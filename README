@@ -1,0 +1,164 @@
+#  File:      README
+#  Author(s): Giacomo Nannicini
+#             Singapore University of Technology and Design
+#             nannicini@sutd.edu.sg
+#  Last edit: 05/17/15
+#
+#  (C) Copyright Singapore University of Technology and Design 2015.
+#  You should have received a copy of the license with this code.
+#  Research supported by the SUTD-MIT International Design Center.
+
+This software is released under the Revised BSD License. By using
+this software, you are implicitly accepting the terms of the license.
+
+Contents of this directory:
+
+LICENSE:
+	Licensing information.
+VERSION:
+	Version of the library.
+AUTHORS:
+	Authors of the library.
+README:
+	This file.
+
+Contents of the src/ directory:
+
+rbfopt.py:
+	Main module for the end-user of this library.
+rbfopt_config.py:
+	Configuration file.
+rbfopt_cl_interface.py:
+	Driver for the command-line interface, to run the library
+	on a user-defined black-box function.
+black_box.py:
+	The file implementing the user-defined black-box function.
+test_rbfopt.py:
+	Executable file to test the library on a standard global
+	optimization test set. 
+test_functions.py:
+	Global optimization test functions.
+rbfopt_utils.py:
+	Utility routines.
+rbfopt_aux_problems.py:
+	Interface for the auxiliary problems solved during
+	the optimization process.
+rbfopt_degreeX_models.py:
+	PyOmo models for the auxiliary problems necessary for RBF
+	functions with minimum required polynomial degree X.
+
+Contents of the doc/ directory:
+
+conf.py:
+	Configuration file for Sphinx.
+Makefile:
+	Makefile (for Linux/Mac) to build the documentation.
+make.bat:
+	Batch file (for Windows) to build the documentation.
+*.rst:
+	ReStructured Text files for the documentation.
+
+#--------------------------------------------------------------------------
+# Installation requirements
+#--------------------------------------------------------------------------
+
+This package requires the following software:
+
+Python 2.7.* (recommended Python 2.7.6)
+NumPy version >= 1.8.1
+Coopr version 3.5.8787, with PyOmo
+pyDOE version >= 0.3.5
+
+The software has been tested with the versions indicated above. It may
+work with earlier version and should work with subsequent version, if
+they are backward compatible.
+
+Note that Python 3.* is not compatible with Python 2.7. While our
+library is Python 3.3 compliant and relies on "from __future__ import
+[...]", the current version of Coopr does not run on Python 3.*,
+therefore at the moment only Python 2.7 is supported.
+
+The latest versions of NumPy, Coopr, pyDOE can be obtained with little
+effort through the Python module manager pip, using the commands:
+
+pip install numpy
+pip install coopr==3.5.8787
+pip install pyDOE
+
+This package requires the solution of convex and nonconvex nonlinear
+programs (NLPs), as well as nonconvex mixed-integer nonlinear programs
+(MINLPs) if some of the decision variables (design parameters) are
+constrained to be integer. Solution of these subproblems is performed
+through Coopr, which supports any solver with an AMPL interface (.nl
+file format). In our tests we employed BonMin and Ipopt, that are
+open-source and available through the COIN-OR repository. The end-user
+is responsible for checking that they have the right to use whatever
+solver they employs.
+
+In case any of the packages indicated above is missing, some features
+may be disabled, not function properly, or the software may not run at
+all.
+
+#--------------------------------------------------------------------------
+# Installation instructions
+#--------------------------------------------------------------------------
+
+1) Install the required packages NumPy, Coopr, pyDOE as indicated
+   above. If you use pip, you can verify that they are present with
+   the commands:
+
+   pip show numpy
+   pip show coopr
+   pip show pyDOE
+
+2) Edit rbfopt_config.py to point to the correct location for the NLP
+   and MINLP solvers.
+
+3) Enjoy!
+
+4) You can test the installation by running:
+   python2.7 test_rbfopt.py branin
+   
+   See:
+   python2.7 test_rbfopt.py --help
+   for more details on command-line options for the testing utility.
+
+   Many more test functions, with different characteristics, are
+   implemented in the file test_functions.py. They can all be used for
+   testing.
+
+5) To run the library on a user-defined black-box function, modify the
+   file black_box.py accordingly, and run:
+   python2.7 rbfopt_cl_interface
+
+   See:
+   python2.7 rbfopt_cl_interface --help
+   for more details on command-line options.
+
+   By redefining the attributes and methods of the class BlackBox of
+   black_box.py, you can define your own black-box function.
+
+
+#--------------------------------------------------------------------------
+# Documentation
+#--------------------------------------------------------------------------
+
+The documentation for the code can be built using Sphinx with the
+numpydoc extension. numpydoc can be installed with pip:
+
+pip install numpydoc
+
+After that, the directory doc/ contains a Makefile (on Windows, use
+make.bat) and the Sphinx configuration file conf.py.
+
+You can build the HTML documentation (recommended) with:
+
+make html
+
+The output will be located in _build/html/ and the index can be found
+in _build/html/index.html .
+
+A PDF version of hte documentation (much less readable than the HTML
+version) can be built using the command:
+
+make latexpdf
