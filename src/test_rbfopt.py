@@ -117,7 +117,7 @@ class TestFunctionBlackBox:
         self.var_lower = None
         self.optimum_value = None
         self.evaluate = None
-        self.evaluatE_fast = None
+        self.evaluate_fast = None
 
 # -- end class
 

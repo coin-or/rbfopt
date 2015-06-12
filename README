@@ -93,7 +93,14 @@ through Coopr, which supports any solver with an AMPL interface (.nl
 file format). In our tests we employed BonMin and Ipopt, that are
 open-source and available through the COIN-OR repository. The end-user
 is responsible for checking that they have the right to use whatever
-solver they employs.
+solver they employs. 
+
+To obtain pre-compiled binaries for BonMin and Ipopt, we suggest
+having a look at:
+http://ampl.com/products/solvers/open-source/
+and
+http://ampl.com/dl/open/
+(for static binaries).
 
 In case any of the packages indicated above is missing, some features
 may be disabled, not function properly, or the software may not run at
@@ -158,7 +165,7 @@ make html
 The output will be located in _build/html/ and the index can be found
 in _build/html/index.html .
 
-A PDF version of hte documentation (much less readable than the HTML
+A PDF version of the documentation (much less readable than the HTML
 version) can be built using the command:
 
 make latexpdf
