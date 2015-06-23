@@ -13,10 +13,11 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 
-import rbfopt
 import sys
 import argparse
+import rbfopt
 import black_box as bb
+from rbfopt_settings import RbfSettings
 
 
 def register_options(parser):
@@ -30,81 +31,41 @@ def register_options(parser):
         The parser.
 
     See also
-    --------
-    :class:`rbfopt.RbfSettings` for a detailed description of all the
-    command line options.
+    --------   
+    :class:`rbfopt_settings.RbfSettings` for a detailed description of
+    all the command line options.
     """
-    parser.add_argument('--rbf', '-f', action = 'store', 
-                        dest = 'rbf', default = 'cubic',
-                        help = 'type of radial basis function')
-    parser.add_argument('--eps-opt', '-opt', action = 'store',
-                        dest = 'eps_opt', 
-                        default = 1.0e-2, type = float,
-                        help = 'optimality threshold (w.r.t. optimum)')
-    parser.add_argument('--max-iter', '-n', action = 'store',
-                        dest = 'max_iterations', default = 150, type = int,
-                        help = 'maximum number of iterations')
-    parser.add_argument('--max-eval', '-e', action = 'store',
-                        dest = 'max_evaluations', default = 250, type = int,
-                        help = 'maximum number of function evaluations')
-    parser.add_argument('--max-fast-eval', '-fe', action = 'store',
-                        dest = 'max_fast_evaluations', default = 150, 
-                        type = int,
-                        help = 'maximum number of fast function evaluations')
-    parser.add_argument('--max-time', '-t', action = 'store',
-                        dest = 'max_clock_time', 
-                        default = 1.0e30, type = float,
-                        help = 'maximum wall-clock time')
-    parser.add_argument('--infstep', '-p', action = 'store_true',
-                        dest = 'do_infstep', default = False,
-                        help = 'perform infstep')
-    parser.add_argument('--skip-tval-clipping', '-a', action = 'store_true',
-                        dest = 'skip_targetval_clipping', default = False,
-                        help = 'skip the Gutmann method to clip target value')
-    parser.add_argument('--num-glob-search', '-k', action = 'store',
-                        dest = 'num_global_searches', default = 5, type = int,
-                        help = 'number of global searches in each cycle')
-    parser.add_argument('--max-cons-loc-search', '-l', action = 'store',
-                        dest = 'max_consecutive_local_searches', 
-                        default = 2, type = int,
-                        help = 'maximum number of consecutive local searches')
-    parser.add_argument('--init-strategy', '-i', action = 'store',
-                        dest = 'init_strategy', default = 'lhd_maximin',
-                        help = 'strategy to choose initial points')
-    parser.add_argument('--function-scaling', '-s', action = 'store',
-                        dest = 'function_scaling', default = 'auto',
-                        help = 'strategy to rescale function values')
-    parser.add_argument('--domain-scaling', '-m', action = 'store',
-                        dest = 'domain_scaling', default = 'auto',
-                        help = 'strategy to rescale domain')
-    parser.add_argument('--dyn-clipping', '-c', action = 'store',
-                        dest = 'dynamism_clipping', default = 'auto',
-                        help = 'strategy to clip large function values')
-    parser.add_argument('--ls-box-scaling', '-b', action = 'store',
-                        dest = 'local_search_box_scaling',
-                        default = 0.5, type = float,
-                        help = 'scaling factor for local search box')
-    parser.add_argument('--max-stalled', '-d', action = 'store',
-                        dest = 'max_stalled_cycles', default = 6, type = int,
-                        help = 'maximum number of cycles without ' +
-                        'improvement before restart')
-    parser.add_argument('--rand-seed', '-r', action = 'store',
-                        dest = 'rand_seed', default = 937627691, type = int,
-                        help = 'seed of the random seed generator')
-    parser.add_argument('--with-rel-noise', '-nr', action = 'store',
-                        dest = 'fast_objfun_rel_error', default = 0.0,
-                        type = float,
-                        help = 'amount of relative noise of the fast oracle')
-    parser.add_argument('--with-abs-noise', '-na', action = 'store',
-                        dest = 'fast_objfun_abs_error', default = 0.0,
-                        type = float,
-                        help = 'amount of relative noise of the fast oracle')
+    # Get default values from here
+    default = RbfSettings()
+    attrs = vars(default)
+    docstring = default.__doc__
+    param_docstring = docstring[docstring.find('Parameters'):
+                                docstring.find('Attributes')].split(' : ')
+    param_name = [val.split(' ')[-1].strip() for val in param_docstring[:-1]]
+    param_type = [val.split('\n')[0].strip() for val in param_docstring[1:]]
+    param_help = [' '.join(line.strip() for line in val.split('\n')[1:-2])
+                  for val in param_docstring[1:]]
+    # We extract the default from the docstring in case it is
+    # necessary, but we use the actual default from the object above.
+    param_default = [val.split(' ')[-1].rstrip('.').strip('\'') 
+                     for val in param_help]
+    for i in range(len(param_name)):
+        if (param_type[i] == 'float'):
+            type_fun = float
+        elif (param_type[i] == 'int'):
+            type_fun = int
+        elif (param_type[i] == 'bool'):
+            type_fun = bool
+        else:
+            type_fun = str
+        parser.add_argument('--' + param_name[i], action = 'store',
+                            dest = param_name[i],
+                            type = type_fun,
+                            help = param_help[i],
+                            default = getattr(default, param_name[i]))
     parser.add_argument('--log', '-o', action = 'store',
                         metavar = 'LOG_FILE_NAME', dest = 'output_stream',
                         help = 'name of log file for output redirection')
-    parser.add_argument('--print-solver-output', '-pso', action = 'store_true',
-                        dest = 'print_solver_output', default = False,
-                        help = 'print solver output')
 
 # -- end function
 
@@ -144,36 +105,36 @@ def rbfopt_cl_interface(args, black_box):
             print('Exception in opening log file', file = sys.stderr)
             print(e, file = sys.stderr)
 
-    settings = rbfopt.RbfSettings(target_objval = black_box.optimum_value,
-                                  eps_opt = args.eps_opt,
-                                  max_iterations = args.max_iterations,
-                                  max_evaluations = args.max_evaluations,
-                                  max_fast_evaluations = 
-                                  args.max_fast_evaluations,
-                                  max_clock_time = args.max_clock_time,
-                                  do_infstep = args.do_infstep,
-                                  skip_targetval_clipping = 
-                                  args.skip_targetval_clipping,
-                                  num_global_searches = 
-                                  args.num_global_searches,
-                                  max_consecutive_local_searches = 
-                                  args.max_consecutive_local_searches,
-                                  rand_seed = args.rand_seed,
-                                  dynamism_clipping = args.dynamism_clipping,
-                                  function_scaling = args.function_scaling,
-                                  domain_scaling = args.domain_scaling,
-                                  local_search_box_scaling =
-                                  args.local_search_box_scaling,
-                                  max_stalled_cycles = 
-                                  args.max_stalled_cycles,
-                                  rbf = args.rbf,
-                                  init_strategy = args.init_strategy,
-                                  fast_objfun_rel_error = 
-                                  args.fast_objfun_rel_error,
-                                  fast_objfun_abs_error = 
-                                  args.fast_objfun_abs_error,
-                                  print_solver_output = 
-                                  args.print_solver_output)
+    settings = RbfSettings(target_objval = black_box.optimum_value,
+                           eps_opt = args.eps_opt,
+                           max_iterations = args.max_iterations,
+                           max_evaluations = args.max_evaluations,
+                           max_fast_evaluations = 
+                           args.max_fast_evaluations,
+                           max_clock_time = args.max_clock_time,
+                           do_infstep = args.do_infstep,
+                           skip_targetval_clipping = 
+                           args.skip_targetval_clipping,
+                           num_global_searches = 
+                           args.num_global_searches,
+                           max_consecutive_local_searches = 
+                           args.max_consecutive_local_searches,
+                           rand_seed = args.rand_seed,
+                           dynamism_clipping = args.dynamism_clipping,
+                           function_scaling = args.function_scaling,
+                           domain_scaling = args.domain_scaling,
+                           local_search_box_scaling =
+                           args.local_search_box_scaling,
+                           max_stalled_cycles = 
+                           args.max_stalled_cycles,
+                           rbf = args.rbf,
+                           init_strategy = args.init_strategy,
+                           fast_objfun_rel_error = 
+                           args.fast_objfun_rel_error,
+                           fast_objfun_abs_error = 
+                           args.fast_objfun_abs_error,
+                           print_solver_output = 
+                           args.print_solver_output)
     settings.print(output_stream = output_stream)
     (opt, point, itercount, evalcount,
      fast_evalcount) = rbfopt.rbf_optimize(settings,

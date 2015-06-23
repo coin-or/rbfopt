@@ -21,6 +21,7 @@ import rbfopt
 import rbfopt_config as config
 import rbfopt_aux_problems as aux
 import pyDOE
+from rbfopt_settings import RbfSettings
 
 def get_rbf_function(settings):
     """Return a radial basis function.
@@ -31,7 +32,7 @@ def get_rbf_function(settings):
     Parameters
     ----------
     
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
     
     Returns
@@ -39,7 +40,7 @@ def get_rbf_function(settings):
     Callable[float]
         A callable radial basis function.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     if (settings.rbf == 'cubic'):
         return _cubic
     elif (settings.rbf == 'thin_plate_spline'):
@@ -82,7 +83,7 @@ def get_degree_polynomial(settings):
 
     Parameters
     ----------
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     Returns
@@ -90,7 +91,7 @@ def get_degree_polynomial(settings):
     int
         Degree of the polynomial
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     if (settings.rbf == 'cubic' or settings.rbf == 'thin_plate_spline'):
         return 1
     elif (settings.rbf == 'linear' or settings.rbf == 'multiquadric'):
@@ -108,7 +109,7 @@ def get_size_P_matrix(settings, n):
 
     Parameters
     ----------
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -119,7 +120,7 @@ def get_size_P_matrix(settings, n):
     int
         Number of columns in the matrix
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     if (settings.rbf == 'cubic' or settings.rbf == 'thin_plate_spline'):
         return n+1
     elif (settings.rbf == 'linear' or settings.rbf == 'multiquadric'):
@@ -309,7 +310,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     
     Parameters
     ----------
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     var_lower : List[float]
@@ -337,7 +338,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         cannot be computed within the prescribed number of iterations.
     """
     assert(len(var_lower)==len(var_upper))
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
 
     # We must make sure points are linearly independent; if they are
     # not, we perform a given number of iterations
@@ -540,7 +541,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
     Parameters
     ----------
 
-    settings : rbfopt.RbfSettings.
+    settings : rbfopt_settings.RbfSettings.
         Global and algorithmic settings.
 
     n : int
@@ -560,7 +561,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
         If the type of RBF function is not supported.
     """
     assert(len(node_pos)==k)
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
 
     rbf = get_rbf_function(settings)
     p = get_size_P_matrix(settings, n)
@@ -601,7 +602,7 @@ def get_matrix_inverse(settings, Amat):
     
     Parameters
     ----------
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
     Amat : numpy.matrix
         The matrix to invert.
@@ -611,7 +612,7 @@ def get_matrix_inverse(settings, Amat):
     numpy.matrix
         The matrix Amat^{-1}.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(isinstance(Amat, np.matrix))
 
     try:
@@ -641,7 +642,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
 
     Parameters
     ---
-    settings : rbfopt.RbfSettings.
+    settings : rbfopt_settings.RbfSettings.
         Global and algorithmic settings.
 
     n : int
@@ -664,7 +665,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
         coefficients (for the polynomial).
     """    
     assert(len(node_val)==(k))
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(isinstance(Amat, np.matrix))
     p = get_size_P_matrix(settings, n)
     assert(Amat.shape==(k+p,k+p))
@@ -689,7 +690,7 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
 
     Parameters
     ----------
-    settings : rbfopt.RbfSettings.
+    settings : rbfopt_settings.RbfSettings.
         Global and algorithmic settings.
 
     point : List[float]
@@ -720,7 +721,7 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
     assert(len(point)==n)
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     p = get_size_P_matrix(settings, n)
     assert(len(rbf_h)==p)
 
@@ -746,7 +747,7 @@ def get_fast_error_bounds(settings, value):
     Parameters
     ----------
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
     value : float
         The value for which the error interval should be computed.
@@ -776,7 +777,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
     Parameters
     ----------
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
        Global and algorithmic settings.
 
     node_val : List[float]
@@ -805,7 +806,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
     ValueError
         If the function scaling strategy requested is not implemented.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     # Check dynamism: if too high, replace large function values with
     # the median or clip at maximum dynamism
     if (settings.dynamism_clipping != 'off' and
@@ -864,7 +865,7 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
 
     Parameters
     ----------
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     var_lower : List[float]
@@ -890,7 +891,7 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
     ValueError
         If the requested rescaling strategy is not implemented.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(len(var_lower)==len(var_upper))
     assert(len(var_lower)==len(point))
 
@@ -919,7 +920,7 @@ def transform_domain_bounds(settings, var_lower, var_upper):
 
     Parameters
     ----------
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
     var_lower : List[float]
         List of lower bounds of the variables.
@@ -936,7 +937,7 @@ def transform_domain_bounds(settings, var_lower, var_upper):
     ValueError
         If the requested rescaling strategy is not implemented.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(len(var_lower)==len(var_upper))
 
     if (settings.domain_scaling == 'off'):
@@ -995,7 +996,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
     Parameters
     ---
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
     n : int
         Dimension of the problem, i.e. the space where the point lives.
@@ -1016,7 +1017,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
     --------
     get_sigma_n
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(k == len(node_val))
     assert(current_step >= 1)
     sorted_node_val = sorted(node_val)
@@ -1040,7 +1041,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
 
     Parameters
     ---
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -1074,7 +1075,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
         The index of the node and corresponding bumpiness value
         indicating the sought node in the list node_pos.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(len(node_val)==k)
     assert(isinstance(Amat, np.matrix))
     assert(len(fast_node_index)==len(fast_node_err_bounds))
@@ -1128,7 +1129,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     Parameters
     ---
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -1164,7 +1165,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
         The bumpiness of the interpolant having a new node at the
         specified location, with value target_val.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(len(node_val)==k)
     assert(len(node_pos)==k)
     assert(len(fast_node_index)==len(fast_node_err_bounds))
@@ -1206,7 +1207,7 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
 
     Parameters
     ---
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -1227,7 +1228,7 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
         An estimate of the leave-one-out cross-validation error, which
         can be interpreted as a measure of model quality.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(len(node_val)==k)
     assert(len(node_pos)==k)
     # We cannot find a leave-one-out interpolant if the following
@@ -1282,7 +1283,7 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
 
     Parameters
     ---
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -1306,7 +1307,7 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
         An estimate of the leave-one-out cross-validation error, which
         can be interpreted as a measure of model quality.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(len(node_val)==k)
     assert(len(node_pos)==k)
     # We cannot find a leave-one-out interpolant if the following
@@ -1357,7 +1358,7 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
 
     Parameters
     ---
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -1383,7 +1384,7 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
         supported types of RBF.
     """
 
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(len(node_val)==k)
     assert(len(node_pos)==k)
     # We cannot find a leave-one-out interpolant if the following

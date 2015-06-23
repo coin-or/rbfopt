@@ -18,6 +18,7 @@ Contents:
    rbfopt_config
    rbfopt_degree0_models
    rbfopt_degree1_models
+   rbfopt_settings
    rbfopt_utils
    test_functions
    test_rbfopt

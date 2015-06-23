@@ -18,6 +18,7 @@ import rbfopt
 import rbfopt_utils as ru
 import numpy as np
 import rbfopt_config as config
+from rbfopt_settings import RbfSettings
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos,
                          rbf_lambda, rbf_h, integer_vars = None):
@@ -28,7 +29,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos,
     Parameters
     ----------
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -67,7 +68,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos,
     assert(len(rbf_lambda)==k)
     assert(len(rbf_h)==(1))
     assert(len(node_pos)==k)
-    assert(isinstance(settings,rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(ru.get_degree_polynomial(settings)==0)
 
     model = ConcreteModel()
@@ -148,7 +149,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -184,7 +185,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     assert(len(node_pos)==k)
     assert(isinstance(mat, np.matrix))
     assert(mat.shape==(k+1,k+1))
-    assert(isinstance(settings,rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(ru.get_degree_polynomial(settings)==0)
 
     model = ConcreteModel()
@@ -279,7 +280,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -329,7 +330,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper,
     assert(len(node_pos)==k)
     assert(isinstance(mat, np.matrix))
     assert(mat.shape==(k+1,k+1))
-    assert(isinstance(settings,rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(ru.get_degree_polynomial(settings)==0)
 
     model = ConcreteModel()
@@ -439,7 +440,7 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     index in fast_node_index deviate by a specified percentage from
     their value.
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -471,14 +472,13 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     pyomo.ConcreteModel
         The concrete model containing the problem.
     """    
-    assert(isinstance(settings, pyrbf.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(len(node_val)==k)
     assert(isinstance(Phimat, np.matrix))
     assert(isinstance(Pmat, np.matrix))
     assert(Phimat.shape==(k,k))
     assert(Pmat.shape==(k,1))
     assert(len(fast_node_index)==len(fast_node_err_bounds))
-    assert(isinstance(settings,rbfopt.RbfSettings))
     assert(ru.get_degree_polynomial(settings)==0)
 
     model = ConcreteModel()

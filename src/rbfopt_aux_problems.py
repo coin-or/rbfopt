@@ -32,6 +32,7 @@ import rbfopt_config as config
 import rbfopt
 import rbfopt_degree1_models
 import rbfopt_degree0_models
+from rbfopt_settings import RbfSettings
 
 def maximize_one_over_mu(settings, n, k, var_lower, var_upper, node_pos,
                          mat, integer_vars):
@@ -45,7 +46,7 @@ def maximize_one_over_mu(settings, n, k, var_lower, var_upper, node_pos,
     Parameters
     ----------
  
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -90,7 +91,7 @@ def maximize_one_over_mu(settings, n, k, var_lower, var_upper, node_pos,
     assert(len(var_upper)==n)
     assert(len(node_pos)==k)
     assert(isinstance(mat, np.matrix))
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
@@ -148,7 +149,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
     Parameters
     ----------
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -197,7 +198,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
@@ -256,7 +257,7 @@ def maximize_h_k(settings, n, k, var_lower, var_upper, node_pos,
     Parameters
     ----------
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -314,7 +315,7 @@ def maximize_h_k(settings, n, k, var_lower, var_upper, node_pos,
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
     assert(isinstance(mat, np.matrix))
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
@@ -374,13 +375,13 @@ def initialize_instance_variables(settings, instance):
 
     Parameters
     ----------
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     instance : coopr.pyomo.ConcreteModel
         A concrete instance of mathematical optimization model.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     
     # Obtain radial basis function
     rbf = ru.get_rbf_function(settings)
@@ -413,13 +414,13 @@ def initialize_h_k_aux_variables(settings, instance):
 
     Parameters
     ----------
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     instance : coopr.pyomo.ConcreteModel
         A concrete instance of mathematical optimization model.
     """
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
 
     instance.rbfval = math.fsum(instance.lambda_h[i] * instance.u_pi[i].value
                                 for i in instance.Q)
@@ -445,7 +446,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     Parameters
     ----------
 
-    settings : rbfopt.RbfSettings
+    settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
     n : int
@@ -496,7 +497,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     RuntimeError
         If the solver cannot be found.
     """    
-    assert(isinstance(settings, rbfopt.RbfSettings))
+    assert(isinstance(settings, RbfSettings))
     assert(len(node_val)==k)
     assert(isinstance(Phimat, np.matrix))
     assert(isinstance(Pmat, np.matrix))

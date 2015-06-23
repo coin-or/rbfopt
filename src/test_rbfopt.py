@@ -19,7 +19,6 @@ import rbfopt
 import rbfopt_cl_interface
 import test_functions
 
-
 class NoisyFunction:
     """Adds noise to an existing function.
 

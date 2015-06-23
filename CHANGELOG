@@ -1,5 +1,13 @@
+2015-06-23  Giacomo Nannicini  <nannicini@sutd.edu.sg>
+	* rbfopt_settings.py (RbfSettings): Added log_scaling_threshold
+	option. Moved RbfSettings here from the rbfopt module.
+	* rbfopt.py (rbf_optimize): Improved automatic function
+	scaling. Improved efficiencyhen skipping infstep.
+	* rbfopt_cl_interface.py (register_options): Parameters are now
+	read automatically from the rbfopt_settings module.
+
 2015-06-11  Giacomo Nannicini  <nannicini@sutd.edu.sg>
-	* black_box.py: introduced class BlackBox as a wrapper around the
+	* black_box.py: Introduced class BlackBox as a wrapper around the
 	black-box methods.
 	Improved docstrings following NumPy's format.
 	Added documentation in the doc/ directory.
