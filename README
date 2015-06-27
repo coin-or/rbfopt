@@ -27,7 +27,9 @@ Contents of the src/ directory:
 rbfopt.py:
 	Main module for the end-user of this library.
 rbfopt_config.py:
-	Configuration file.
+	(Static) configuration file for the machine.
+rbfopt_settings.py:
+	Global and algorithmic settings.
 rbfopt_cl_interface.py:
 	Driver for the command-line interface, to run the library
 	on a user-defined black-box function.
