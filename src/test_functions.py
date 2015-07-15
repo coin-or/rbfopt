@@ -1267,7 +1267,6 @@ class nvs15:
         # - x[0] - x[1] - 2*x[2] + 3 >= 0
         penalty = 0.0
         penalty += 10*max(0, -(-x[0] - x[1] - 2*x[2] + 3))
-        print(penalty)
         return(value + penalty)
 
     dimension = 3
@@ -1321,8 +1320,6 @@ class prob03:
         # There is one constraint:
         # x[0]*x[1] - 3.5 >= 0
         penalty = 10*max(0, -(x[0]*x[1] - 3.5))
-        print(x)
-        print(penalty)
         return(value + penalty)
 
     dimension = 2
