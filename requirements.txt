@@ -1,1 +1,3 @@
 numpydoc==0.5
+coopr==3.5.8787
+pyDOE
