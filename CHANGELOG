@@ -1,3 +1,7 @@
+2015-07-17  Giacomo Nannicini  <nannicini@sutd.edu.sg>
+	Switch to Pyomo 4. The relevant files have been updated to use the
+	pyomo module rather than coopr.
+
 2015-06-23  Giacomo Nannicini  <nannicini@sutd.edu.sg>
 	* rbfopt_settings.py (RbfSettings): Added log_scaling_threshold
 	option. Moved RbfSettings here from the rbfopt module.
