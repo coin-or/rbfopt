@@ -18,15 +18,9 @@ from __future__ import absolute_import
 import math
 import random
 import numpy as np
-try:
-    import coopr.environ
-except ImportError:
-    # The module environ is not defined for older versions of Coopr,
-    # but the code should still work.
-    pass
-import coopr.opt
-from coopr.opt import SolverStatus, TerminationCondition
-import coopr.pyomo.base.numvalue 
+import pyomo.environ
+import pyomo.opt
+from pyomo.opt import SolverStatus, TerminationCondition
 import rbfopt_utils as ru
 import rbfopt_config as config
 import rbfopt
@@ -105,8 +99,6 @@ def maximize_one_over_mu(settings, n, k, var_lower, var_upper, node_pos,
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
-#    register_numeric_types()
-
     instance = model.create_max_one_over_mu_model(settings, n, k, var_lower, 
                                                   var_upper, node_pos, mat,
                                                   integer_vars)
@@ -115,7 +107,7 @@ def maximize_one_over_mu(settings, n, k, var_lower, var_upper, node_pos,
     initialize_instance_variables(settings, instance)
 
     # Instantiate optimizer
-    opt = coopr.opt.SolverFactory(config.MINLP_SOLVER_EXEC, solver_io='nl')
+    opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_EXEC, solver_io='nl')
     if opt is None:
         raise RuntimeError('Solver ' + config.MINLP_SOLVER_EXEC + ' not found')
     set_minlp_solver_options(opt)
@@ -124,11 +116,11 @@ def maximize_one_over_mu(settings, n, k, var_lower, var_upper, node_pos,
     try:
         results = opt.solve(instance, keepfiles = False, 
                             tee = settings.print_solver_output)
-        if ((results.solver.status == coopr.opt.SolverStatus.ok) and 
+        if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
             (results.solver.termination_condition == 
              TerminationCondition.optimal)):
             # this is feasible and optimal
-            instance.load(results)
+            instance.solutions.load_from(results)
             point = [instance.x[i].value for i in instance.N]
             ru.round_integer_vars(point, integer_vars)
         else:
@@ -212,8 +204,6 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
-#    register_numeric_types()
-
     instance = model.create_min_rbf_model(settings, n, k, var_lower, 
                                           var_upper, node_pos, rbf_lambda,
                                           rbf_h, integer_vars)
@@ -222,7 +212,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
     initialize_instance_variables(settings, instance)
 
     # Instantiate optimizer
-    opt = coopr.opt.SolverFactory(config.MINLP_SOLVER_EXEC, solver_io='nl')
+    opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_EXEC, solver_io='nl')
     if opt is None:
         raise RuntimeError('Solver ' + config.MINLP_SOLVER_EXEC + ' not found')
     set_minlp_solver_options(opt)
@@ -231,11 +221,11 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
     try:
         results = opt.solve(instance, keepfiles = False,
                             tee = settings.print_solver_output)
-        if ((results.solver.status == coopr.opt.SolverStatus.ok) and 
+        if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
             (results.solver.termination_condition == 
              TerminationCondition.optimal)):
             # this is feasible and optimal
-            instance.load(results)
+            instance.solutions.load_from(results)
             point = [instance.x[i].value for i in instance.N]
             ru.round_integer_vars(point, integer_vars)
         else:
@@ -330,8 +320,6 @@ def maximize_h_k(settings, n, k, var_lower, var_upper, node_pos,
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
     
-#    register_numeric_types()
-
     instance = model.create_max_h_k_model(settings, n, k, var_lower, var_upper,
                                           node_pos, rbf_lambda, rbf_h, mat,
                                           target_val, integer_vars)
@@ -341,7 +329,7 @@ def maximize_h_k(settings, n, k, var_lower, var_upper, node_pos,
     initialize_h_k_aux_variables(settings, instance)
 
     # Instantiate optimizer
-    opt = coopr.opt.SolverFactory(config.MINLP_SOLVER_EXEC, solver_io='nl')
+    opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_EXEC, solver_io='nl')
     if opt is None:
         raise RuntimeError('Solver ' + config.MINLP_SOLVER_EXEC + ' not found')
     set_minlp_solver_options(opt)
@@ -350,11 +338,11 @@ def maximize_h_k(settings, n, k, var_lower, var_upper, node_pos,
     try:
         results = opt.solve(instance, keepfiles = False,
                             tee = settings.print_solver_output)
-        if ((results.solver.status == coopr.opt.SolverStatus.ok) and 
+        if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
             (results.solver.termination_condition == 
              TerminationCondition.optimal)):
             # this is feasible and optimal
-            instance.load(results)
+            instance.solutions.load_from(results)
             point = [instance.x[i].value for i in instance.N]
             ru.round_integer_vars(point, integer_vars)
         else:
@@ -378,7 +366,7 @@ def initialize_instance_variables(settings, instance):
     settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
-    instance : coopr.pyomo.ConcreteModel
+    instance : pyomo.ConcreteModel
         A concrete instance of mathematical optimization model.
     """
     assert(isinstance(settings, RbfSettings))
@@ -417,7 +405,7 @@ def initialize_h_k_aux_variables(settings, instance):
     settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
-    instance : coopr.pyomo.ConcreteModel
+    instance : pyomo.ConcreteModel
         A concrete instance of mathematical optimization model.
     """
     assert(isinstance(settings, RbfSettings))
@@ -513,14 +501,12 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
-#    register_numeric_types()
-
     instance = model.create_min_bump_model(settings, n, k, Phimat, Pmat,
                                            node_val, fast_node_index,
                                            fast_node_err_bounds)
 
     # Instantiate optimizer
-    opt = coopr.opt.SolverFactory(config.NLP_SOLVER_EXEC, solver_io='nl')
+    opt = pyomo.opt.SolverFactory(config.NLP_SOLVER_EXEC, solver_io='nl')
     if opt is None:
         raise RuntimeError('Solver ' + config.NLP_SOLVER_EXEC + ' not found')
     set_nlp_solver_options(opt)
@@ -538,11 +524,11 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     try:
         results = opt.solve(instance, keepfiles = False,
                             tee = settings.print_solver_output)
-        if ((results.solver.status == coopr.opt.SolverStatus.ok) and 
+        if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
             (results.solver.termination_condition == 
              TerminationCondition.optimal)):
             # this is feasible and optimal
-            instance.load(results)
+            instance.solutions.load_from(results)
             rbf_lambda = [instance.rbf_lambda[i].value for i in instance.K]
             rbf_h = [instance.rbf_h[i].value for i in instance.P]
         else:
@@ -568,7 +554,7 @@ def set_minlp_solver_options(solver):
    
     Parameters
     ----------
-    solver: coopr.opt.SolverFactory
+    solver: pyomo.opt.SolverFactory
         The solver interface.
     """
     for (opt_name, opt_value) in config.MINLP_SOLVER_OPTIONS:
@@ -586,7 +572,7 @@ def set_nlp_solver_options(solver):
    
     Parameters
     ----------
-    solver: coopr.opt.SolverFactory
+    solver: pyomo.opt.SolverFactory
         The solver interface.
     """
 
@@ -597,20 +583,3 @@ def set_nlp_solver_options(solver):
 
 # -- end function
 
-def register_numeric_types():
-    """Register NumPy's numeric types.
-
-    This function registers NumPy's numeric types into Coopr, so that
-    they are recognized as valid numbers. It suffices to call it
-    once. Currently not used because of a mismatch of Coopr's version.
-    """
-    # Update Reals
-    coopr.pyomo.base.numvalue.RegisterNumericType(numpy.float64)
-
-    # Update Integers and Reals
-    coopr.pyomo.base.numvalue.RegisterIntegerType(numpy.int64)
-    
-    # Update Boolean Only
-    coopr.pyomo.base.numvalue.RegisterBooleanType(numpy.bool_)
-
-# -- end function

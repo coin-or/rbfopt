@@ -2,7 +2,7 @@
 #  Author(s): Giacomo Nannicini
 #             Singapore University of Technology and Design
 #             nannicini@sutd.edu.sg
-#  Last edit: 05/17/15
+#  Last edit: 07/17/15
 #
 #  (C) Copyright Singapore University of Technology and Design 2015.
 #  You should have received a copy of the license with this code.
@@ -21,6 +21,8 @@ AUTHORS:
 	Authors of the library.
 README:
 	This file.
+requirements.txt:
+	List of dependencies for this project.
 
 Contents of the src/ directory:
 
@@ -68,7 +70,7 @@ This package requires the following software:
 
 Python 2.7.* (recommended Python 2.7.6)
 NumPy version >= 1.8.1
-Coopr version 3.5.8787, with PyOmo
+Pyomo version 4.1.10509
 pyDOE version >= 0.3.5
 
 The software has been tested with the versions indicated above. It may
@@ -77,15 +79,25 @@ they are backward compatible.
 
 Note that Python 3.* is not compatible with Python 2.7. While our
 library is Python 3.3 compliant and relies on "from __future__ import
-[...]", the current version of Coopr does not run on Python 3.*,
-therefore at the moment only Python 2.7 is supported.
+[...]", the code has not been tested on Python 3 yet. We recommend
+using Python 2.7.
 
-The latest versions of NumPy, Coopr, pyDOE can be obtained with little
-effort through the Python module manager pip, using the commands:
+The easiest way to install all the dependencies is via the Python
+module manager pip, using the command:
+
+pip install -r requirements.txt
+
+The file requirements.txt contains the list of required modules and
+their latest version that has been tried and found to work
+correctly. If your want to install them one at a time, you can try:
 
 pip install numpy
-pip install coopr==3.5.8787
+pip install pyomo
 pip install pyDOE
+
+To build the documentation, you also need numpydoc:
+
+pip install numpydoc
 
 This package requires the solution of convex and nonconvex nonlinear
 programs (NLPs), as well as nonconvex mixed-integer nonlinear programs
@@ -112,12 +124,12 @@ all.
 # Installation instructions
 #--------------------------------------------------------------------------
 
-1) Install the required packages NumPy, Coopr, pyDOE as indicated
+1) Install the required packages NumPy, Pyomo, pyDOE as indicated
    above. If you use pip, you can verify that they are present with
    the commands:
 
    pip show numpy
-   pip show coopr
+   pip show pyomo
    pip show pyDOE
 
 2) Edit rbfopt_config.py to point to the correct location for the NLP
@@ -153,7 +165,8 @@ all.
 #--------------------------------------------------------------------------
 
 The documentation for the code can be built using Sphinx with the
-numpydoc extension. numpydoc can be installed with pip:
+numpydoc extension. numpydoc can be installed with pip (if you
+followed our instructions above, it should already be installed):
 
 pip install numpydoc
 
@@ -171,3 +184,8 @@ A PDF version of the documentation (much less readable than the HTML
 version) can be built using the command:
 
 make latexpdf
+
+An online version of the documentation for the latest master branch of
+the code is available on ReadTheDocs:
+
+http://rbfopt.readthedocs.org/en/latest/
