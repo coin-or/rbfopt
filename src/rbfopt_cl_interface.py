@@ -155,7 +155,7 @@ def rbfopt_cl_interface(args, black_box):
 
 if (__name__ == "__main__"):
     if (sys.version_info[0] >= 3):
-        print('Error: Python 3 is currently not supported by PyOmo/Coopr.')
+        print('Error: Python 3 is currently not tested.')
         print('Please use Python 2.7')
         exit()
     # Create command line parsers
