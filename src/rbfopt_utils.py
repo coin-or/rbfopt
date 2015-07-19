@@ -1,6 +1,7 @@
-"""Optimize a black-box function using the RBF method.
+"""Utility functions.
 
-This module contains the main optimization algorithm and its settings.
+This module contains a number of subroutines that are used by the
+other modules.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
