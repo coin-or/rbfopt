@@ -22,7 +22,6 @@ MINLP_SOLVER_MAX_SEED : int
     Maximum integer that can be used to seed the MINLP solver's random
     seed.
 
-
 NLP_SOLVER_EXEC : str 
     NLP solver executable - should be in your path.
 
@@ -37,6 +36,13 @@ NLP_SOLVER_RAND_SEED_OPTION : str or None
 NLP_SOLVER_MAX_SEED : int
     Maximum integer that can be used to seed the NLP solver's random
     seed.
+
+LP_SOLVER_EXEC : str 
+    LP solver executable - should be in your path.
+
+LP_SOLVER_OPTIONS : List[(str, Any)]
+    Options passed on to the LP solver, in the form ('option_name',
+    value)
 
 GAMMA : float
     Parameter gamma for some of the radial basis functions. This is
@@ -93,6 +99,9 @@ NLP_SOLVER_OPTIONS = [('acceptable_tol', 1.0e-3),
                       ('max_iter', 1000)]
 NLP_SOLVER_RAND_SEED_OPTION = None
 NLP_SOLVER_MAX_SEED = 2147483647
+
+LP_SOLVER_EXEC = 'cplex'
+LP_SOLVER_OPTIONS = []
 
 GAMMA = 1.0
 
