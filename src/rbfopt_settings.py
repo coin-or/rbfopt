@@ -148,6 +148,11 @@ class RbfSettings:
         Maximum number of iterations in fast mode before switching
         to accurate mode. Default 100.
     
+    model_selection_method : string
+        Method to compute leave-one-out errors in cross validation for
+        model selection. Choice of 'lp', 'cplex', 'numpy'. Default
+        'numpy'.
+    
     print_solver_output : bool
         Print the output of the solvers to screen? Note that this
         cannot be redirected to file so it will go to
@@ -169,6 +174,8 @@ class RbfSettings:
         Allowed domain scaling strategies.
     _allowed_dynamism_clipping : Dict[str]
         Allowed dynamism clipping strategies.
+    _allowed_model_selection_method : Dict[str]
+        Allowed model selection method.
     """
 
     # Allowed values for multiple choice options
@@ -179,6 +186,7 @@ class RbfSettings:
     _allowed_function_scaling = {'off', 'affine', 'log', 'auto'}
     _allowed_domain_scaling = {'off', 'affine', 'auto'}
     _allowed_dynamism_clipping = {'off', 'median', 'clip_at_dyn', 'auto'}
+    _allowed_model_selection_method = {'lp', 'cplex', 'numpy'}
 
     def __init__(self,
                  rbf = 'thin_plate_spline',
@@ -208,6 +216,7 @@ class RbfSettings:
                  fast_objfun_abs_error = 0.0,
                  max_fast_restarts = 2,
                  max_fast_iterations = 100,
+                 model_selection_method = 'numpy',
                  print_solver_output = False,
                  rand_seed = 937627691):
         """Class constructor with default values. 
@@ -239,6 +248,7 @@ class RbfSettings:
         self.fast_objfun_abs_error = fast_objfun_abs_error
         self.max_fast_restarts = max_fast_restarts
         self.max_fast_iterations = max_fast_iterations
+        self.model_selection_method = model_selection_method
         self.print_solver_output = print_solver_output
         self.rand_seed = rand_seed
 
@@ -259,6 +269,12 @@ class RbfSettings:
             RbfSettings._allowed_dynamism_clipping):
             raise ValueError('settings.dynamism_clipping = ' + 
                              str(self.dynamism_clipping) + ' not supported')
+        if (self.model_selection_method not in 
+            RbfSettings._allowed_model_selection_method):
+            raise ValueError('settings.model_selection_method = ' + 
+                             str(self.model_selection_method) + 
+                             ' not supported')
+    # -- end function
 
     def set_auto_parameters(self, dimension, var_lower, var_upper,
                             integer_vars):
@@ -320,6 +336,8 @@ class RbfSettings:
                     l_settings.domain_scaling = 'off'
 
         return l_settings
+
+    # - end function
         
     def print(self, output_stream):
         """Print the value of all settings.

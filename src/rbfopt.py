@@ -18,6 +18,7 @@ import time
 import numpy as np
 import rbfopt_utils as ru
 import rbfopt_aux_problems as aux
+import rbfopt_model_selection as ms
 import rbfopt_config as config
 from rbfopt_settings import RbfSettings
 
@@ -267,10 +268,10 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
         # If RBF selection is automatic, at the beginning of each
         # cycle check if a different RBF yields a better model
         if (settings.rbf == 'auto' and k > n+1 and current_step <= first_step):
-            best_local_rbf = ru.get_best_rbf_model(l_settings, n, k, node_pos,
+            best_local_rbf = ms.get_best_rbf_model(l_settings, n, k, node_pos,
                                                    scaled_node_val,
                                                    int(math.ceil(k*0.1)))
-            best_global_rbf = ru.get_best_rbf_model(l_settings, n, k, node_pos,
+            best_global_rbf = ms.get_best_rbf_model(l_settings, n, k, node_pos,
                                                     scaled_node_val,
                                                     int(math.ceil(k*0.7)))
         # If we are in local search or just before local search, use a

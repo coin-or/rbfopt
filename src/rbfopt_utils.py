@@ -18,7 +18,6 @@ import math
 import random
 import itertools
 import numpy as np
-import rbfopt
 import rbfopt_config as config
 import rbfopt_aux_problems as aux
 import pyDOE
@@ -541,7 +540,6 @@ def get_rbf_matrix(settings, n, k, node_pos):
     
     Parameters
     ----------
-
     settings : rbfopt_settings.RbfSettings.
         Global and algorithmic settings.
 
@@ -995,8 +993,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
     `sigma_n`.
 
     Parameters
-    ---
-
+    ----------
     settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
     n : int
@@ -1041,7 +1038,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
     error, to target_val.
 
     Parameters
-    ---
+    ----------
     settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
@@ -1128,8 +1125,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     new node in a specified location, at value target_val.
 
     Parameters
-    ---
-
+    ----------
     settings : rbfopt_settings.RbfSettings
         Global and algorithmic settings.
 
@@ -1198,210 +1194,3 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     return bumpiness
 
 # -- end function
-
-def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
-    """Compute an estimate of model quality.
-
-    Computes an estimate of model quality, using
-    cross-validation. This version assumes that all interpolation
-    points are used for cross-validation.
-
-    Parameters
-    ---
-    settings : rbfopt_settings.RbfSettings
-        Global and algorithmic settings.
-
-    n : int
-        Dimension of the problem, i.e. the space where the point lives.
-
-    k : int
-        Number of nodes, i.e. interpolation points.
-
-    node_pos : List[List[float]]
-        Location of current interpolation nodes.
-
-    node_val : List[float]
-        List of values of the function at the nodes.
-    
-    Returns
-    -------
-    float
-        An estimate of the leave-one-out cross-validation error, which
-        can be interpreted as a measure of model quality.
-    """
-    assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(len(node_pos)==k)
-    # We cannot find a leave-one-out interpolant if the following
-    # condition is not met.
-    assert(k > n + 1)
-
-    sorted_list = sorted([(node_val[i], node_pos[i]) for i in range(k)])
-
-    # Create a copy of the interpolation nodes and values
-    cv_node_pos = [node_pos[i] for i in range(k-1)]
-    cv_node_val = [node_val[i] for i in range(k-1)]
-
-    # The node that was left out
-    rm_node_pos = node_pos[-1]
-    rm_node_val = node_val[-1]
-
-    # Estimate of the model error
-    loo_error = 0.0
-    # Variance
-    loo_error_var = 0.0
-    
-    for i in range(k):
-        # Compute the RBF interpolant with one node left out
-        Amat = get_rbf_matrix(settings, n, k-1, cv_node_pos)
-        (rbf_l, rbf_h) = get_rbf_coefficients(settings, n, k-1, 
-                                              Amat, cv_node_val)
-
-        # Compute value of the interpolant at the removed node
-        predicted_val = evaluate_rbf(settings, rm_node_pos, n, k-1,
-                                     cv_node_pos, rbf_l, rbf_h)
-
-        # Update leave-one-out error
-        loo_error += abs(predicted_val - rm_node_val)
-        loo_error_var += (abs(predicted_val - rm_node_val))**2
-
-        # Update the node left out, unless we are at the last iteration
-        if (i < k - 1):
-            cv_node_pos[k-2-i], rm_node_pos = rm_node_pos, cv_node_pos[k-2-i]
-            cv_node_val[k-2-i], rm_node_val = rm_node_val, cv_node_val[k-2-i]
-
-    return loo_error/k
-
-# -- end function
-
-def get_model_quality_estimate(settings, n, k, node_pos, node_val,
-                               num_iterations):
-    """Compute an estimate of model quality.
-
-    Computes an estimate of model quality, using
-    cross-validation. This version does not use all interpolation
-    nodes, but rather only the best num_iterations ones.
-
-    Parameters
-    ---
-    settings : rbfopt_settings.RbfSettings
-        Global and algorithmic settings.
-
-    n : int
-        Dimension of the problem, i.e. the space where the point lives.
-
-    k : int
-        Number of nodes, i.e. interpolation points.
-
-    node_pos : List[List[float]]
-        Location of current interpolation nodes.
-
-    node_val : List[float]
-        List of values of the function at the nodes.
-
-    num_iterations : int
-        Number of nodes on which quality should be tested.
-    
-    Returns
-    ------
-    float
-        An estimate of the leave-one-out cross-validation error, which
-        can be interpreted as a measure of model quality.
-    """
-    assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(len(node_pos)==k)
-    # We cannot find a leave-one-out interpolant if the following
-    # condition is not met.
-    assert(k > n + 1)
-
-    # Sort interpolation nodes by increasing objective function value
-    sorted_list = sorted([(node_val[i], node_pos[i]) for i in range(k)])
-
-    # Initialize the arrays used for the cross-validation
-    cv_node_pos = [sorted_list[i][1] for i in range(1,k)]
-    cv_node_val = [sorted_list[i][0] for i in range(1,k)]
-
-    # The node that was left out
-    rm_node_pos = sorted_list[0][1]
-    rm_node_val = sorted_list[0][0]
-
-    # Estimate of the model error
-    loo_error = 0.0
-    
-    for i in range(num_iterations):
-        # Compute the RBF interpolant with one node left out
-        Amat = get_rbf_matrix(settings, n, k-1, cv_node_pos)
-        (rbf_l, rbf_h) = get_rbf_coefficients(settings, n, k-1, 
-                                              Amat, cv_node_val)
-
-        # Compute value of the interpolant at the removed node
-        predicted_val = evaluate_rbf(settings, rm_node_pos, n, k-1,
-                                     cv_node_pos, rbf_l, rbf_h)
-
-        # Update leave-one-out error
-        loo_error += abs(predicted_val - rm_node_val)
-
-        # Update the node left out
-        cv_node_pos[i], rm_node_pos = rm_node_pos, cv_node_pos[i]
-        cv_node_val[i], rm_node_val = rm_node_val, cv_node_val[i]
-
-    return loo_error/num_iterations
-
-# -- end function
-
-def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
-    """Compute which type of RBF yields the best model.
-
-    Compute which RBF interpolant yields the best surrogate model,
-    using cross validation to determine the lowest leave-one-out
-    error.
-
-    Parameters
-    ---
-    settings : rbfopt_settings.RbfSettings
-        Global and algorithmic settings.
-
-    n : int
-        Dimension of the problem, i.e. the space where the point lives.
-
-    k : int
-        Number of nodes, i.e. interpolation points.
-
-    node_pos : List[List[float]]
-        Location of current interpolation nodes.
-
-    node_val : List[float]
-        List of values of the function at the nodes.
-
-    num_iterations : int
-        Number of nodes on which quality should be tested.
-
-    Returns
-    -------
-    str
-        The type of RBF that currently yields the best surrogate
-        model, based on leave-one-out error. This will be one of the
-        supported types of RBF.
-    """
-
-    assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(len(node_pos)==k)
-    # We cannot find a leave-one-out interpolant if the following
-    # condition is not met.
-    assert(k > n + 1)
-
-    best_loo_error = float('inf')
-    best_model = None
-    original_rbf_type = settings.rbf
-    for rbf_type in ['cubic', 'thin_plate_spline', 'multiquadric', 'linear']:
-        settings.rbf = rbf_type
-        loo_error = get_model_quality_estimate(settings, n, k, node_pos,
-                                               node_val, num_iter)
-        if (loo_error < best_loo_error):
-            best_loo_error = loo_error
-            best_model = rbf_type
-
-    settings.rbf = original_rbf_type
-    return (best_model)

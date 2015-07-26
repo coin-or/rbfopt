@@ -133,6 +133,8 @@ def rbfopt_cl_interface(args, black_box):
                            args.fast_objfun_rel_error,
                            fast_objfun_abs_error = 
                            args.fast_objfun_abs_error,
+                           model_selection_method =
+                           args.model_selection_method,
                            print_solver_output = 
                            args.print_solver_output)
     settings.print(output_stream = output_stream)
