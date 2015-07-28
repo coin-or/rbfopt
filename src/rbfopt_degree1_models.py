@@ -591,104 +591,6 @@ def add_integrality_constraints(model, integer_vars):
 
 # -- end function
 
-def create_cross_validation_model(settings, n, k, Phimat, Pmat, node_val):
-    """Create LP to compute RBF interpolant.
-    
-    Create a linear model to compute the coefficients of the RBF
-    interpolant minimizing bumpiness. This model uses a set of slack
-    variables, with bounds initially set to [-\infty, +\infty], to
-    allow one of the interpolation nodes to be ignored.
-
-    Parameters
-    ----------
-    settings : rbfopt_settings.RbfSettings
-        Global and algorithmic settings.
-
-    n : int
-        Dimension of the problem, i.e. the space where the point lives.
-
-    k : int
-        Number of nodes, i.e. interpolation points.
-
-    Phimat : numpy.matrix
-        Matrix Phi, i.e. top left part of the standard RBF matrix.
-
-    Pmat : numpy.matrix
-        Matrix P, i.e. top right part of the standard RBF matrix.
-
-    node_val : List[float]
-        List of values of the function at the nodes.
-
-    Returns
-    -------
-    pyomo.ConcreteModel
-        The concrete model describing the problem.
-    """
-    assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(isinstance(Phimat, np.matrix))
-    assert(isinstance(Pmat, np.matrix))
-    assert(Phimat.shape==(k,k))
-    assert(Pmat.shape==(k,n+1))
-
-    model = ConcreteModel()
-
-    # Dimension of the space
-    model.n = Param(initialize=n)
-    model.N = RangeSet(0, model.n - 1)
-
-    # Dimension of P matrix
-    model.p = Param(initialize=n+1)
-    model.P = RangeSet(0, model.n)
-        
-    # Number of interpolation nodes
-    model.k = Param(initialize=k)
-    model.K = RangeSet(0, model.k - 1)
-
-    # Phi matrix.
-    Phi_param = {}
-    for i in range(k):
-        for j in range(k):
-            if (abs(Phimat[i, j]) != 0.0):
-                Phi_param[i, j] = float(Phimat[i, j])
-    model.Phi = Param(model.K, model.K, initialize=Phi_param,
-                      default=0.0)
-
-    # P matrix.
-    Pm_param = {}
-    for i in range(k):
-        for j in range(n+1):
-            if (abs(Pmat[i, j]) != 0.0):
-                Pm_param[i, j] = float(Pmat[i, j])
-    model.Pm = Param(model.K, model.P, initialize=Pm_param,
-                     default=0.0)
-
-    # Node values, i.e. right hand sides of the first set of equations
-    # in the constraints
-    node_val_param = {}
-    for i in range(k):
-        node_val_param[i] = float(node_val[i])
-    model.node_val = Param(model.K, initialize=node_val_param)
-
-    # Variable: the lambda coefficients of the RBF
-    model.rbf_lambda = Var(model.K, domain=Reals)
-
-    # Variable: the h coefficients of the RBF
-    model.rbf_h = Var(model.P, domain=Reals)
-
-    # Variable: the slacks for the equality constraints
-    model.slack = Var(model.K, domain=Reals, bounds=_zero_bounds)
-
-    # Objective function.
-    model.OBJ = Objective(rule=_min_bump_linear_obj_expression, sense=minimize)
-
-    # Constraints. See definitions below.
-    model.IntrConstraint = Constraint(model.K, rule=_intr_constraint_rule)
-    model.UnisConstraint = Constraint(model.P, rule=_unis_constraint_rule)    
-
-    return model
-# -- end function
-
 # Function to return bounds
 def _x_bounds(model, i):
     return (model.var_lower[i], model.var_upper[i])
@@ -775,19 +677,9 @@ def _min_bump_obj_expression(model):
     return (sum(model.Phi[i,j] * model.rbf_lambda[i] * model.rbf_lambda[j]
                 for i in model.K for j in model.K))
 
-# Objective function for the "minimize bumpiness with linear model"
-# problem. The expression is:
-# lambda^T F.
-def _min_bump_linear_obj_expression(model):
-    return (sum(model.rbf_lambda[i] * model.node_val[i] for i in model.K))
-
 # Function to return bounds on the slack variables
 def _slack_bounds(model, i):
     return (model.slack_lower[i], model.slack_upper[i])
-
-# Function to return bounds on the slack variables
-def _zero_bounds(model, i):
-    return (0.0, 0.0)
 
 # Function to return bounds of the y variables
 def _y_bounds(model, i):

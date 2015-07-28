@@ -150,7 +150,7 @@ class RbfSettings:
     
     model_selection_method : string
         Method to compute leave-one-out errors in cross validation for
-        model selection. Choice of 'lp', 'cplex', 'numpy'. Default
+        model selection. Choice of 'clp', 'cplex', 'numpy'. Default
         'numpy'.
     
     print_solver_output : bool
@@ -186,7 +186,7 @@ class RbfSettings:
     _allowed_function_scaling = {'off', 'affine', 'log', 'auto'}
     _allowed_domain_scaling = {'off', 'affine', 'auto'}
     _allowed_dynamism_clipping = {'off', 'median', 'clip_at_dyn', 'auto'}
-    _allowed_model_selection_method = {'lp', 'cplex', 'numpy'}
+    _allowed_model_selection_method = {'clp', 'cplex', 'numpy'}
 
     def __init__(self,
                  rbf = 'thin_plate_spline',
