@@ -1,3 +1,14 @@
+2015-07-29  Giacomo Nannicini  <nannicini@sutd.edu.sg>
+	* rbfopt_model_selection.py: Introduced stand-alone module for
+	model selection. Increased efficiency of cross-validation via LPs
+	solved with Cplex or Clp.
+	* rbfopt_settings.py (RbfSettings): Introduced unpacking of
+	parameters from dictionary.
+	* rbfopt_cl_interface.py (rbfopt_cl_interface): Switched to
+	dictionary to pass algorithmic parameters.
+	* test_rbfopt: Switched to dictionary to pass algorithmic
+	paramters.
+
 2015-07-17  Giacomo Nannicini  <nannicini@sutd.edu.sg>
 	Switch to Pyomo 4. The relevant files have been updated to use the
 	pyomo module rather than coopr.
@@ -20,7 +31,6 @@
 2015-06-03  Giacomo Nannicini  <nannicini@sutd.edu.sg>
 	* rbfopt.py (rbf_optimize): Better printout of initialization
 	points.
-
 
 2015-05-17  Giacomo Nannicini  <nannicini@sutd.edu.sg>
 	* rbfopt_cl_interface.py: Added module for command line interface.

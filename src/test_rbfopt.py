@@ -179,4 +179,8 @@ if (__name__ == "__main__"):
     black_box.evaluate = function.evaluate
     black_box.evaluate_fast = fast_objfun
 
-    rbfopt_cl_interface.rbfopt_cl_interface(args, black_box)
+    # Obtain parameters in dictionary format for easier unpacking
+    dict_args = vars(args)
+    del dict_args['function']
+
+    rbfopt_cl_interface.rbfopt_cl_interface(dict_args, black_box)

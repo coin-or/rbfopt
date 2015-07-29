@@ -77,8 +77,9 @@ def rbfopt_cl_interface(args, black_box):
 
     Parameters
     ----------
-    args : Any
-        A namespace containing the options, as created by ArgumentParser.
+    args : Dict[string]
+        A dictionary containing the values of the parameters in a
+        format args['name'] = value. 
 
     black_box : black_box.BlackBox
         An object containing the function to be optimized and its main
@@ -96,47 +97,22 @@ def rbfopt_cl_interface(args, black_box):
     assert(hasattr(black_box, 'evaluate_fast'))
 
     # Open output stream if necessary
-    if (args.output_stream is None):
+    if (args['output_stream'] is None):
         output_stream = sys.stdout
     else:
         try:
-            output_stream = open(args.output_stream, 'w')
+            output_stream = open(args['output_stream'], 'w')
         except IOError as e:
             print('Exception in opening log file', file = sys.stderr)
             print(e, file = sys.stderr)
 
-    settings = RbfSettings(target_objval = black_box.optimum_value,
-                           eps_opt = args.eps_opt,
-                           max_iterations = args.max_iterations,
-                           max_evaluations = args.max_evaluations,
-                           max_fast_evaluations = 
-                           args.max_fast_evaluations,
-                           max_clock_time = args.max_clock_time,
-                           do_infstep = args.do_infstep,
-                           skip_targetval_clipping = 
-                           args.skip_targetval_clipping,
-                           num_global_searches = 
-                           args.num_global_searches,
-                           max_consecutive_local_searches = 
-                           args.max_consecutive_local_searches,
-                           rand_seed = args.rand_seed,
-                           dynamism_clipping = args.dynamism_clipping,
-                           function_scaling = args.function_scaling,
-                           domain_scaling = args.domain_scaling,
-                           local_search_box_scaling =
-                           args.local_search_box_scaling,
-                           max_stalled_cycles = 
-                           args.max_stalled_cycles,
-                           rbf = args.rbf,
-                           init_strategy = args.init_strategy,
-                           fast_objfun_rel_error = 
-                           args.fast_objfun_rel_error,
-                           fast_objfun_abs_error = 
-                           args.fast_objfun_abs_error,
-                           model_selection_method =
-                           args.model_selection_method,
-                           print_solver_output = 
-                           args.print_solver_output)
+    # Make a copy of parameters and adjust them, also deleting keys
+    # that are not recognized as valid by RbfSettings.
+    local_args = args.copy()
+    del local_args['output_stream']
+    local_args['target_objval'] = float(black_box.optimum_value)
+
+    settings = RbfSettings.from_dictionary(local_args)
     settings.print(output_stream = output_stream)
     (opt, point, itercount, evalcount,
      fast_evalcount) = rbfopt.rbf_optimize(settings,
@@ -168,4 +144,4 @@ if (__name__ == "__main__"):
     register_options(parser)
     args = parser.parse_args()
     # Run the interface
-    rbfopt_cl_interface(args, bb.BlackBox())
+    rbfopt_cl_interface(vars(args), bb.BlackBox())

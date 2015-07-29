@@ -89,7 +89,7 @@ class RbfSettings:
 
     max_consecutive_local_searches : int
         Maximum number of consecutive local searches during the
-        optimization phase. Default 2.
+        optimization phase. Default 1.
 
     init_strategy : str
         Strategy to select initial points. Choice of 'all_corners',
@@ -202,7 +202,7 @@ class RbfSettings:
                  do_infstep = False,
                  skip_targetval_clipping = False,
                  num_global_searches = 5,
-                 max_consecutive_local_searches = 2,
+                 max_consecutive_local_searches = 1,
                  init_strategy = 'lhd_maximin',
                  function_scaling = 'auto',
                  log_scaling_threshold = 1.0e6,
@@ -275,6 +275,42 @@ class RbfSettings:
                              str(self.model_selection_method) + 
                              ' not supported')
     # -- end function
+
+    @classmethod
+    def from_dictionary(cls, args):
+        """Construct settings from dictionary containing parameter values.
+    
+        Construct an instance of RbfSettings by looking up the value
+        of all the parameters from a given dictionary. The dictionary
+        must contain only parameter values in the form args['name'] =
+        value.  anything else present in the dictionary will raise an
+        exception.
+
+        Parameters
+        ----------
+
+        args : Dict[string]
+            A dictionary containing the values of the parameters in a
+            format args['name'] = value. 
+
+        Returns
+        -------
+        RbfSettings
+            An instance of the object of the class.
+
+        Raises
+        ------
+        ValueError
+            If the dictionary contains invalid parameters.
+
+        """
+        valid_params = vars(cls())
+        for param in args.keys():
+            if param not in valid_params:
+                raise ValueError('Parameter name {:s}'.format(param) +
+                                 'not recognized')
+
+        return cls(**args)
 
     def set_auto_parameters(self, dimension, var_lower, var_upper,
                             integer_vars):

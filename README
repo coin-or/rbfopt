@@ -2,7 +2,7 @@
 #  Author(s): Giacomo Nannicini
 #             Singapore University of Technology and Design
 #             nannicini@sutd.edu.sg
-#  Last edit: 07/17/15
+#  Last edit: 07/17/29
 #
 #  (C) Copyright Singapore University of Technology and Design 2015.
 #  You should have received a copy of the license with this code.
@@ -26,30 +26,32 @@ requirements.txt:
 
 Contents of the src/ directory:
 
-rbfopt.py:
-	Main module for the end-user of this library.
-rbfopt_config.py:
-	(Static) configuration file for the machine.
-rbfopt_settings.py:
-	Global and algorithmic settings.
-rbfopt_cl_interface.py:
-	Driver for the command-line interface, to run the library
-	on a user-defined black-box function.
 black_box.py:
 	The file implementing the user-defined black-box function.
-test_rbfopt.py:
-	Executable file to test the library on a standard global
-	optimization test set. 
-test_functions.py:
-	Global optimization test functions.
-rbfopt_utils.py:
-	Utility routines.
 rbfopt_aux_problems.py:
 	Interface for the auxiliary problems solved during
 	the optimization process.
+rbfopt_cl_interface.py:
+	Driver for the command-line interface, to run the library
+	on a user-defined black-box function.
+rbfopt_config.py:
+	(Static) configuration file for the machine.
 rbfopt_degreeX_models.py:
 	PyOmo models for the auxiliary problems necessary for RBF
 	functions with minimum required polynomial degree X.
+rbfopt_model_selection.py:
+	Routines for automatic model selection.
+rbfopt.py:
+	Main module for the end-user of this library.
+rbfopt_settings.py:
+	Global and algorithmic settings.
+rbfopt_utils.py:
+	Utility routines.
+test_functions.py:
+	Global optimization test functions.
+test_rbfopt.py:
+	Executable file to test the library on a standard global
+	optimization test set. 
 
 Contents of the doc/ directory:
 
@@ -78,9 +80,9 @@ work with earlier version and should work with subsequent version, if
 they are backward compatible.
 
 Note that Python 3.* is not compatible with Python 2.7. While our
-library is Python 3.3 compliant and relies on "from __future__ import
-[...]", the code has not been tested on Python 3 yet. We recommend
-using Python 2.7.
+library is Python 3.3 compliant and consistently uses "from __future__
+import [...]", the code has not been tested on Python 3 yet. We
+recommend using Python 2.7.
 
 The easiest way to install all the dependencies is via the Python
 module manager pip, using the command:
@@ -120,6 +122,16 @@ In case any of the packages indicated above is missing, some features
 may be disabled, not function properly, or the software may not run at
 all.
 
+This package can take advantage of supported linear programming
+solvers to increase the speed of the automatic model selection
+procedure. Supported solvers:
+
+IBM-ILOG Cplex via its Python API
+COIN-OR Clp via CyLP (see https://github.com/coin-or/CyLP).
+
+The two packages above are optional.
+
+
 #--------------------------------------------------------------------------
 # Installation instructions
 #--------------------------------------------------------------------------
@@ -158,6 +170,15 @@ all.
 
    By redefining the attributes and methods of the class BlackBox of
    black_box.py, you can define your own black-box function.
+
+6) To take advantage of faster model selection procedures, you must
+   have either IBM-ILOG Cplex or COIN-OR Clp available on your
+   machine. By default, the model selection procedure uses
+   Numpy. Using Cplex (via its Python library) or Clp (via CyLP) can
+   increase its speed dramatically. If one of these packages is
+   installed and available via the usual "import" Python command, you
+   can select the corresponding value for the option
+   model_selection_method.
 
 
 #--------------------------------------------------------------------------
