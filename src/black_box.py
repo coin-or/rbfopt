@@ -41,18 +41,12 @@ class BlackBox:
     integer_vars : List[int]
         A list of indices of the variables that must assume integer
         values.
-
-    optimum_value : float
-        The value of the optimum for the function, if available.
-        Otherwise, it can be set to any satisfactory value.
     """
 
     dimension = 3
 
     var_lower = [0, 0, 0]
     var_upper = [10, 10, 10]
-
-    optimum_value = 0
 
     integer_vars = [0, 1]
 

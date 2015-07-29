@@ -382,17 +382,18 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             # cycle, and kappa is the number of global searches.
             scaling = (1 - ((current_step - 1) /
                             l_settings.num_global_searches))**2
-            # Compute the function value used to determine the
-            # target value. This is given by the sorted value in
-            # position sigma_n, where sigma_n is a function
-            # described in the paper by Gutmann (2001). Unless we
-            # want to skip this approach.
-            if (l_settings.skip_targetval_clipping):
-                local_fmax = fmax
-            else:
+            # Compute the function value used to determine the target
+            # value. This is given by the sorted value in position
+            # sigma_n, where sigma_n is a function described in the
+            # paper by Gutmann (2001). If clipping is disabled, we
+            # simply take the largest function value.
+            if (l_settings.targetval_clipping):
                 local_fmax = ru.get_fmax_current_iter(l_settings, n, k, 
                                                       current_step, 
                                                       scaled_node_val)
+            else:
+                local_fmax = fmax
+
             target_val = (min_rbf_val - 
                           scaling * (local_fmax - min_rbf_val))
 

@@ -91,7 +91,6 @@ def rbfopt_cl_interface(args, black_box):
     assert(hasattr(black_box, 'dimension'))
     assert(hasattr(black_box, 'var_lower'))
     assert(hasattr(black_box, 'var_upper'))
-    assert(hasattr(black_box, 'optimum_value'))
     assert(hasattr(black_box, 'integer_vars'))
     assert(hasattr(black_box, 'evaluate'))
     assert(hasattr(black_box, 'evaluate_fast'))
@@ -106,26 +105,22 @@ def rbfopt_cl_interface(args, black_box):
             print('Exception in opening log file', file = sys.stderr)
             print(e, file = sys.stderr)
 
-    # Make a copy of parameters and adjust them, also deleting keys
+    # Make a copy of parameters and adjust them, deleting keys
     # that are not recognized as valid by RbfSettings.
     local_args = args.copy()
     del local_args['output_stream']
-    local_args['target_objval'] = float(black_box.optimum_value)
 
     settings = RbfSettings.from_dictionary(local_args)
     settings.print(output_stream = output_stream)
-    (opt, point, itercount, evalcount,
-     fast_evalcount) = rbfopt.rbf_optimize(settings,
-                                           black_box.dimension, 
-                                           black_box.var_lower,
-                                           black_box.var_upper,
-                                           black_box.evaluate,
-                                           integer_vars = 
-                                           black_box.integer_vars,
-                                           objfun_fast =
-                                           black_box.evaluate_fast,
-                                           output_stream = output_stream)
-    print('rbf_optimize returned function value {:.15f}'.format(opt),
+    result = rbfopt.rbf_optimize(settings = settings,
+                                 dimension = black_box.dimension, 
+                                 var_lower = black_box.var_lower,
+                                 var_upper = black_box.var_upper,
+                                 objfun = black_box.evaluate,
+                                 objfun_fast = black_box.evaluate_fast,
+                                 integer_vars = black_box.integer_vars,
+                                 output_stream = output_stream)
+    print('rbf_optimize returned function value {:.15f}'.format(result[0]),
           file = output_stream)
     output_stream.close()
 

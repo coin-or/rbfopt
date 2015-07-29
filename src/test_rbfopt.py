@@ -174,7 +174,6 @@ if (__name__ == "__main__"):
     black_box.dimension = function.dimension
     black_box.var_lower = function.var_lower
     black_box.var_upper = function.var_upper
-    black_box.optimum_value = function.optimum_value
     black_box.integer_vars = function.integer_vars
     black_box.evaluate = function.evaluate
     black_box.evaluate_fast = fast_objfun
@@ -182,5 +181,7 @@ if (__name__ == "__main__"):
     # Obtain parameters in dictionary format for easier unpacking
     dict_args = vars(args)
     del dict_args['function']
+    dict_args['target_objval'] = function.optimum_value
+
 
     rbfopt_cl_interface.rbfopt_cl_interface(dict_args, black_box)

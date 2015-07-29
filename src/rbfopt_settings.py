@@ -76,13 +76,12 @@ class RbfSettings:
         becoming singular. Default 1.0e-5.
 
     do_infstep : bool
-        Should we perform the InfStep? Default False.
+        Perform the InfStep. Default False.
 
-    skip_targetval_clipping : bool
-        Should we skip the method to clip target value selection based
-        on periodically eliminating some of the largest function
-        values, as proposed by Gutmann (2001) and later Regis and
-        Shoemaker (2007)? Default False.
+    targetval_clipping : bool
+        Clip target value selection based on periodically eliminating
+        some of the largest function values, as proposed by Gutmann
+        (2001) and later Regis and Shoemaker (2007). Default True.
 
     num_global_searches : int
         Number of steps in the global search phase. Default 5.
@@ -148,8 +147,8 @@ class RbfSettings:
         Maximum number of iterations in fast mode before switching
         to accurate mode. Default 100.
     
-    model_selection_method : string
-        Method to compute leave-one-out errors in cross validation for
+    model_selection_solver : string
+        Solver to compute leave-one-out errors in cross validation for
         model selection. Choice of 'clp', 'cplex', 'numpy'. Default
         'numpy'.
     
@@ -174,7 +173,7 @@ class RbfSettings:
         Allowed domain scaling strategies.
     _allowed_dynamism_clipping : Dict[str]
         Allowed dynamism clipping strategies.
-    _allowed_model_selection_method : Dict[str]
+    _allowed_model_selection_solver : Dict[str]
         Allowed model selection method.
     """
 
@@ -186,7 +185,7 @@ class RbfSettings:
     _allowed_function_scaling = {'off', 'affine', 'log', 'auto'}
     _allowed_domain_scaling = {'off', 'affine', 'auto'}
     _allowed_dynamism_clipping = {'off', 'median', 'clip_at_dyn', 'auto'}
-    _allowed_model_selection_method = {'clp', 'cplex', 'numpy'}
+    _allowed_model_selection_solver = {'clp', 'cplex', 'numpy'}
 
     def __init__(self,
                  rbf = 'thin_plate_spline',
@@ -200,7 +199,7 @@ class RbfSettings:
                  eps_impr = 1.0e-3,
                  min_dist = 1.0e-5,
                  do_infstep = False,
-                 skip_targetval_clipping = False,
+                 targetval_clipping = True,
                  num_global_searches = 5,
                  max_consecutive_local_searches = 1,
                  init_strategy = 'lhd_maximin',
@@ -216,7 +215,7 @@ class RbfSettings:
                  fast_objfun_abs_error = 0.0,
                  max_fast_restarts = 2,
                  max_fast_iterations = 100,
-                 model_selection_method = 'numpy',
+                 model_selection_solver = 'numpy',
                  print_solver_output = False,
                  rand_seed = 937627691):
         """Class constructor with default values. 
@@ -232,7 +231,7 @@ class RbfSettings:
         self.eps_impr = eps_impr
         self.min_dist = min_dist
         self.do_infstep = do_infstep
-        self.skip_targetval_clipping = skip_targetval_clipping
+        self.targetval_clipping = targetval_clipping
         self.num_global_searches = num_global_searches
         self.max_consecutive_local_searches = max_consecutive_local_searches
         self.init_strategy = init_strategy
@@ -248,7 +247,7 @@ class RbfSettings:
         self.fast_objfun_abs_error = fast_objfun_abs_error
         self.max_fast_restarts = max_fast_restarts
         self.max_fast_iterations = max_fast_iterations
-        self.model_selection_method = model_selection_method
+        self.model_selection_solver = model_selection_solver
         self.print_solver_output = print_solver_output
         self.rand_seed = rand_seed
 
@@ -269,10 +268,10 @@ class RbfSettings:
             RbfSettings._allowed_dynamism_clipping):
             raise ValueError('settings.dynamism_clipping = ' + 
                              str(self.dynamism_clipping) + ' not supported')
-        if (self.model_selection_method not in 
-            RbfSettings._allowed_model_selection_method):
-            raise ValueError('settings.model_selection_method = ' + 
-                             str(self.model_selection_method) + 
+        if (self.model_selection_solver not in 
+            RbfSettings._allowed_model_selection_solver):
+            raise ValueError('settings.model_selection_solver = ' + 
+                             str(self.model_selection_solver) + 
                              ' not supported')
     # -- end function
 
@@ -281,9 +280,9 @@ class RbfSettings:
         """Construct settings from dictionary containing parameter values.
     
         Construct an instance of RbfSettings by looking up the value
-        of all the parameters from a given dictionary. The dictionary
-        must contain only parameter values in the form args['name'] =
-        value.  anything else present in the dictionary will raise an
+        of the parameters from a given dictionary. The dictionary must
+        contain only parameter values in the form args['name'] =
+        value. Anything else present in the dictionary will raise an
         exception.
 
         Parameters
@@ -302,7 +301,6 @@ class RbfSettings:
         ------
         ValueError
             If the dictionary contains invalid parameters.
-
         """
         valid_params = vars(cls())
         for param in args.keys():

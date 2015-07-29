@@ -176,9 +176,9 @@ The two packages above are optional.
    machine. By default, the model selection procedure uses
    Numpy. Using Cplex (via its Python library) or Clp (via CyLP) can
    increase its speed dramatically. If one of these packages is
-   installed and available via the usual "import" Python command, you
-   can select the corresponding value for the option
-   model_selection_method.
+   installed and available via the corresponding "import" Python
+   command (i.e. "import cplex" and "import cylp.cy"), you can select
+   the corresponding value for the option model_selection_solver.
 
 
 #--------------------------------------------------------------------------

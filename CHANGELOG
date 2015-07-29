@@ -4,10 +4,13 @@
 	solved with Cplex or Clp.
 	* rbfopt_settings.py (RbfSettings): Introduced unpacking of
 	parameters from dictionary.
+	* rbfopt_settings.py (RbfSettings): skip_targetval_clipping
+	flipped and renamed to targetval_clipping.
 	* rbfopt_cl_interface.py (rbfopt_cl_interface): Switched to
 	dictionary to pass algorithmic parameters.
 	* test_rbfopt: Switched to dictionary to pass algorithmic
-	paramters.
+	parameters.	
+	Version 1.1.0 released. 
 
 2015-07-17  Giacomo Nannicini  <nannicini@sutd.edu.sg>
 	Switch to Pyomo 4. The relevant files have been updated to use the

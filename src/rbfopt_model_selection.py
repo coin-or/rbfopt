@@ -522,9 +522,9 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
     assert(k > n + 1)
 
     # Choose model selection method
-    if (settings.model_selection_method == 'cplex' and cpx_available):
+    if (settings.model_selection_solver == 'cplex' and cpx_available):
         model_quality_function = get_model_quality_estimate_cpx
-    elif (settings.model_selection_method == 'clp' and clp_available):
+    elif (settings.model_selection_solver == 'clp' and clp_available):
         model_quality_function = get_model_quality_estimate_clp
     else:
         model_quality_function = get_model_quality_estimate
