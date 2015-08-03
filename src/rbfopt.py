@@ -133,6 +133,9 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
     # Number of consecutive cycles without improvement
     num_stalled_cycles = 0
 
+    # Number of consecutive discarded points
+    num_cons_discarded = 0
+
     # Number of restarts in fast mode
     num_fast_restarts = 0
     
@@ -476,6 +479,7 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             (ru.get_min_distance(next_p, node_pos) <= l_settings.min_dist)):
             current_step = (current_step+1) % cycle_length
             num_cons_ls = 0
+            num_cons_discarded += 1
             print('Iteration {:3d}'.format(itercount) + ' Discarded',
                   file = output_stream)
             output_stream.flush()
@@ -521,6 +525,7 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             else:
                 current_step = (current_step+1) % cycle_length
                 num_cons_ls = 0
+            num_cons_discarded = 0
                         
             # Update fmin
             if (next_val < fmin):
@@ -558,10 +563,11 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
 
         # Check if we should restart. We only restart if the initial
         # sampling strategy is random, otherwise it makes little sense.
-        if (num_stalled_cycles >= l_settings.max_stalled_cycles and
-            evalcount + n + 1 < l_settings.max_evaluations and
-            l_settings.init_strategy != 'all_corners' and
-            l_settings.init_strategy != 'lower_corners'):
+        if (num_cons_discarded >= l_settings.max_consecutive_discarded or 
+            (num_stalled_cycles >= l_settings.max_stalled_cycles and
+             evalcount + n + 1 < l_settings.max_evaluations and
+             l_settings.init_strategy != 'all_corners' and
+             l_settings.init_strategy != 'lower_corners')):
             print('Restart at iteration {:3d}'.format(itercount),
                   file = output_stream)
             output_stream.flush()
@@ -611,6 +617,7 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             fmax = max(node_val)
             fmin_cycle_start = fmin
             num_stalled_cycles = 0
+            num_cons_discarded = 0
 
         # Check if we should switch to the second phase of two-phase
         # optimization. The conditions for switching are:
