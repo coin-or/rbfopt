@@ -143,6 +143,7 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
     inf_step = 0
     local_search_step = (l_settings.num_global_searches + 1)
     cycle_length = (l_settings.num_global_searches + 2)
+    restoration_step = (l_settings.num_global_searches + 3)
     # Determine which step is the first of each loop
     first_step = (inf_step if l_settings.do_infstep else inf_step + 1)
 
@@ -245,6 +246,64 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             current_step = (current_step+1) % cycle_length
             continue
 
+        # Check if we should restart. We only restart if the initial
+        # sampling strategy is random, otherwise it makes little sense.
+        if (num_cons_discarded >= l_settings.max_consecutive_discarded or 
+            (num_stalled_cycles >= l_settings.max_stalled_cycles and
+             evalcount + n + 1 < l_settings.max_evaluations and
+             l_settings.init_strategy != 'all_corners' and
+             l_settings.init_strategy != 'lower_corners')):
+            print('Restart at iteration {:3d}'.format(itercount),
+                  file = output_stream)
+            output_stream.flush()
+            # We update the number of fast restarts here, so that if
+            # we hit the limit on fast restarts, we can evaluate
+            # points in accurate mode after restarting (even if
+            # current_mode is updated in a subsequent block of code)
+            num_fast_restarts += (1 if current_mode == 'fast' else 0.0)
+            # Store the current number of nodes
+            all_node_pos_size_at_restart = len(all_node_pos)
+            # Compute a new set of starting points
+            node_pos = ru.initialize_nodes(l_settings, var_lower, var_upper, 
+                                           integer_vars)
+            if (current_mode == 'accurate' or
+                num_fast_restarts > l_settings.max_fast_restarts or
+                fast_evalcount + n + 1 >= l_settings.max_fast_evaluations):
+                node_val = [objfun(point) for point in node_pos]
+                evalcount += len(node_val)
+            else:
+                node_val = [objfun_fast(point) for point in node_pos]
+                fast_evalcount += len(node_val)
+            node_is_fast = [current_mode == 'fast' for val in node_val]
+            # Print the initialization points
+            for (i, val) in enumerate(node_val):
+                min_dist = ru.get_min_distance(node_pos[i], node_pos[:i] + 
+                                               node_pos[(i+1):])
+                print('Iteration {:3d}'.format(itercount) + 
+                      ' {:16s}'.format('Initialization') +
+                      ': objval{:s}'.format('~' if node_is_fast[i] else ' ') +
+                      ' {:16.6f}'.format(val) +
+                      ' min_dist {:9.4f}'.format(min_dist) +
+                      ' gap {:8.2f}'.format(gap*100),
+                      file = output_stream)
+            all_node_pos.extend(node_pos)
+            all_node_val.extend(node_val)
+            all_node_is_fast.extend(node_is_fast)
+            # Rescale the domain of the function
+            node_pos = [ru.transform_domain(l_settings, var_lower,
+                                            var_upper, point)
+                        for point in node_pos]            
+            (l_lower, l_upper) = ru.transform_domain_bounds(l_settings,
+                                                            var_lower,
+                                                            var_upper)
+            # Update all counters and values to restart properly
+            fmin_index = node_val.index(min(node_val))
+            fmin = node_val[fmin_index]
+            fmax = max(node_val)
+            fmin_cycle_start = fmin
+            num_stalled_cycles = 0
+            num_cons_discarded = 0
+
         # Number of nodes at current iteration
         k = len(node_pos)
 
@@ -285,26 +344,44 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
         else:
             l_settings.rbf = best_global_rbf
 
-        # Compute the matrices necessary for the algorithm
-        Amat = ru.get_rbf_matrix(l_settings, n, k, node_pos)
-        Amatinv = ru.get_matrix_inverse(l_settings, Amat)
-        # Compute RBF interpolant at current stage
-        if (fast_node_index):
-            # Get coefficients for the exact RBF
-            (rbf_l, rbf_h) = ru.get_rbf_coefficients(l_settings, n, k, 
-                                                     Amat, scaled_node_val)
-            # RBF with some fast function evaluations
-            (rbf_l, rbf_h) = aux.get_noisy_rbf_coefficients(l_settings, n, k, 
-                                                            Amat[:k, :k],
-                                                            Amat[:k, k:],
-                                                            scaled_node_val,
-                                                            fast_node_index,
-                                                            node_err_bounds,
-                                                            rbf_l, rbf_h)
-        else:
-            # Fully accurate RBF
-            (rbf_l, rbf_h) = ru.get_rbf_coefficients(l_settings, n, k, 
-                                                     Amat, scaled_node_val)
+        try:
+            # Compute the matrices necessary for the algorithm
+            Amat = ru.get_rbf_matrix(l_settings, n, k, node_pos)
+            Amatinv = ru.get_matrix_inverse(l_settings, Amat)
+
+            # Compute RBF interpolant at current stage
+            if (fast_node_index):
+                # Get coefficients for the exact RBF
+                rc = ru.get_rbf_coefficients(l_settings, n, k, 
+                                             Amat, scaled_node_val)
+                # RBF with some fast function evaluations
+                rc = aux.get_noisy_rbf_coefficients(l_settings, n, k, 
+                                                    Amat[:k, :k],
+                                                    Amat[:k, k:],
+                                                    scaled_node_val,
+                                                    fast_node_index,
+                                                    node_err_bounds,
+                                                    rc[0], rc[1])
+                (rbf_l, rbf_h) = rc
+            else:
+                # Fully accurate RBF
+                rc = ru.get_rbf_coefficients(l_settings, n, k, 
+                                             Amat, scaled_node_val)
+                (rbf_l, rbf_h) = rc
+                
+        except np.linalg.LinAlgError:
+            # Error in the solution of the linear system. We must
+            # switch to a restoration phase.
+            current_step = restoration_step
+            node_val.pop()
+            node_pos.pop()
+            (scaled_node_val, scaled_fmin, scaled_fmax,
+             node_err_bounds) = ru.transform_function_values(l_settings,
+                                                             node_val,
+                                                             fmin, fmax,
+                                                             fast_node_index)
+            k = len(node_pos)
+
 
         # For displaying purposes, record what type of iteration we
         # are performing
@@ -319,6 +396,36 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
                                               l_upper, node_pos, Amatinv,
                                               integer_vars)
             iteration_id = 'InfStep'
+
+        elif (current_step == restoration_step):
+            # Restoration: pick a random point, far enough from
+            # current points
+            restoration_done = False
+            cons_restoration = 0
+            while (not restoration_done and
+                   cons_restoration < l_settings.max_consecutive_restoration):
+                next_p = [random.uniform(var_lower[i], var_upper[i])
+                          for i in range(n)]
+                ru.round_integer_vars(next_p, integer_vars)
+                if (ru.get_min_distance(next_p, node_pos) >
+                    l_settings.min_dist):
+                    # Try inverting the RBF matrix to see if
+                    # nonsingularity is restored
+                    try:
+                        Amat = ru.get_rbf_matrix(l_settings, n, k + 1,
+                                                 node_pos + [next_p])
+                        Amatinv = ru.get_matrix_inverse(l_settings, Amat)
+                        restoration_done = True
+                    except np.linalg.LinAlgError:
+                        cons_restoration += 1
+                else:
+                    cons_restoration += 1
+            if (not restoration_done):
+                print('Restoration phase keeps failing. Abort.',
+                      file = output_stream)
+                # This will force the optimization process to return
+                break
+            iteration_id = 'Restoration'
             
         elif (current_step == local_search_step):
             # Local search: compute the minimum of the RBF.
@@ -560,64 +667,6 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
                 fmin_cycle_start = fmin
             else:
                 num_stalled_cycles += 1
-
-        # Check if we should restart. We only restart if the initial
-        # sampling strategy is random, otherwise it makes little sense.
-        if (num_cons_discarded >= l_settings.max_consecutive_discarded or 
-            (num_stalled_cycles >= l_settings.max_stalled_cycles and
-             evalcount + n + 1 < l_settings.max_evaluations and
-             l_settings.init_strategy != 'all_corners' and
-             l_settings.init_strategy != 'lower_corners')):
-            print('Restart at iteration {:3d}'.format(itercount),
-                  file = output_stream)
-            output_stream.flush()
-            # We update the number of fast restarts here, so that if
-            # we hit the limit on fast restarts, we can evaluate
-            # points in accurate mode after restarting (even if
-            # current_mode is updated in a subsequent block of code)
-            num_fast_restarts += (1 if current_mode == 'fast' else 0.0)
-            # Store the current number of nodes
-            all_node_pos_size_at_restart = len(all_node_pos)
-            # Compute a new set of starting points
-            node_pos = ru.initialize_nodes(l_settings, var_lower, var_upper, 
-                                           integer_vars)
-            if (current_mode == 'accurate' or
-                num_fast_restarts > l_settings.max_fast_restarts or
-                fast_evalcount + n + 1 >= l_settings.max_fast_evaluations):
-                node_val = [objfun(point) for point in node_pos]
-                evalcount += len(node_val)
-            else:
-                node_val = [objfun_fast(point) for point in node_pos]
-                fast_evalcount += len(node_val)
-            node_is_fast = [current_mode == 'fast' for val in node_val]
-            # Print the initialization points
-            for (i, val) in enumerate(node_val):
-                min_dist = ru.get_min_distance(node_pos[i], node_pos[:i] + 
-                                               node_pos[(i+1):])
-                print('Iteration {:3d}'.format(itercount) + 
-                      ' {:16s}'.format('Initialization') +
-                      ': objval{:s}'.format('~' if node_is_fast[i] else ' ') +
-                      ' {:16.6f}'.format(val) +
-                      ' min_dist {:9.4f}'.format(min_dist) +
-                      ' gap {:8.2f}'.format(gap*100),
-                      file = output_stream)
-            all_node_pos.extend(node_pos)
-            all_node_val.extend(node_val)
-            all_node_is_fast.extend(node_is_fast)
-            # Rescale the domain of the function
-            node_pos = [ru.transform_domain(l_settings, var_lower,
-                                            var_upper, point)
-                        for point in node_pos]            
-            (l_lower, l_upper) = ru.transform_domain_bounds(l_settings,
-                                                            var_lower,
-                                                            var_upper)
-            # Update all counters and values to restart properly
-            fmin_index = node_val.index(min(node_val))
-            fmin = node_val[fmin_index]
-            fmax = max(node_val)
-            fmin_cycle_start = fmin
-            num_stalled_cycles = 0
-            num_cons_discarded = 0
 
         # Check if we should switch to the second phase of two-phase
         # optimization. The conditions for switching are:

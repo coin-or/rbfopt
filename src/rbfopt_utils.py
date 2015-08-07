@@ -610,6 +610,11 @@ def get_matrix_inverse(settings, Amat):
     -------
     numpy.matrix
         The matrix Amat^{-1}.
+
+    Raises
+    ------
+    numpy.linalg.LinAlgError
+        If the matrix cannot be inverted for numerical reasons.
     """
     assert(isinstance(settings, RbfSettings))
     assert(isinstance(Amat, np.matrix))
@@ -619,9 +624,8 @@ def get_matrix_inverse(settings, Amat):
     except np.linalg.LinAlgError as e:
         print('Exception raised trying to invert the RBF matrix',
               file = sys.stderr)
-        print('Exception details:', file = sys.stderr)
         print(e, file = sys.stderr)
-        exit()
+        raise e
 
     # Zero out tiny elements of the inverse -- this is potentially
     # dangerous as the product between Amat and Amatinv may not be the

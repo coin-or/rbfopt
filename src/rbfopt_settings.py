@@ -134,6 +134,10 @@ class RbfSettings:
         Maximum number of discarded points before a restart is
         triggered. Default 15.
 
+    max_consecutive_restoration : int
+        Maximum number of consecutive nonsingularity restoration
+        phases before the algorithm fails. Default 15.
+
     fast_objfun_rel_error : float
         An estimate of the relative error by which the fast version of
         the objective function is affected. Default 0.0.
@@ -216,6 +220,7 @@ class RbfSettings:
                  max_stalled_cycles = 6,
                  max_stalled_objfun_impr = 0.05,
                  max_consecutive_discarded = 15,
+                 max_consecutive_restoration = 15,
                  fast_objfun_rel_error = 0.0,
                  fast_objfun_abs_error = 0.0,
                  max_fast_restarts = 2,
@@ -249,6 +254,7 @@ class RbfSettings:
         self.max_stalled_cycles = max_stalled_cycles
         self.max_stalled_objfun_impr = max_stalled_objfun_impr
         self.max_consecutive_discarded = max_consecutive_discarded
+        self.max_consecutive_restoration = max_consecutive_restoration
         self.fast_objfun_rel_error = fast_objfun_rel_error
         self.fast_objfun_abs_error = fast_objfun_abs_error
         self.max_fast_restarts = max_fast_restarts
