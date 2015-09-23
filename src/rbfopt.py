@@ -65,7 +65,7 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
         algorithm. This must be of length at least dimension + 1, if
         provided.
 
-    init_node_val: List[float] or None
+    init_node_val : List[float] or None
         Function values corresponding to the points given in
         init_node_pos. Should be None if the previous argument is
         None.
@@ -303,6 +303,7 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             fmin_cycle_start = fmin
             num_stalled_cycles = 0
             num_cons_discarded = 0
+            is_best_fast = node_is_fast[fmin_index]
 
         # Number of nodes at current iteration
         k = len(node_pos)
@@ -375,6 +376,8 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             current_step = restoration_step
             node_val.pop()
             node_pos.pop()
+            if (node_is_fast.pop()):
+                fast_node_index.pop()
             (scaled_node_val, scaled_fmin, scaled_fmax,
              node_err_bounds) = ru.transform_function_values(l_settings,
                                                              node_val,
@@ -603,14 +606,24 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             else: 
                 next_val = objfun_fast(next_p_orig)
                 fast_evalcount += 1
-                # Check if the point could be optimal in accurate
-                # mode. In that case, perform an accurate evaluation
-                # immediately. Otherwise, add to the list of fast
-                # evaluations.
-                if ((next_val + 
-                     ru.get_fast_error_bounds(l_settings, next_val)[0]) <=
-                    (l_settings.target_objval + 
-                     l_settings.eps_opt*abs(l_settings.target_objval))):
+                # Check if the point improves over existing points, or
+                # if it could be optimal according to tolerances. In
+                # this case, perform a double evaluation.
+                best_possible = fmin + (ru.get_fast_error_bounds(l_settings,
+                                                                 fmin)[0]
+                                        if is_best_fast else 0.0)
+                if ((next_val <= best_possible -
+                     l_settings.eps_impr*max(1.0, abs(best_possible))) or
+                    (next_val <= l_settings.target_objval +
+                     l_settings.eps_opt*abs(l_settings.target_objval) -
+                     ru.get_fast_error_bounds(l_settings, next_val)[0])):
+                    print('Iteration {:3d}'.format(itercount) + 
+                          ' {:16s}'.format(iteration_id) + ': objval~' +
+                          ' {:16.6f}'.format(next_val) +
+                          ' min_dist {:9.4f}'.format(min_dist) +
+                          ' gap {:8.2f}'.format(gap*100),
+                          file = output_stream)
+                    output_stream.flush()
                     next_val = objfun(next_p_orig)
                     evalcount += 1
                     node_is_fast.append(False)
