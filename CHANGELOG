@@ -1,3 +1,10 @@
+2015-10-26  Giacomo Nannicini  <nannicini@sutd.edu.sg>
+	* README: Updated installation instructions for Windows systems.
+
+2015-09-23  Giacomo Nannicini  <nannicini@sutd.edu.sg>
+	* rbfopt.py (rbf_optimize): Minor bug fixing and performance
+	improvements in handling the noisy oracle.
+
 2015-07-29  Giacomo Nannicini  <nannicini@sutd.edu.sg>
 	* rbfopt_model_selection.py: Introduced stand-alone module for
 	model selection. Increased efficiency of cross-validation via LPs
