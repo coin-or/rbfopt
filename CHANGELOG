@@ -1,3 +1,13 @@
+2015-11-21  Giacomo Nannicini  <nannicini@sutd.edu.sg>
+	* rbfopt.py (rbf_optimize): Implementation of Metric SRSM method.
+	* rbfopt_utils.py: Performance improvements. Bulk version of some
+	utility functions (bulk_evaluate_rbf, bulk_get_min_distance).
+	* rbfopt_aux_problems.py (maximize_one_over_mu): Renamed to
+	pure_global_search.
+	* rbfopt_aux_problems.py (maximize_h_k): Renamed to global_search.
+	* rbfopt_aux_problems.py (MetricSRSMObj): New class to support the
+	Metric SRSM method.
+
 2015-10-26  Giacomo Nannicini  <nannicini@sutd.edu.sg>
 	* README: Updated installation instructions for Windows systems.
 
@@ -16,8 +26,8 @@
 	* rbfopt_cl_interface.py (rbfopt_cl_interface): Switched to
 	dictionary to pass algorithmic parameters.
 	* test_rbfopt: Switched to dictionary to pass algorithmic
-	parameters.	
-	Version 1.1.0 released. 
+	parameters.
+	Version 1.1.0 released.
 
 2015-07-17  Giacomo Nannicini  <nannicini@sutd.edu.sg>
 	Switch to Pyomo 4. The relevant files have been updated to use the
