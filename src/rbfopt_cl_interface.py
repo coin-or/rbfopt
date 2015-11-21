@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import sys
 import argparse
+import ast
 import rbfopt
 import black_box as bb
 from rbfopt_settings import RbfSettings
@@ -55,7 +56,7 @@ def register_options(parser):
         elif (param_type[i] == 'int'):
             type_fun = int
         elif (param_type[i] == 'bool'):
-            type_fun = bool
+            type_fun = ast.literal_eval
         else:
             type_fun = str
         parser.add_argument('--' + param_name[i], action = 'store',

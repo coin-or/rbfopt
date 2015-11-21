@@ -18,10 +18,12 @@ import math
 import random
 import itertools
 import numpy as np
+import scipy.spatial as ss
 import rbfopt_config as config
 import rbfopt_aux_problems as aux
 import pyDOE
 from rbfopt_settings import RbfSettings
+
 
 def get_rbf_function(settings):
     """Return a radial basis function.
@@ -491,10 +493,8 @@ def get_min_distance(point, other_points):
     assert(point is not None)
     assert(other_points is not None)
 
-    min_dist = float('inf')
-    for other_point in other_points:
-        min_dist = min(min_dist, distance(point, other_point))
-    return min_dist
+    distances = map(lambda x : distance(x, point), other_points)
+    return min(distances)
 
 # -- end function
 
@@ -521,14 +521,46 @@ def get_min_distance_index(point, other_points):
     assert(point is not None)
     assert(other_points is not None)
 
-    min_dist = float('inf')
-    index = len(other_points)
-    for (i, other_point) in enumerate(other_points):
-        dist = distance(point, other_point)
-        if (dist < min_dist):
-            min_dist = dist
-            index = i
-    return index
+    distances = map(lambda x : distance(x, point), other_points)
+    return distances.index(min(distances))
+
+# -- end function
+
+def bulk_get_min_distance(points, other_points):
+    """Get the minimum distance between two sets of points.
+
+    Compute the minimum distance of each point in the first set to the
+    points in the second set. This is faster than using
+    get_min_distance repeatedly, for large sets of points.
+
+    Parameters
+    ----------
+    point : List[List[float]]
+        The points in R^n that we compute the distances from.
+
+    other_points : List[List[float]]
+        The list of points we want to compute the distances to.
+
+    Returns
+    -------
+    List[float]
+        Minimum distance between each point in points and the
+        other_points.
+
+    See also
+    --------
+    get_min_distance()
+    """
+    assert(points)
+    assert(other_points)
+    assert(len(points[0]) == len(other_points[0]))
+
+    # Convert to numpy
+    point_mat = np.array(points)
+    other_points_mat = np.array(other_points)
+    # Create distance matrix
+    dist_mat = ss.distance.cdist(point_mat, other_points_mat)
+    return (np.amin(dist_mat, 1)).tolist()
 
 # -- end function
         
@@ -737,6 +769,87 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
                       for i in range(k))
     part2 = math.fsum(rbf_h[i]*point[i] for i in range(p-1))
     return math.fsum([part1, part2, rbf_h[-1] if (p > 0) else 0.0])
+
+# -- end function
+
+def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
+                      compute_min_dist = False):
+    """Evaluate the RBF interpolant at all points in a given list.
+
+    Evaluate the RBF interpolant at all points in a given list. This
+    version uses numpy and should be faster than individually
+    evaluating the RBF at each single point, provided that the list of
+    points is large enough. It also computes the minimum distance of
+    each point from the interpolation nodes, if requested (since this
+    comes almost for free).
+
+    Parameters
+    ----------
+    settings : rbfopt_settings.RbfSettings.
+        Global and algorithmic settings.
+
+    points : List[List[float]]
+        The list of points in R^n where we want to evaluate the
+        interpolant.
+    
+    n : int
+        Dimension of the problem, i.e. the size of the space.
+
+    k : int
+        Number of interpolation nodes.
+
+    node_pos : List[List[float]]
+        List of coordinates of the interpolation points. 
+
+    rbf_lambda : List[float]
+        The lambda coefficients of the RBF interpolant, corresponding
+        to the radial basis functions. List of dimension k.
+
+    rbf_h : List[float]
+        The h coefficients of the RBF interpolant, corresponding to he
+        polynomial. List of dimension given by get_size_P_matrix().
+
+    compute_min_dist : bool
+        Compute and return minimum distance of points to the
+        interpolation nodes.
+
+    Returns
+    -------
+    List[float] or (List[float], List[float])
+        Value of the RBF interpolant at each point; if
+        compute_min_dist is True, additionally returns the minimum
+        distance of each point from the interpolation nodes.
+    """
+    assert(points)
+    assert(len(rbf_lambda)==k)
+    assert(len(node_pos)==k)
+    assert(isinstance(settings, RbfSettings))
+    p = get_size_P_matrix(settings, n)
+    assert(len(rbf_h)==p)
+
+    rbf_function = get_rbf_function(settings)
+    # Formula:
+    # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
+
+    # Convert to numpy
+    point_mat = np.array(points)
+    node_mat = np.array(node_pos)
+    # Create distance matrix
+    dist_mat = ss.distance.cdist(point_mat, node_mat)
+    # Evaluate radial basis function on each distance
+    rbf_vec = map(rbf_function, dist_mat.ravel())
+    rbf_vec_mat = np.reshape(np.array(rbf_vec), (len(point_mat), -1))
+    part1 = np.dot(rbf_vec_mat, rbf_lambda)
+    if (get_degree_polynomial(settings) == 1):
+        part2 = np.dot(point_mat, rbf_h[:-1])
+    else:
+        part2 = np.zeros(len(point_mat))
+    part3 = rbf_h[-1] if (p > 0) else 0.0
+    if (compute_min_dist):
+        return ((part1 + part2 + part3).tolist(), 
+                (np.amin(dist_mat, 1)).tolist())
+    else:
+        return (part1 + part2 + part3).tolist()
 
 # -- end function
 

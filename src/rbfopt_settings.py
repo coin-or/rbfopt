@@ -76,12 +76,8 @@ class RbfSettings:
         becoming singular. Default 1.0e-5.
 
     do_infstep : bool
-        Perform the InfStep. Default False.
-
-    targetval_clipping : bool
-        Clip target value selection based on periodically eliminating
-        some of the largest function values, as proposed by Gutmann
-        (2001) and later Regis and Shoemaker (2007). Default True.
+        Perform a pure global search in every optimization
+        loop. Default False.
 
     num_global_searches : int
         Number of steps in the global search phase. Default 5.
@@ -159,6 +155,22 @@ class RbfSettings:
         Solver to compute leave-one-out errors in cross validation for
         model selection. Choice of 'clp', 'cplex', 'numpy'. Default
         'numpy'.
+
+    algorithm : string
+        Optimization algorithm used. Choice of 'Gutmann' and 'MSRSM',
+        see References Gutmann (2001) and Regis and Shoemaker
+        (2007). Default 'Gutmann'.
+
+    targetval_clipping : bool
+        Clip target value selection based on periodically eliminating
+        some of the largest function values, as proposed by Gutmann
+        (2001) and later Regis and Shoemaker (2007). Used by Gutmann
+        RBF method only. Default True.
+
+    num_samples_aux_problems : int
+        Multiplier for the dimension of the problem to determine the
+        number of samples used by the Metric SRSM algorithm at every
+        iteration. Default 1000.
     
     print_solver_output : bool
         Print the output of the solvers to screen? Note that this
@@ -183,6 +195,8 @@ class RbfSettings:
         Allowed dynamism clipping strategies.
     _allowed_model_selection_solver : Dict[str]
         Allowed model selection method.
+    _allowed_algorithm : Dict[str]
+        Allowed algorithms.
     """
 
     # Allowed values for multiple choice options
@@ -194,6 +208,7 @@ class RbfSettings:
     _allowed_domain_scaling = {'off', 'affine', 'auto'}
     _allowed_dynamism_clipping = {'off', 'median', 'clip_at_dyn', 'auto'}
     _allowed_model_selection_solver = {'clp', 'cplex', 'numpy'}
+    _allowed_algorithm = {'Gutmann', 'MSRSM'}
 
     def __init__(self,
                  rbf = 'thin_plate_spline',
@@ -207,7 +222,6 @@ class RbfSettings:
                  eps_impr = 1.0e-3,
                  min_dist = 1.0e-5,
                  do_infstep = False,
-                 targetval_clipping = True,
                  num_global_searches = 5,
                  max_consecutive_local_searches = 1,
                  init_strategy = 'lhd_maximin',
@@ -226,6 +240,9 @@ class RbfSettings:
                  max_fast_restarts = 2,
                  max_fast_iterations = 100,
                  model_selection_solver = 'numpy',
+                 algorithm = 'Gutmann',
+                 targetval_clipping = True,
+                 num_samples_aux_problems = 1000,                 
                  print_solver_output = False,
                  rand_seed = 937627691):
         """Class constructor with default values. 
@@ -241,7 +258,6 @@ class RbfSettings:
         self.eps_impr = eps_impr
         self.min_dist = min_dist
         self.do_infstep = do_infstep
-        self.targetval_clipping = targetval_clipping
         self.num_global_searches = num_global_searches
         self.max_consecutive_local_searches = max_consecutive_local_searches
         self.init_strategy = init_strategy
@@ -260,6 +276,9 @@ class RbfSettings:
         self.max_fast_restarts = max_fast_restarts
         self.max_fast_iterations = max_fast_iterations
         self.model_selection_solver = model_selection_solver
+        self.algorithm = algorithm
+        self.targetval_clipping = targetval_clipping
+        self.num_samples_aux_problems = num_samples_aux_problems
         self.print_solver_output = print_solver_output
         self.rand_seed = rand_seed
 
@@ -285,6 +304,9 @@ class RbfSettings:
             raise ValueError('settings.model_selection_solver = ' + 
                              str(self.model_selection_solver) + 
                              ' not supported')
+        if (self.algorithm not in RbfSettings._allowed_algorithm):
+            raise ValueError('settings.algorithm = ' + 
+                             str(self.algorithm) + ' not supported')
     # -- end function
 
     @classmethod

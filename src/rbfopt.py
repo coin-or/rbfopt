@@ -395,9 +395,9 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
 
         if (current_step == inf_step):
             # Infstep: explore the parameter space
-            next_p = aux.maximize_one_over_mu(l_settings, n, k, l_lower,
-                                              l_upper, node_pos, Amatinv,
-                                              integer_vars)
+            next_p = aux.pure_global_search(l_settings, n, k, l_lower,
+                                            l_upper, node_pos, Amatinv,
+                                            integer_vars)
             iteration_id = 'InfStep'
 
         elif (current_step == restoration_step):
@@ -456,6 +456,7 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
                 # search problem, rescaling the search box to enforce
                 # some sort of local search
                 target_val = scaled_fmin - 0.01*max(1.0, abs(scaled_fmin))
+                dist_weight = 0.05
                 local_varl = [max(l_lower[i], min_rbf[i] -
                                   l_settings.local_search_box_scaling * 
                                   0.33 * (l_upper[i] - l_lower[i]))
@@ -466,49 +467,66 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
                               for i in range(n)]
                 ru.round_integer_bounds(local_varl, local_varu,
                                         integer_vars)
-                next_p  = aux.maximize_h_k(l_settings, n, k, local_varl,
-                                           local_varu, node_pos, rbf_l, 
-                                           rbf_h, Amatinv, target_val,
-                                           integer_vars)
+                next_p  = aux.global_search(l_settings, n, k, local_varl,
+                                            local_varu, node_pos, rbf_l, 
+                                            rbf_h, Amatinv, target_val,
+                                            dist_weight, integer_vars)
                 iteration_id = 'AdjLocalStep'
 
         else:
             # Global search: compromise between finding a good value
             # of the objective function, and improving the model.
-            # Choose target value for the objective function. To do
-            # so, we need the minimum of the RBF interpolant.
-            min_rbf = aux.minimize_rbf(l_settings, n, k, l_lower,
-                                       l_upper, node_pos,
-                                       rbf_l, rbf_h, integer_vars)
-            if (min_rbf is not None):
-                min_rbf_val = ru.evaluate_rbf(l_settings, min_rbf, n, k, 
-                                              node_pos, rbf_l, rbf_h)
-            # If the RBF cannot me minimized, or if the minimum is
-            # larger than the node with smallest value, just take the
-            # node with the smallest value.
-            if (min_rbf is None or 
-                min_rbf_val >= scaled_fmin + l_settings.eps_zero):
+            if (l_settings.algorithm == 'Gutmann'):
+                # If we use Gutmann's algorithm, we need the minimum
+                # of the RBF interpolant to choose the target value.
+                min_rbf = aux.minimize_rbf(l_settings, n, k, l_lower,
+                                           l_upper, node_pos, rbf_l,
+                                           rbf_h, integer_vars)
+                if (min_rbf is not None):
+                    min_rbf_val = ru.evaluate_rbf(l_settings, min_rbf, n, k, 
+                                                  node_pos, rbf_l, rbf_h)
+                # If the RBF cannot me minimized, or if the minimum is
+                # larger than the node with smallest value, just take the
+                # node with the smallest value.
+                if (min_rbf is None or 
+                    min_rbf_val >= scaled_fmin + l_settings.eps_zero):
+                    min_rbf = node_pos[fmin_index]
+                    min_rbf_val = scaled_fmin
+            else:
+                # For the Metric SRSM method, pick the node with the
+                # smallest value as minimum of the RBF.
                 min_rbf = node_pos[fmin_index]
-                min_rbf_val = scaled_fmin
-            # The scaling factor is 1 - h/kappa, where h goes from
-            # 0 to kappa-1 over the course of one global search
-            # cycle, and kappa is the number of global searches.
-            scaling = (1 - ((current_step - 1) /
-                            l_settings.num_global_searches))**2
+                min_rbf_val = fmin
+            
             # Compute the function value used to determine the target
             # value. This is given by the sorted value in position
             # sigma_n, where sigma_n is a function described in the
             # paper by Gutmann (2001). If clipping is disabled, we
             # simply take the largest function value.
             if (l_settings.targetval_clipping):
-                local_fmax = ru.get_fmax_current_iter(l_settings, n, k, 
-                                                      current_step, 
+                local_fmax = ru.get_fmax_current_iter(l_settings, n, k,
+                                                      current_step,
                                                       scaled_node_val)
             else:
                 local_fmax = fmax
 
+            # For Gutmann's RBF method, the scaling factor is 1 -
+            # h/kappa, where h goes from 0 to kappa-1 over the course
+            # of one global search cycle, and kappa is the number of
+            # global searches.
+            scaling = (1 - ((current_step - 1) /
+                            l_settings.num_global_searches))**2
             target_val = (min_rbf_val - 
                           scaling * (local_fmax - min_rbf_val))
+            # For Metric SRSM, The weighting factor for the distance
+            # is is (h+1)/kappa, where h goes from 0 to kappa-1 over
+            # the course of one global search cycle, and kappa is the
+            # number of global searches. If dist_weight would be 0, we
+            # set it to 0.05.
+            dist_weight = (1 - current_step / l_settings.num_global_searches
+                           if current_step < l_settings.num_global_searches
+                           else 0.05)
+
 
             # If the global search is almost a local search, we
             # restrict the search to a box following Regis and
@@ -531,10 +549,10 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
                 local_varl = l_lower
                 local_varu = l_upper
 
-            next_p  = aux.maximize_h_k(l_settings, n, k, local_varl,
-                                       local_varu, node_pos, rbf_l,
-                                       rbf_h, Amatinv, target_val,
-                                       integer_vars)
+            next_p  = aux.global_search(l_settings, n, k, local_varl,
+                                        local_varu, node_pos, rbf_l,
+                                        rbf_h, Amatinv, target_val,
+                                        dist_weight, integer_vars)
             iteration_id = 'GlobalStep'
 
         # -- end if
@@ -592,6 +610,7 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             num_cons_discarded += 1
             print('Iteration {:3d}'.format(itercount) + ' Discarded',
                   file = output_stream)
+            print('Min dist: {:f}'.format(ru.get_min_distance(next_p, node_pos)))
             output_stream.flush()
         else:
             min_dist = ru.get_min_distance(next_p, node_pos)
