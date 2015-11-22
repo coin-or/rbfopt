@@ -610,7 +610,6 @@ def rbf_optimize(settings, dimension, var_lower, var_upper, objfun,
             num_cons_discarded += 1
             print('Iteration {:3d}'.format(itercount) + ' Discarded',
                   file = output_stream)
-            print('Min dist: {:f}'.format(ru.get_min_distance(next_p, node_pos)))
             output_stream.flush()
         else:
             min_dist = ru.get_min_distance(next_p, node_pos)
