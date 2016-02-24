@@ -1,11 +1,13 @@
 """Optimize given test function as a black box.
 
 This module contains the routines used to construct a black-box object
-using the standard test functions of the module `test_functions`
+using the standard test functions of the module `test_functions`. It
+can be used as an interface to test RBFOpt.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
 Research partially supported by SUTD-MIT International Design Center.
+
 """
 
 from __future__ import print_function
@@ -15,6 +17,7 @@ from __future__ import absolute_import
 import sys
 import argparse
 import random
+import test_rbfopt_env
 import rbfopt
 import rbfopt_cl_interface
 import test_functions

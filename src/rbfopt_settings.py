@@ -227,7 +227,7 @@ class RbfSettings:
                  init_strategy = 'lhd_maximin',
                  function_scaling = 'auto',
                  log_scaling_threshold = 1.0e6,
-                 domain_scaling = 'off',
+                 domain_scaling = 'auto',
                  dynamism_clipping = 'auto',
                  dynamism_threshold = 1.0e3,
                  local_search_box_scaling = 0.5,

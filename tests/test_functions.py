@@ -1,13 +1,10 @@
-#######################################################################
-#  File:      test_functions.py
-#  Author(s): Giacomo Nannicini
-#             Singapore University of Technology and Design
-#             nannicini@sutd.edu.sg
-#  Date:      02/09/14
-#
-#  This file is NOT part of RBFOpt and is NOT protected by copyright.
-#  It implements a number of already known mathematical functions.
-#######################################################################
+"""Suite of global optimization test functions.
+
+This module contains several continuous and mixed-integer nonlinear
+functions that can be used as test cases for RBFOpt. These functions
+are not protected by copyright, and neither is this file.
+
+"""
 
 from __future__ import print_function
 from __future__ import division
@@ -560,14 +557,17 @@ class schoen_6_1:
         numerator = 0.0
         denominator = 0.0
 
+        prod = 1.0
+        all_distances = list()
         for i in range(50):
-            prod = 1.0
-            for j in range(50):
-                if (i != j):
-                    prod *= math.fsum([ (x[k] - z[j][k])**2
-                                        for k in range(6) ])
-            numerator += f[i]*prod
-            denominator += prod
+            dist = math.fsum([ (x[k] - z[i][k])**2
+                               for k in range(6) ])
+            prod *= dist
+            all_distances.append(dist)
+
+        for i in range(50):
+            numerator += f[i]*prod/all_distances[i]
+            denominator += prod/all_distances[i]
         
         value = numerator/denominator
         return(value)
@@ -653,15 +653,18 @@ class schoen_6_2:
         numerator = 0.0
         denominator = 0.0
 
+        prod = 1.0
+        all_distances = list()
         for i in range(50):
-            prod = 1.0
-            for j in range(50):
-                if (i != j):
-                    prod *= math.fsum([ (x[k] - z[j][k])**2
-                                        for k in range(6) ])
-                    numerator += f[i]*prod
-                    denominator += prod
-                    
+            dist = math.fsum([ (x[k] - z[i][k])**2
+                               for k in range(6) ])
+            prod *= dist
+            all_distances.append(dist)
+
+        for i in range(50):
+            numerator += f[i]*prod/all_distances[i]
+            denominator += prod/all_distances[i]
+        
         value = numerator/denominator
         return(value)
 
@@ -796,14 +799,17 @@ class schoen_10_1:
         numerator = 0.0
         denominator = 0.0
 
+        prod = 1.0
+        all_distances = list()
         for i in range(50):
-            prod = 1.0
-            for j in range(50):
-                if (i != j):
-                    prod *= math.fsum([ (x[k] - z[j][k])**2
-                                        for k in range(10) ])
-            numerator += f[i]*prod
-            denominator += prod
+            dist = math.fsum([ (x[k] - z[i][k])**2
+                               for k in range(6) ])
+            prod *= dist
+            all_distances.append(dist)
+
+        for i in range(50):
+            numerator += f[i]*prod/all_distances[i]
+            denominator += prod/all_distances[i]
         
         value = numerator/denominator
         return(value)
@@ -939,14 +945,17 @@ class schoen_10_2:
         numerator = 0.0
         denominator = 0.0
 
+        prod = 1.0
+        all_distances = list()
         for i in range(50):
-            prod = 1.0
-            for j in range(50):
-                if (i != j):
-                    prod *= math.fsum([ (x[k] - z[j][k])**2
-                                        for k in range(10) ])
-            numerator += f[i]*prod
-            denominator += prod
+            dist = math.fsum([ (x[k] - z[i][k])**2
+                               for k in range(6) ])
+            prod *= dist
+            all_distances.append(dist)
+
+        for i in range(50):
+            numerator += f[i]*prod/all_distances[i]
+            denominator += prod/all_distances[i]
         
         value = numerator/denominator
         return(value)

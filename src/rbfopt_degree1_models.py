@@ -258,7 +258,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
                                           rule=_udef_cubic_constraint_rule)
     elif (settings.rbf == 'thin_plate_spline'):
         model.UdefConstraint = Constraint(model.K, 
-                                          rule=u_def_thinplate_constraint_rule)
+                                          rule=_udef_thinplate_constraint_rule)
     model.PidefConstraint = Constraint(model.N, rule=_pidef_constraint_rule)
     model.NonhomoConstraint = Constraint(model.Qlast, 
                                          rule=_nonhomo_constraint_rule)

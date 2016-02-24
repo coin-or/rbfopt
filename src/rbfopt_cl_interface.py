@@ -103,7 +103,7 @@ def rbfopt_cl_interface(args, black_box):
         try:
             output_stream = open(args['output_stream'], 'w')
         except IOError as e:
-            print('Exception in opening log file', file = sys.stderr)
+            print('Error while opening log file', file = sys.stderr)
             print(e, file = sys.stderr)
 
     # Make a copy of parameters and adjust them, deleting keys

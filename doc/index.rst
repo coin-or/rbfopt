@@ -21,8 +21,6 @@ Contents:
    rbfopt_model_selection
    rbfopt_settings
    rbfopt_utils
-   test_functions
-   test_rbfopt
 
 
 Indices and tables

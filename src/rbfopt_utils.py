@@ -227,7 +227,7 @@ def get_random_corners(var_lower, var_upper):
     while (len(node_pos) < n+1):
         point = [var_lower[i] if (random.random() <= 0.5) else var_upper[i]
                  for i in range(n)]
-        if (get_min_distance(point, node_pos) > 0):
+        if (not node_pos or get_min_distance(point, node_pos) > 0):
             node_pos.append(point)
 
     return node_pos
@@ -297,7 +297,7 @@ def get_lhd_corr_points(var_lower, var_upper):
         # of the interval as starting points
         return [var_lower, var_upper]
     # Otherwise, generate the LHD
-    lhd = pyDOE.lhs(n, n+1, 'correlation')
+    lhd = pyDOE.lhs(n, n+1, 'corr')
     node_pos = [[var_lower[i] + (var_upper[i] - var_lower[i])*lhd_point[i] 
                  for i in range(n)] for lhd_point in lhd]
     return node_pos
@@ -389,7 +389,7 @@ def round_integer_vars(point, integer_vars):
     integer_vars : List[int] or None
         A list of indices of integer variables, or None.
     """
-    if (integer_vars is not None):
+    if (integer_vars is not None and integer_vars):
         assert(max(integer_vars)<len(point))
         for i in integer_vars:
             point[i] = round(point[i])
@@ -416,7 +416,7 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
         variables. If None or empty list, all variables are assumed to
         be continuous.
     """
-    if (integer_vars is not None):
+    if (integer_vars is not None and integer_vars):
         assert(len(var_lower)==len(var_upper))
         assert(max(integer_vars)<len(var_lower))
         for i in integer_vars:
@@ -490,8 +490,8 @@ def get_min_distance(point, other_points):
     float
         Minimum distance between point and the other_points.
     """
-    assert(point is not None)
-    assert(other_points is not None)
+    assert(point is not None and point)
+    assert(other_points is not None and other_points)
 
     distances = map(lambda x : distance(x, point), other_points)
     return min(distances)
@@ -518,8 +518,8 @@ def get_min_distance_index(point, other_points):
         The index of the point in other_points that achieved minimum
         distance from point.
     """
-    assert(point is not None)
-    assert(other_points is not None)
+    assert(point is not None and point)
+    assert(other_points is not None and other_points)
 
     distances = map(lambda x : distance(x, point), other_points)
     return distances.index(min(distances))
@@ -936,9 +936,11 @@ def transform_function_values(settings, node_val, fmin, fmax,
             clip_val = [min(val, median) for val in node_val]
             fmax = median
         elif (settings.dynamism_clipping == 'clip_at_dyn'):
-            clip_val = [min(val, settings.dynamism_threshold*abs(fmin))
-                               for val in node_val]
-            fmax = settings.dynamism_threshold*abs(fmin)
+            # We should not multiply by abs(fmin) if it is too small
+            mult = abs(fmin) if (abs(fmin) > settings.eps_zero) else 1.0
+            clip_val = [min(val, settings.dynamism_threshold*mult)
+                        for val in node_val]
+            fmax = settings.dynamism_threshold*mult
     else:
         clip_val = node_val
 
@@ -952,7 +954,8 @@ def transform_function_values(settings, node_val, fmin, fmax,
         # zero. This may happen if the surface is "flat" after median
         # clipping.
         denom = (fmax - fmin) if (fmax - fmin > settings.eps_zero) else 1.0
-        return ([(val - fmin)/denom for val in clip_val], 0.0, 1.0,
+        return ([(val - fmin)/denom for val in clip_val], 0.0, 
+                1.0 if (fmax - fmin > settings.eps_zero) else 0.0,
                 [tuple([val/denom for val in 
                         get_fast_error_bounds(settings, clip_val[i])])
                  for i in fast_node_index])
@@ -1020,7 +1023,9 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
             return [point[i]*(var_upper[i] - var_lower[i]) + var_lower[i]
                     for i in range(len(point))]
         else:
-            return [(point[i] - var_lower[i])/(var_upper[i] - var_lower[i])
+            return [(point[i] - var_lower[i]) /
+                    ((var_upper[i] - var_lower[i]) 
+                     if (var_upper[i] > var_lower[i]) else 1.0)
                     for i in range(len(point))]
     else:
         raise ValueError('Domain scaling "' + settings.domain_scaling + 
@@ -1134,12 +1139,14 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
     """
     assert(isinstance(settings, RbfSettings))
     assert(k == len(node_val))
+    assert(k >= 1)
     assert(current_step >= 1)
-    sorted_node_val = sorted(node_val)
     num_initial_points = (2**n if settings.init_strategy == 'all_corners'
                            else n + 1)
+    assert(k >= num_initial_points)
+    sorted_node_val = sorted(node_val)
     s_n = get_sigma_n(k, current_step, settings.num_global_searches,
-                          num_initial_points)
+                      num_initial_points)
     return sorted_node_val[s_n]
 
 # -- end function

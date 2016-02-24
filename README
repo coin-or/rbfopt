@@ -2,11 +2,12 @@
 #  Author(s): Giacomo Nannicini
 #             Singapore University of Technology and Design
 #             nannicini@sutd.edu.sg
-#  Last edit: 07/17/29
+#  Last edit: 02/04/16
 #
 #  (C) Copyright Singapore University of Technology and Design 2015.
+#  (C) Copyright International Business Machines Corporation 2016.
 #  You should have received a copy of the license with this code.
-#  Research supported by the SUTD-MIT International Design Center.
+#  Research partially supported by SUTD-MIT International Design Center.
 
 This software is released under the Revised BSD License. By using
 this software, you are implicitly accepting the terms of the license.
@@ -47,11 +48,29 @@ rbfopt_settings.py:
 	Global and algorithmic settings.
 rbfopt_utils.py:
 	Utility routines.
-test_functions.py:
-	Global optimization test functions.
-test_rbfopt.py:
+
+
+Contents of the tests/ directory:
+
+rbfopt_test_interface.py:
 	Executable file to test the library on a standard global
 	optimization test set. 
+test_functions.py:
+	Global optimization test functions.
+test_rbfopt_aux_problems.py:
+	Testing module for rbfopt_aux_problems.py.
+test_rbfopt_degree0_models.py:
+	Testing module for rbfopt_degree0_models.py.
+test_rbfopt_degree1_models.py:
+	Testing module for rbfopt_degree1_models.py.
+test_rbfopt_env.py:
+	Environment variables for testing environment.
+test_rbfopt.py:
+	Testing module for rbfopt.py.
+test_rbfopt_settings.py:
+	Testing module for rbfopt_settings.py.
+test_rbfopt_utils.py
+	Testing module for rbfopt_utils.pu.
 
 Contents of the doc/ directory:
 
@@ -72,6 +91,7 @@ This package requires the following software:
 
 Python 2.7.* (recommended Python 2.7.6)
 NumPy version >= 1.8.1
+SciPy version >= 0.13.3
 Pyomo version 4.1.10509
 pyDOE version >= 0.3.5
 
@@ -80,7 +100,7 @@ work with earlier version and should work with subsequent version, if
 they are backward compatible.
 
 Note that Python 3.* is not compatible with Python 2.7. While our
-library is Python 3.3 compliant and consistently uses "from __future__
+library is Python 3 compliant and consistently uses "from __future__
 import [...]", the code has not been tested on Python 3 yet. We
 recommend using Python 2.7.
 
@@ -94,6 +114,7 @@ their latest version that has been tried and found to work
 correctly. If your want to install them one at a time, you can try:
 
 pip install numpy
+pip install scipy
 pip install pyomo
 pip install pyDOE
 
@@ -143,11 +164,12 @@ The two packages above are optional.
 # Installation instructions
 #--------------------------------------------------------------------------
 
-1) Install the required packages NumPy, Pyomo, pyDOE as indicated
-   above. If you use pip, you can verify that they are present with
-   the commands:
+1) Install the required packages NumPy, SciPy, Pyomo, pyDOE as
+   indicated above. If you use pip, you can verify that they are
+   present with the commands:
 
    pip show numpy
+   pip show scipy
    pip show pyomo
    pip show pyDOE
 
@@ -157,22 +179,26 @@ The two packages above are optional.
 3) Enjoy!
 
 4) You can test the installation by running:
-   python2.7 test_rbfopt.py branin
+   python2.7 tests/rbfopt_test_interface.py branin
    
    See:
-   python2.7 test_rbfopt.py --help
+   python2.7 tests/rbfopt_test_interface.py --help
    for more details on command-line options for the testing utility.
 
    Many more test functions, with different characteristics, are
    implemented in the file test_functions.py. They can all be used for
    testing.
 
+5) Unit tests for the library can be executed by running:
+   python2.7 -m unittest discover -s tests/
+   from the current (main) directory.
+
 5) To run the library on a user-defined black-box function, modify the
-   file black_box.py accordingly, and run:
-   python2.7 rbfopt_cl_interface.py
+   file src/black_box.py accordingly, and run:
+   python2.7 src/rbfopt_cl_interface.py
 
    See:
-   python2.7 rbfopt_cl_interface.py --help
+   python2.7 src/rbfopt_cl_interface.py --help
    for more details on command-line options.
 
    By redefining the attributes and methods of the class BlackBox of

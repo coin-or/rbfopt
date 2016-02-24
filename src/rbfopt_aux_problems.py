@@ -139,7 +139,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
         samples = generate_sample_points(settings, n, var_lower,
                                          var_upper, integer_vars)
         distance = ru.bulk_get_min_distance(samples, node_pos)
-        point = samples[values.index(max(distance))]
+        point = samples[distance.index(max(distance))]
     else:
         raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
 
@@ -701,6 +701,7 @@ class MetricSRSMObj:
         """Constructor.
         """
         assert(len(distance_values) == len(objfun_values))
+        assert(len(distance_values) >= 1)
         assert(0 <= dist_weight <= 1)
         assert(isinstance(settings, RbfSettings))
         # Determine scaling factors
