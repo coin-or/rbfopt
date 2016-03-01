@@ -676,7 +676,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
     interpolant.
 
     Parameters
-    ---
+    ----------
     settings : rbfopt_settings.RbfSettings.
         Global and algorithmic settings.
 
