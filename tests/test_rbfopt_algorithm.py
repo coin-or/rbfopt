@@ -1,7 +1,7 @@
-"""Test the main rbfopt module in RBFOpt.
+"""Test the rbfopt_algorithm module in RBFOpt.
 
-This module contains unit tests for the module rbfopt, that implements
-the main algorithms.
+This module contains unit tests for the module rbfopt_algorithm, that
+implements the main optimization algorithm.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright International Business Machines Corporation 2016.
@@ -14,11 +14,13 @@ from __future__ import absolute_import
 
 import unittest
 import time
+import tempfile
+import os
 import test_rbfopt_env
 from rbfopt_settings import RbfSettings
 import rbfopt_test_interface as ti
 import test_functions
-import rbfopt
+import rbfopt_algorithm as ra
 
 def create_black_box(function, evaluate_fast = None):
     """Return a TestFunctionBlackBox object with given function.
@@ -59,13 +61,14 @@ class TestGutmann(unittest.TestCase):
                                    max_iterations = 200,
                                    max_evaluations = 300,
                                    rand_seed = seed)
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             msg = 'Could not solve goldstein with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
@@ -89,13 +92,14 @@ class TestGutmann(unittest.TestCase):
                                    max_iterations = 200,
                                    max_evaluations = 300,
                                    rand_seed = seed)
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             msg = 'Could not solve prob03 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
@@ -121,13 +125,14 @@ class TestGutmann(unittest.TestCase):
                                    function_scaling = 'log',
                                    do_infstep = True,
                                    rand_seed = seed)
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             msg = 'Could not solve branin with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
@@ -145,7 +150,7 @@ class TestGutmann(unittest.TestCase):
             print()
             print('Solving st_miqp1 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gurmann', 
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
@@ -153,13 +158,14 @@ class TestGutmann(unittest.TestCase):
                                    fast_objfun_rel_error = 0.1,
                                    fast_objfun_abs_error = 0.01,
                                    rand_seed = seed)
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             msg = 'Could not solve st_miqp1 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
@@ -182,13 +188,14 @@ class TestGutmann(unittest.TestCase):
                                    max_clock_time = 2.0,
                                    rand_seed = seed)
             start_time = time.time()
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             tot_time = time.time() - start_time
             msg = 'Time limit exceeded with Gutmann algorithm'
             self.assertLessEqual(tot_time, 4.0, msg = msg)
@@ -217,13 +224,14 @@ class TestMSRSM(unittest.TestCase):
                                    max_iterations = 200,
                                    max_evaluations = 300,
                                    rand_seed = seed)
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             msg = 'Could not solve hartman3 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
@@ -246,13 +254,14 @@ class TestMSRSM(unittest.TestCase):
                                    max_iterations = 200,
                                    max_evaluations = 300,
                                    rand_seed = seed)
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             msg = 'Could not solve nvs03 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
@@ -277,13 +286,14 @@ class TestMSRSM(unittest.TestCase):
                                    max_evaluations = 300,
                                    local_search_box_scaling = 10000,
                                    rand_seed = seed)
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             msg = 'Could not solve nvs06 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
@@ -309,13 +319,14 @@ class TestMSRSM(unittest.TestCase):
                                    fast_objfun_rel_error = 0.1,
                                    fast_objfun_abs_error = 0.01,
                                    rand_seed = seed)
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             msg = 'Could not solve goldsteinprice with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
@@ -338,16 +349,62 @@ class TestMSRSM(unittest.TestCase):
                                    max_clock_time = 2.0,
                                    rand_seed = seed)
             start_time = time.time()
-            res = rbfopt.rbf_optimize(settings = settings,
-                                      dimension = bb.dimension, 
-                                      var_lower = bb.var_lower,
-                                      var_upper = bb.var_upper,
-                                      objfun = bb.evaluate,
-                                      objfun_fast = bb.evaluate_fast,
-                                      integer_vars = bb.integer_vars)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize()
             tot_time = time.time() - start_time
             msg = 'Time limit exceeded with MSRSM algorithm'
             self.assertLessEqual(tot_time, 4.0, msg = msg)
+    # -- end function
+# -- end class
+
+class TestState(unittest.TestCase):
+    """Test load/save state methods."""
+
+    rand_seeds = [512319876412, 231974198123, 90865241837]
+    eps_opt = 0.05
+
+    def test_state_reload(self):
+        """Check solution of hartman3 after state save/reload."""
+        function = test_functions.hartman3
+        bb = create_black_box(function)
+        optimum = function.optimum_value
+        handle, filename = tempfile.mkstemp()
+        for seed in self.rand_seeds:
+            print()
+            print('Solving hartman3 with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfSettings(algorithm = 'MSRSM', 
+                                   rbf = 'linear',
+                                   target_objval = optimum,
+                                   eps_opt = self.eps_opt,
+                                   max_iterations = 200,
+                                   max_evaluations = 300,
+                                   rand_seed = seed)
+            alg = ra.OptAlgorithm(settings = settings,
+                                  dimension = bb.dimension, 
+                                  var_lower = bb.var_lower,
+                                  var_upper = bb.var_upper,
+                                  objfun = bb.evaluate,
+                                  objfun_fast = bb.evaluate_fast,
+                                  integer_vars = bb.integer_vars)
+            res = alg.optimize(5)
+            alg.save_to_file(filename)
+            alg_reload = ra.OptAlgorithm.load_from_file(filename,
+                                                        bb.evaluate,
+                                                        bb.evaluate_fast)
+            res = alg_reload.optimize()
+            msg = 'Could not solve hartman3 after reload'
+            target = optimum + (abs(optimum)*self.eps_opt if
+                                abs(optimum) > settings.eps_zero 
+                                else self.eps_opt) 
+            self.assertLessEqual(res[0], target, msg = msg)
+        os.remove(filename)
     # -- end function
 # -- end class
 

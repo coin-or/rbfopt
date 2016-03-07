@@ -19,6 +19,7 @@ import ast
 import rbfopt
 import black_box as bb
 from rbfopt_settings import RbfSettings
+from rbfopt_algorithm import OptAlgorithm
 
 
 def register_options(parser):
@@ -67,6 +68,16 @@ def register_options(parser):
     parser.add_argument('--log', '-o', action = 'store',
                         metavar = 'LOG_FILE_NAME', dest = 'output_stream',
                         help = 'name of log file for output redirection')
+    parser.add_argument('--load', '-l', action = 'store', dest = 'load_state',
+                        help = 'file to read state to resume optimization')
+    parser.add_argument('--save', '-s', action = 'store', dest = 'dump_state',
+                        help = 'file to save state after optimization')
+    parser.add_argument('--pause', '-p', action = 'store', dest = 'pause',
+                        default = sys.maxint, type = int,
+                        help = 'number of iterations after which ' +
+                        'the optimization process should be paused')
+
+
 
 # -- end function
 
@@ -110,19 +121,33 @@ def rbfopt_cl_interface(args, black_box):
     # that are not recognized as valid by RbfSettings.
     local_args = args.copy()
     del local_args['output_stream']
+    del local_args['load_state']
+    del local_args['dump_state']
+    del local_args['pause']
 
     settings = RbfSettings.from_dictionary(local_args)
     settings.print(output_stream = output_stream)
-    result = rbfopt.rbf_optimize(settings = settings,
-                                 dimension = black_box.dimension, 
-                                 var_lower = black_box.var_lower,
-                                 var_upper = black_box.var_upper,
-                                 objfun = black_box.evaluate,
-                                 objfun_fast = black_box.evaluate_fast,
-                                 integer_vars = black_box.integer_vars,
-                                 output_stream = output_stream)
-    print('rbf_optimize returned function value {:.15f}'.format(result[0]),
+    if (args['load_state'] is not None):
+        alg = OptAlgorithm.load_from_file(args['load_state'],
+                                          black_box.evaluate,
+                                          black_box.evaluate_fast)
+    else:
+        alg = OptAlgorithm(settings = settings,
+                           dimension = black_box.dimension, 
+                           var_lower = black_box.var_lower,
+                           var_upper = black_box.var_upper,
+                           objfun = black_box.evaluate,
+                           objfun_fast = black_box.evaluate_fast,
+                           integer_vars = black_box.integer_vars)
+    alg.set_output_stream(output_stream)
+    result = alg.optimize(args['pause'])
+    print('OptAlgorithm.optimize() returned ' + 
+          'function value {:.15f}'.format(result[0]),
           file = output_stream)
+    if (args['dump_state'] is not None):
+        alg.save_to_file(args['dump_state'])
+        print('Dumped state to file {:s}'.format(args['dump_state']),
+              file = output_stream)
     output_stream.close()
 
 # -- end function

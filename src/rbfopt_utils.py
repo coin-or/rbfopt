@@ -21,7 +21,6 @@ import numpy as np
 import scipy.spatial as ss
 import rbfopt_config as config
 import rbfopt_aux_problems as aux
-import pyDOE
 from rbfopt_settings import RbfSettings
 
 
@@ -142,6 +141,7 @@ def get_all_corners(var_lower, var_upper):
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
 
@@ -179,6 +179,7 @@ def get_lower_corners(var_lower, var_upper):
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
 
@@ -212,6 +213,7 @@ def get_random_corners(var_lower, var_upper):
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
 
@@ -234,20 +236,56 @@ def get_random_corners(var_lower, var_upper):
     
 # -- end function
 
-def get_lhd_maximin_points(var_lower, var_upper):
+def get_uniform_lhs(n, num_samples):
+    """Generate random Latin Hypercube samples.
+
+    Generate points using Latin Hypercube sampling from the uniform
+    distribution in the unit hypercube.
+
+    Parameters
+    ----------
+    n : int
+        Dimension of the space, i.e. number of variables.
+
+    num_samples : num_samples
+        Number of samples to be generated.
+
+    Returns
+    -------
+    List[List[float]]
+        A list of n-dimensional points in the unit hypercube.
+    """
+    assert(n >= 0)
+    assert(num_samples >= 0)
+    # Generate integer LH in [0, num_samples]
+    perm = [np.random.permutation(num_samples) for i in range(n)]
+    int_lh = [[val[j] for val in perm] for j in range(num_samples)]
+    # Map integer LH back to unit hypercube, and perturb points so that
+    # they are uniformly distributed in the corresponding intervals
+    lhs = [[np.random.uniform(i/num_samples, (i + 1)/num_samples)
+            for i in point] for point in int_lh]
+    return lhs
+
+# -- end function
+
+def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     """Compute a latin hypercube design with maximin distance.
 
     Compute a list of (n+1) points in the given box, where n is the
     dimension of the space. The selected points are picked according
     to a random latin hypercube design with maximin distance
-    criterion. This function relies on the library pyDOE.
+    criterion. 
 
     Parameters
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
+
+    num_trials : int
+        Maximum number of generated LHs to choose from.
 
     Returns
     -------
@@ -261,15 +299,23 @@ def get_lhd_maximin_points(var_lower, var_upper):
         # For unidimensional problems, simply take the two endpoints
         # of the interval as starting points
         return [var_lower, var_upper]
-    # Otherwise, generate the LHD
-    lhd = pyDOE.lhs(n, n+1, 'maximin')
+    # Otherwise, generate a bunch of Latin Hypercubes, and rank them
+    lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
+    # Indices of upper triangular matrix (without the diagonal)
+    indices = np.triu_indices(n + 1, 1)
+    # Compute distance matrix of points to themselves, get upper
+    # triangular part of the matrix, and get minimum
+    dist_values = [np.amin(ss.distance.cdist(mat, mat)[indices])
+                   for mat in lhs]
+    lhd = lhs[dist_values.index(max(dist_values))]
     node_pos = [[var_lower[i] + (var_upper[i] - var_lower[i])*lhd_point[i] 
                  for i in range(n)] for lhd_point in lhd]
     return node_pos
 
 # -- end function
 
-def get_lhd_corr_points(var_lower, var_upper):
+def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
+
     """Compute a latin hypercube design with min correlation.
 
     Compute a list of (n+1) points in the given box, where n is the
@@ -281,8 +327,12 @@ def get_lhd_corr_points(var_lower, var_upper):
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
+
+    num_trials : int
+        Maximum number of generated LHs to choose from.
 
     Returns
     -------
@@ -296,8 +346,15 @@ def get_lhd_corr_points(var_lower, var_upper):
         # For unidimensional problems, simply take the two endpoints
         # of the interval as starting points
         return [var_lower, var_upper]
-    # Otherwise, generate the LHD
-    lhd = pyDOE.lhs(n, n+1, 'corr')
+    # Otherwise, generate a bunch of Latin Hypercubes, and rank them
+    lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
+    # Indices of upper triangular matrix (without the diagonal)
+    indices = np.triu_indices(n, 1)
+    # Compute correlation matrix of points to themselves, get upper
+    # triangular part of the matrix, and get minimum
+    corr_values = [abs(np.amax(np.corrcoef(mat, rowvar = 0)[indices]))
+                   for mat in lhs]
+    lhd = lhs[corr_values.index(min(corr_values))]
     node_pos = [[var_lower[i] + (var_upper[i] - var_lower[i])*lhd_point[i] 
                  for i in range(n)] for lhd_point in lhd]
     return node_pos

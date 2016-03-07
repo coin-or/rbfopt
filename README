@@ -94,7 +94,6 @@ Python 2.7.* (recommended Python 2.7.6)
 NumPy version >= 1.8.1
 SciPy version >= 0.13.3
 Pyomo version 4.1.10509
-pyDOE version >= 0.3.5
 
 The software has been tested with the versions indicated above. It may
 work with earlier version and should work with subsequent version, if
@@ -117,7 +116,6 @@ correctly. If your want to install them one at a time, you can try:
 pip install numpy
 pip install scipy
 pip install pyomo
-pip install pyDOE
 
 To build the documentation, you also need numpydoc:
 
@@ -165,14 +163,13 @@ The two packages above are optional.
 # Installation instructions
 #--------------------------------------------------------------------------
 
-1) Install the required packages NumPy, SciPy, Pyomo, pyDOE as
+1) Install the required packages NumPy, SciPy, Pyomo, as
    indicated above. If you use pip, you can verify that they are
    present with the commands:
 
    pip show numpy
    pip show scipy
    pip show pyomo
-   pip show pyDOE
 
 2) Edit rbfopt_config.py to point to the correct location for the NLP
    and MINLP solvers.
