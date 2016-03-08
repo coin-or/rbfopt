@@ -495,7 +495,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     
     fast_node_index : List[int]
         List of indices of nodes whose function value should be
-        considered variable withing the allowed range.
+        considered variable within the allowed range.
     
     fast_node_err_bounds : List[(float, float)]
         Allowed deviation from node values for nodes affected by

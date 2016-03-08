@@ -143,10 +143,12 @@ class OptAlgorithm:
     node_pos : List[List[float]]
         Coordinates of the interpolation nodes (i.e. the points where
         the objective function has already been evaluated). The
-        coordinates may be in the transformed space.
+        coordinates may be in the transformed space. This list only
+        includes points since the last restart.
 
     node_val : List[float]
-        Objective function value at the points in node_pos.
+        Objective function value at the points in node_pos. This list 
+        only includes points since the last restart.
 
     node_is_fast : List[bool]
         For each interpolation node in node_pos, was it evaluated in
@@ -274,46 +276,17 @@ class OptAlgorithm:
         # Round variable bounds to integer if necessary
         ru.round_integer_bounds(var_lower, var_upper, integer_vars)
 
-        # List of node coordinates is node_pos, list of node values is in
-        # node_val. We keep a current list and a global list; they can be
-        # different in case of restarts.
-
-        # We must choose the initial interpolation points. If they are not
-        # given, generate them using the chosen strategy.
-        if (init_node_pos is None):
-            node_pos = ru.initialize_nodes(l_settings, var_lower, var_upper, 
-                                           integer_vars)
-            if (self.current_mode == 'accurate'):
-                node_val = [objfun(point) for point in node_pos]
-                self.evalcount += len(node_val)
-            else:
-                node_val = [objfun_fast(point) for point in node_pos]
-                self.fast_evalcount += len(node_val)
-            node_is_fast = [self.current_mode == 'fast' for val in node_val]
-        else:
-            node_pos = init_node_pos
-            node_val = init_node_val
-            # We assume that initial points provided by the user are
-            # 'accurate'.
-            node_is_fast = [False for val in node_val]
-
-        # Make a copy, in the original space
-        self.all_node_pos = [point for point in node_pos]
-        self.all_node_val = [val for val in node_val]
+        # Save initial nodes
+        self.init_node_pos = init_node_pos
+        self.init_node_val = init_node_val
+        # Initialize global lists
+        self.all_node_pos, self.all_node_val = list(), list()
+        self.node_pos, self.node_val = list(), list()
         # Store if each function evaluation is fast or accurate
-        self.all_node_is_fast = [val for val in node_is_fast]
+        self.node_is_fast, self.all_node_is_fast = list(), list()
         # We need to remember the index of the first node in all_node_pos
         # after every restart
         self.all_node_pos_size_at_restart = 0
-
-        # Rescale the domain of the function
-        node_pos = [ru.transform_domain(l_settings, var_lower, var_upper, 
-                                        point) for point in node_pos]
-        
-        # Save reference
-        self.node_pos = node_pos
-        self.node_val = node_val
-        self.node_is_fast = node_is_fast
 
         # Update domain bounds if necessary
         (self.l_lower, 
@@ -321,10 +294,10 @@ class OptAlgorithm:
                                                     var_upper)
 
         # Current minimum value among the nodes, and its index
-        self.fmin_index = node_val.index(min(node_val))
-        self.fmin = node_val[self.fmin_index]
+        self.fmin_index = 0
+        self.fmin = float('+inf')
         # Current maximum value among the nodes
-        self.fmax = max(self.all_node_val)
+        self.fmax = float('+inf')
 
         # Best value function at the beginning of an optimization cycle
         self.fmin_cycle_start = self.fmin
@@ -380,7 +353,7 @@ class OptAlgorithm:
         """
         if (node_is_fast is None or obj_value is None or 
             min_dist is None or gap is None):
-            print('Iteration {:3d}:'.format(self.itercount) + 
+            print('Iteration {:3d}'.format(self.itercount) + 
                   ' {:s}'.format(tag), file = self.output_stream)
         else:
             print('Iteration {:3d}'.format(self.itercount) + 
@@ -521,17 +494,15 @@ class OptAlgorithm:
         """
         start_time = time.time()
         
-        # Localize variables that will be used often. These are all
-        # lists or objects, so the reference points to the original.
+        # Localize variables that will be used often and that will
+        # never be erased through the algorithm. These are all lists
+        # or objects, so the reference points to the original.
         var_lower, var_upper = self.var_lower, self.var_upper
         objfun, objfun_fast = self.objfun, self.objfun_fast
         integer_vars = self.integer_vars
-        node_pos, node_val = self.node_pos, self.node_val
-        node_is_fast = self.node_is_fast
         all_node_pos, all_node_val = self.all_node_pos, self.all_node_val
         all_node_is_fast = self.all_node_is_fast 
         settings, l_settings = self.settings, self.l_settings
-        l_lower, l_upper = self.l_lower, self.l_upper
         # The dimension will not be changed so it is safe to localize
         n = self.n
 
@@ -550,13 +521,15 @@ class OptAlgorithm:
         gap = ((self.fmin + gap_shift - l_settings.target_objval) /
                gap_den)
         
-        # Print the initialization points, if this is the first iteration
+        # If this is the first iteration, initialize the algorithm
         if (self.itercount == 0):
-            for (i, val) in enumerate(node_val):
-                min_dist = ru.get_min_distance(node_pos[i], node_pos[:i] + 
-                                               node_pos[(i+1):])
-                self.update_log('Initialization', node_is_fast[i], val,
-                                min_dist, gap)
+            self.restart()
+            for (i, val) in enumerate(self.node_val):
+                min_dist = ru.get_min_distance(self.node_pos[i], 
+                                               self.node_pos[:i] + 
+                                               self.node_pos[(i+1):])
+                self.update_log('Initialization', self.node_is_fast[i], 
+                                val, min_dist, gap)
 
         # Main loop
         while (self.itercount - itercount_at_start < pause_after_iters and
@@ -568,7 +541,7 @@ class OptAlgorithm:
             # of Gutmann (2001), we proceed to the next iteration.
             if (self.current_step == self.inf_step and 
                 not l_settings.do_infstep):
-                self.current_step = (self.current_step+1) % self.cycle_length
+                self.advance_step_counter()
                 continue
 
             # Check if we should restart. We only restart if the initial
@@ -581,70 +554,20 @@ class OptAlgorithm:
                  l_settings.init_strategy != 'lower_corners')):
 
                 self.update_log('Restart')
-                # We update the number of fast restarts here, so that if
-                # we hit the limit on fast restarts, we can evaluate
-                # points in accurate mode after restarting (even if
-                # current_mode is updated in a subsequent block of code)
-                self.num_fast_restarts += (1 if self.current_mode == 'fast' 
-                                           else 0)
-                # Store the current number of nodes
-                self.all_node_pos_size_at_restart = len(all_node_pos)
-                # Compute a new set of starting points
-                node_pos = ru.initialize_nodes(l_settings, var_lower, 
-                                               var_upper, integer_vars)
-                if (self.current_mode == 'accurate' or
-                    self.num_fast_restarts > l_settings.max_fast_restarts or
-                    (self.fast_evalcount + n + 1 >=
-                     l_settings.max_fast_evaluations)):
-                    node_val = [objfun(point) for point in node_pos]
-                    self.evalcount += len(node_val)
-                else:
-                    node_val = [objfun_fast(point) for point in node_pos]
-                    self.fast_evalcount += len(node_val)
-                node_is_fast = [self.current_mode == 'fast' 
-                                for val in node_val]
-                # Print the initialization points
-                for (i, val) in enumerate(node_val):
-                    min_dist = ru.get_min_distance(node_pos[i], node_pos[:i] + 
-                                                   node_pos[(i+1):])
-                    self.update_log('Initialization', node_is_fast[i], val,
-                                    min_dist, gap)
-                all_node_pos.extend(node_pos)
-                all_node_val.extend(node_val)
-                all_node_is_fast.extend(node_is_fast)
-
-                # Rescale the domain of the function
-                node_pos = [ru.transform_domain(l_settings, var_lower,
-                                                var_upper, point)
-                            for point in node_pos]           
-                (l_lower, l_upper) = ru.transform_domain_bounds(l_settings,
-                                                                var_lower,
-                                                                var_upper)
-                # Update references
-                self.node_pos, self.node_val = node_pos, node_val
-                self.node_is_fast = node_is_fast
-                self.l_lower, self.l_upper = l_lower, l_upper
-                # Update all counters and values to restart properly
-                self.fmin_index = node_val.index(min(node_val))
-                self.fmin = node_val[self.fmin_index]
-                self.fmax = max(node_val)
-                self.fmin_cycle_start = self.fmin
-                self.num_stalled_cycles = 0
-                self.num_cons_discarded = 0
-                self.is_best_fast = node_is_fast[self.fmin_index]
+                self.restart()
 
             # Number of nodes at current iteration
-            k = len(node_pos)
+            k = len(self.node_pos)
 
             # Compute indices of fast node evaluations (sparse format)
-            fast_node_index = ([i for (i, val) in enumerate(node_is_fast) 
+            fast_node_index = ([i for (i, val) in enumerate(self.node_is_fast) 
                                 if val] if self.two_phase_optimization 
                                else list())
 
             # If function scaling is automatic, determine which one to use
             if (settings.function_scaling == 'auto' and 
                 self.current_step <= self.first_step):
-                sorted_node_val = sorted(node_val)
+                sorted_node_val = sorted(self.node_val)
                 if (sorted_node_val[len(sorted_node_val)//2] - 
                     sorted_node_val[0] > l_settings.log_scaling_threshold):
                     l_settings.function_scaling = 'log'
@@ -652,7 +575,7 @@ class OptAlgorithm:
                     l_settings.function_scaling = 'off'
         
             # Rescale nodes if necessary
-            tfv = ru.transform_function_values(l_settings, node_val,
+            tfv = ru.transform_function_values(l_settings, self.node_val,
                                                self.fmin, self.fmax,
                                                fast_node_index)
             scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
@@ -664,11 +587,11 @@ class OptAlgorithm:
                 loc_iter = int(math.ceil(k*0.1))
                 glob_iter = int(math.ceil(k*0.7))
                 self.best_local_rbf = ms.get_best_rbf_model(l_settings, n, k, 
-                                                            node_pos,
+                                                            self.node_pos,
                                                             scaled_node_val,
                                                             loc_iter)
                 self.best_global_rbf = ms.get_best_rbf_model(l_settings, n, k,
-                                                             node_pos,
+                                                             self.node_pos,
                                                              scaled_node_val,
                                                              glob_iter)
             # If we are in local search or just before local search, use a
@@ -681,7 +604,7 @@ class OptAlgorithm:
 
             try:
                 # Compute the matrices necessary for the algorithm
-                Amat = ru.get_rbf_matrix(l_settings, n, k, node_pos)
+                Amat = ru.get_rbf_matrix(l_settings, n, k, self.node_pos)
                 Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
                 # Compute RBF interpolant at current stage
@@ -708,16 +631,17 @@ class OptAlgorithm:
                 # Error in the solution of the linear system. We must
                 # switch to a restoration phase.
                 self.current_step = self.restoration_step
-                node_val.pop()
-                node_pos.pop()
-                if (node_is_fast.pop()):
+                self.node_val.pop()
+                self.node_pos.pop()
+                if (self.node_is_fast.pop()):
                     fast_node_index.pop()
-                    tfv = ru.transform_function_values(l_settings, node_val,
+                    tfv = ru.transform_function_values(l_settings, 
+                                                       self.node_val,
                                                        self.fmin, self.fmax,
                                                        fast_node_index)
                     (scaled_node_val, scaled_fmin, scaled_fmax,
                      node_err_bounds) = tfv
-                k = len(node_pos)
+                k = len(self.node_pos)
 
 
             # For displaying purposes, record what type of iteration
@@ -729,230 +653,55 @@ class OptAlgorithm:
 
             if (self.current_step == self.inf_step):
                 # Infstep: explore the parameter space
-                next_p = aux.pure_global_search(l_settings, n, k, l_lower,
-                                                l_upper, node_pos, Amatinv,
-                                                integer_vars)
+                next_p = self.pure_global_step(Amatinv)
                 iteration_id = 'InfStep'
 
             elif (self.current_step == self.restoration_step):
-                # Restoration: pick a random point, far enough from
-                # current points
-                restoration_done = False
-                cons_restoration = 0
-                while (not restoration_done and cons_restoration < 
-                       l_settings.max_consecutive_restoration):
-                    next_p = [random.uniform(var_lower[i], var_upper[i])
-                              for i in range(n)]
-                    ru.round_integer_vars(next_p, integer_vars)
-                    if (ru.get_min_distance(next_p, node_pos) >
-                        l_settings.min_dist):
-                        # Try inverting the RBF matrix to see if
-                        # nonsingularity is restored
-                        try:
-                            Amat = ru.get_rbf_matrix(l_settings, n, k + 1,
-                                                     node_pos + [next_p])
-                            Amatinv = ru.get_matrix_inverse(l_settings, Amat)
-                            restoration_done = True
-                        except np.linalg.LinAlgError:
-                            cons_restoration += 1
-                    else:
-                        cons_restoration += 1
-                if (not restoration_done):
-                    self.update_log('Restoration phase keeps failing. Abort.')
+                # Restoration
+                if (not self.restoration_step()):
+                    self.update_log('Restoration phase failed. Abort.')
                     # This will force the optimization process to return
                     break
                 iteration_id = 'Restoration'
             
             elif (self.current_step == self.local_search_step):
-                # Local search: compute the minimum of the RBF.
-                min_rbf = aux.minimize_rbf(l_settings, n, k, l_lower,
-                                           l_upper, node_pos,
-                                           rbf_l, rbf_h, integer_vars)
-                if (min_rbf is not None):
-                    min_rbf_val = ru.evaluate_rbf(l_settings, min_rbf, n, k, 
-                                                  node_pos, rbf_l, rbf_h)
-                # If the RBF cannot me minimized, or if the minimum is
-                # larger than the node with smallest value, just take the
-                # node with the smallest value.
-                if (min_rbf is None or 
-                    (min_rbf_val >= scaled_fmin + l_settings.eps_zero)):
-                    min_rbf = node_pos[self.fmin_index]
-                    min_rbf_val = scaled_fmin
-                # Check if point can be accepted: is there an improvement?
-                if (min_rbf_val <= (scaled_fmin - l_settings.eps_impr * 
-                                    max(1.0, abs(scaled_fmin)))):
-                    target_val = min_rbf_val
-                    next_p = min_rbf
-                    iteration_id = 'LocalStep'                    
-                else:
-                    # If the point is not improving, we solve a global
-                    # search problem, rescaling the search box to enforce
-                    # some sort of local search
-                    target_val = scaled_fmin - 0.01*max(1.0, abs(scaled_fmin))
-                    dist_weight = 0.05
-                    local_varl = [max(l_lower[i], min_rbf[i] -
-                                      l_settings.local_search_box_scaling * 
-                                      0.33 * (l_upper[i] - l_lower[i]))
-                                  for i in range(n)]
-                    local_varu = [min(l_upper[i], min_rbf[i] +
-                                      l_settings.local_search_box_scaling * 
-                                      0.33 * (l_upper[i] - l_lower[i]))
-                                  for i in range(n)]
-                    ru.round_integer_bounds(local_varl, local_varu, 
-                                            integer_vars)
-                    next_p  = aux.global_search(l_settings, n, k, local_varl,
-                                                local_varu, node_pos, rbf_l, 
-                                                rbf_h, Amatinv, target_val,
-                                                dist_weight, integer_vars)
+                # Local search
+                (adj, next_p, ind) = self.local_step(rbf_l, rbf_h, tfv,
+                                                     fast_node_index,
+                                                     Amat, Amatinv)
+                # Re-evaluate point if necessary
+                if (ind < len(self.node_pos)):
+                    self.node_pos.pop(ind)
+                    self.node_val.pop(ind)
+                    self.node_is_fast.pop(ind)
+                    all_node_pos.pop(all_node_pos_size_at_restart + ind)
+                    all_node_val.pop(all_node_pos_size_at_restart + ind)
+                    all_node_is_fast.pop(all_node_pos_size_at_restart + ind)
+                    # We must update k here to make sure it is consistent
+                    # until the start of the next iteration.
+                    k = len(self.node_pos)
+                if (adj):
                     iteration_id = 'AdjLocalStep'
+                else:
+                    iteration_id = 'LocalStep'                    
 
             else:
-                # Global search: compromise between finding a good value
-                # of the objective function, and improving the model.
-                if (l_settings.algorithm == 'Gutmann'):
-                    # If we use Gutmann's algorithm, we need the minimum
-                    # of the RBF interpolant to choose the target value.
-                    min_rbf = aux.minimize_rbf(l_settings, n, k, l_lower,
-                                               l_upper, node_pos, rbf_l,
-                                               rbf_h, integer_vars)
-                    if (min_rbf is not None):
-                        min_rbf_val = ru.evaluate_rbf(l_settings, min_rbf,
-                                                      n,  k, node_pos, rbf_l,
-                                                      rbf_h)
-                    # If the RBF cannot me minimized, or if the minimum is
-                    # larger than the node with smallest value, just take 
-                    # the node with the smallest value.
-                    if (min_rbf is None or 
-                        min_rbf_val >= scaled_fmin + l_settings.eps_zero):
-                        min_rbf = node_pos[self.fmin_index]
-                        min_rbf_val = scaled_fmin
-                else:
-                    # For the Metric SRSM method, pick the node with the
-                    # smallest value as minimum of the RBF.
-                    min_rbf = node_pos[self.fmin_index]
-                    min_rbf_val = self.fmin
-            
-                # Compute the function value used to determine the
-                # target value. This is given by the sorted value in
-                # position sigma_n, where sigma_n is a function
-                # described in the paper by Gutmann (2001). If
-                # clipping is disabled, we simply take the largest
-                # function value.
-                if (l_settings.targetval_clipping):
-                    local_fmax = ru.get_fmax_current_iter(l_settings, n, k,
-                                                          self.current_step,
-                                                          scaled_node_val)
-                else:
-                    local_fmax = self.fmax
-                    
-                # For Gutmann's RBF method, the scaling factor is 1 -
-                # h/kappa, where h goes from 0 to kappa-1 over the
-                # course of one global search cycle, and kappa is the
-                # number of global searches.
-                scaling = (1 - ((self.current_step - 1) /
-                                l_settings.num_global_searches))**2
-                target_val = (min_rbf_val - 
-                              scaling * (local_fmax - min_rbf_val))
-                # For Metric SRSM, The weighting factor for the
-                # distance is is (h+1)/kappa, where h goes from 0 to
-                # kappa-1 over the course of one global search cycle,
-                # and kappa is the number of global searches. If
-                # dist_weight would be 0, we set it to 0.05.
-                dist_weight = (1 - (self.current_step / 
-                                    l_settings.num_global_searches)
-                               if (self.current_step < 
-                                   l_settings.num_global_searches)
-                               else 0.05)
-
-
-                # If the global search is almost a local search, we
-                # restrict the search to a box following Regis and
-                # Shoemaker (2007)
-                if (scaling <= config.LOCAL_SEARCH_THRESHOLD):
-                    local_varl = [max(l_lower[i], min_rbf[i] -
-                                      l_settings.local_search_box_scaling * 
-                                      math.sqrt(scaling) * 
-                                      (l_upper[i] - l_lower[i]))
-                                  for i in range(n)]
-                    local_varu = [min(l_upper[i], min_rbf[i] +
-                                      l_settings.local_search_box_scaling * 
-                                      math.sqrt(scaling) * 
-                                      (l_upper[i] - l_lower[i]))
-                                  for i in range(n)]
-                    ru.round_integer_bounds(local_varl, local_varu,
-                                            integer_vars)
-                else:
-                    # Otherwise, use original bounds
-                    local_varl = l_lower
-                    local_varu = l_upper
-
-                next_p  = aux.global_search(l_settings, n, k, local_varl,
-                                            local_varu, node_pos, rbf_l,
-                                            rbf_h, Amatinv, target_val,
-                                            dist_weight, integer_vars)
+                # Global search
+                next_p = self.global_step(rbf_l, rbf_h, scaled_fmin, 
+                                          scaled_node_val, Amatinv)
                 iteration_id = 'GlobalStep'
-
             # -- end if
-
-            # If previous points were evaluated in low quality and we
-            # are now in high-quality local search mode, then we
-            # should verify if it is better to evaluate a brand new
-            # point or re-evaluate a previously known point.
-            if ((self.two_phase_optimization == True) and
-                (self.current_step == self.local_search_step) and
-                (self.current_mode == 'accurate')):
-                (ind, bump) = ru.get_min_bump_node(l_settings, n, k, Amat, 
-                                                   scaled_node_val,
-                                                   fast_node_index, 
-                                                   node_err_bounds, target_val)
-            
-                if (ind is not None and next_p is not None):
-                    # Check if the newly proposed point is very close to
-                    # an existing one.
-                    if (ru.get_min_distance(next_p, node_pos) >
-                        l_settings.min_dist):
-                        # If not, compute bumpiness of the newly
-                        # proposed point.
-                        n_bump = ru.get_bump_new_node(l_settings, n, k, 
-                                                      node_pos, 
-                                                      scaled_node_val, next_p,
-                                                      fast_node_index,
-                                                      node_err_bounds,
-                                                      target_val)
-                    else:
-                        # If yes, we will simply reevaluate the existing
-                        # point (if it can be reevaluated).
-                        ind = ru.get_min_distance_index(next_p, node_pos)
-                        n_bump = (float('inf') if node_is_fast[ind] 
-                                  else float('-inf'))
-                    if (n_bump > bump):
-                        # In this case we want to put the new point at
-                        # the same location as one of the old points.
-                        # Remove the noisy function evaluation from
-                        # the data structures, so that the point can
-                        # be evaluated in accurate mode.
-                        next_p = node_pos.pop(ind)
-                        node_val.pop(ind)
-                        node_is_fast.pop(ind)
-                        all_node_pos.pop(all_node_pos_size_at_restart + ind)
-                        all_node_val.pop(all_node_pos_size_at_restart + ind)
-                        all_node_is_fast.pop(all_node_pos_size_at_restart + 
-                                             ind)
-                        # We must update k here to make sure it is consistent
-                        # until the start of the next iteration.
-                        k = len(node_pos)
                                                      
             # If the optimization failed or the point is too close to
             # current nodes, discard it. Otherwise, add it to the list.
             if ((next_p is None) or 
-                (ru.get_min_distance(next_p, node_pos) <= 
+                (ru.get_min_distance(next_p, self.node_pos) <= 
                  l_settings.min_dist)):
-                self.current_step = (self.current_step+1) % self.cycle_length
-                self.num_cons_ls = 0
+                self.advance_step_counter()
                 self.num_cons_discarded += 1
                 self.update_log('Discarded')
             else:
-                min_dist = ru.get_min_distance(next_p, node_pos)
+                min_dist = ru.get_min_distance(next_p, self.node_pos)
                 # Transform back to original space if necessary
                 next_p_orig = ru.transform_domain(l_settings, var_lower,
                                                   var_upper, next_p, True)
@@ -960,89 +709,53 @@ class OptAlgorithm:
                 if (self.current_mode == 'accurate'):
                     next_val = objfun(next_p_orig)
                     self.evalcount += 1
-                    node_is_fast.append(False)
+                    self.node_is_fast.append(False)
                 else: 
                     next_val = objfun_fast(next_p_orig)
                     self.fast_evalcount += 1
-                    # Check if the point improves over existing points, 
-                    # or if it could be optimal according to tolerances. 
-                    # In this case, perform a double evaluation.
-                    best_possible = ((ru.get_fast_error_bounds(l_settings,
-                                                               self.fmin)[0]
-                                      if self.is_best_fast else 0.0) + 
-                                     self.fmin)
-                    if ((next_val <= best_possible -
-                         l_settings.eps_impr*max(1.0, abs(best_possible))) or
-                        (next_val <= l_settings.target_objval +
-                         l_settings.eps_opt*abs(l_settings.target_objval) -
-                         ru.get_fast_error_bounds(l_settings, next_val)[0])):
+                    if (self.require_accurate_evaluation(next_val)):
                         self.update_log(iteration_id, True, next_val,
                                         min_dist, gap)
                         next_val = objfun(next_p_orig)
                         self.evalcount += 1
-                        node_is_fast.append(False)
+                        self.node_is_fast.append(False)
                     else:
-                        node_is_fast.append(True)
+                        self.node_is_fast.append(True)
 
                 # Add to the lists
-                node_pos.append(next_p)
-                node_val.append(next_val)
+                self.node_pos.append(next_p)
+                self.node_val.append(next_val)
                 all_node_pos.append(next_p_orig)
                 all_node_val.append(next_val)
-                all_node_is_fast.append(node_is_fast[-1])
+                all_node_is_fast.append(self.node_is_fast[-1])
 
-                if ((self.current_step == self.local_search_step) and
-                    (next_val <= (self.fmin - 
-                                  l_settings.eps_impr*max(1.0,abs(self.fmin))))
-                     and (self.num_cons_ls < 
-                          l_settings.max_consecutive_local_searches - 1)):
-                    # Keep doing local search
-                    self.num_cons_ls += 1
-                else:
-                    self.current_step = ((self.current_step+1) % 
-                                         self.cycle_length)
-                    self.num_cons_ls = 0
+                self.advance_step_counter()
                 self.num_cons_discarded = 0
                         
                 # Update fmin
                 if (next_val < self.fmin):
                     self.fmin_index = k
                     self.fmin = next_val
-                    self.is_best_fast = node_is_fast[-1]
+                    self.is_best_fast = self.node_is_fast[-1]
                 self.fmax = max(self.fmax, next_val)
                 # Shift due to fast function evaluation
                 gap_shift = (ru.get_fast_error_bounds(l_settings, next_val)[1]
                              if self.is_best_fast else 0.0)
                 gap = min(gap, (next_val + gap_shift - 
                                 l_settings.target_objval) / gap_den)
-                self.update_log(iteration_id, node_is_fast[-1], next_val,
-                                min_dist, gap)
+                self.update_log(iteration_id, self.node_is_fast[-1], 
+                                next_val, min_dist, gap)
 
             # Update iteration number
             self.itercount += 1
 
             # At the beginning of each loop of the cyclic optimization
             # strategy, check if the main loop is stalling
-            if (self.current_step <= self.first_step): 
-                if (self.fmin <= (self.fmin_cycle_start - 
-                                  l_settings.max_stalled_objfun_impr
-                                  * max(1.0, abs(self.fmin_cycle_start)))):
-                    self.num_stalled_cycles = 0
-                    self.fmin_cycle_start = self.fmin
-                else:
-                    self.num_stalled_cycles += 1
+            self.stalling_update()
 
-            # Check if we should switch to the second phase of two-phase
-            # optimization. The conditions for switching are:
-            # 1) Optimization in fast mode restarted too many times.
-            # 2) We reached the limit of fast mode iterations.
-            if ((self.two_phase_optimization == True) and 
-                (self.current_mode == 'fast') and
-                ((self.num_fast_restarts > l_settings.max_fast_restarts) or
-                 (self.itercount >= l_settings.max_fast_iterations) or
-                 (self.fast_evalcount >= l_settings.max_fast_evaluations))):
-                self.update_log('Switching to accurate mode')
-                self.current_mode = 'accurate'            
+            # Check if we should switch to the second phase of
+            # two-phase optimization.
+            self.phase_update()
             
         # -- end while
 
@@ -1064,4 +777,499 @@ class OptAlgorithm:
 
     # -- end function
 
+    def restart(self):
+        """Perform a complete restart of the optimization.
+
+        Restart the optimization algorithm, i.e. discard the current
+        RBF model, and select new sample points to start the algorithm
+        from scratch. Previous point evaluations are ignored, but they
+        are still recorded in the appropriate arrays.
+        """
+        # We update the number of fast restarts here, so that if
+        # we hit the limit on fast restarts, we can evaluate
+        # points in accurate mode after restarting (even if
+        # current_mode is updated in a subsequent block of code)
+        self.num_fast_restarts += (1 if self.current_mode == 'fast' 
+                                   else 0)
+        # Store the current number of nodes
+        self.all_node_pos_size_at_restart = len(self.all_node_pos)
+        if (self.itercount > 0 or self.init_node_pos is None):
+            # Compute a new set of starting points
+            node_pos = ru.initialize_nodes(self.l_settings, self.var_lower, 
+                                           self.var_upper, self.integer_vars)
+            if (self.current_mode == 'accurate' or
+                self.num_fast_restarts > self.l_settings.max_fast_restarts or
+                (self.fast_evalcount + self.n + 1 >=
+                 self.l_settings.max_fast_evaluations)):
+                node_val = [self.objfun(point) for point in node_pos]
+                self.evalcount += len(node_val)
+            else:
+                node_val = [self.objfun_fast(point) for point in node_pos]
+                self.fast_evalcount += len(node_val)
+            self.node_is_fast = [self.current_mode == 'fast' 
+                                 for val in node_val]
+        else:
+            node_pos, node_val = self.init_node_pos, self.init_node_val
+            # Initial points provided by the user are 'accurate'.
+            self.node_is_fast = [False for val in node_val]
+
+        self.all_node_pos.extend(node_pos)
+        self.all_node_val.extend(node_val)
+        self.all_node_is_fast.extend(self.node_is_fast)
+
+        # Rescale the domain of the function
+        node_pos = [ru.transform_domain(self.l_settings, self.var_lower,
+                                        self.var_upper, point)
+                    for point in node_pos]           
+        # Update references
+        self.node_pos, self.node_val = node_pos, node_val
+        # Update all counters and values to restart properly
+        self.fmin_index = node_val.index(min(node_val))
+        self.fmin = node_val[self.fmin_index]
+        self.fmax = max(node_val)
+        self.fmin_cycle_start = self.fmin
+        self.num_stalled_cycles = 0
+        self.num_cons_discarded = 0
+        self.is_best_fast = self.node_is_fast[self.fmin_index]
+        # Denominator of errormin
+        gap_den = (abs(self.l_settings.target_objval) 
+                   if (abs(self.l_settings.target_objval) >=  
+                       self.l_settings.eps_zero) else 1.0)
+        # Shift due to fast function evaluation
+        gap_shift = (ru.get_fast_error_bounds(self.l_settings, self.fmin)[1]
+                     if self.is_best_fast else 0.0)
+        # Compute current minimum distance from the optimum
+        gap = ((self.fmin + gap_shift - self.l_settings.target_objval) /
+               gap_den)                                
+        # Print the initialization points
+        for (i, val) in enumerate(self.node_val):
+            min_dist = ru.get_min_distance(self.node_pos[i], 
+                                           self.node_pos[:i] + 
+                                           self.node_pos[(i+1):])
+            self.update_log('Initialization', self.node_is_fast[i],
+                            val, min_dist, gap)
+
+    # -- end function
+
+    def pure_global_step(self, mat):
+        """Perform the pure global search step.
+
+        Parameters
+        ----------
+        mat : numpy.matrix
+            The matrix necessary for the computation. This is the
+            inverse of the matrix [Phi P; P^T 0]. Must be a square
+            numpy.matrix of appropriate dimension.
+
+        Returns
+        -------
+        List[float] or None
+            The point to be evaluated next, or None if errors
+            occurred.
+
+        """
+        assert(isinstance(mat, np.matrix))
+        # Infstep: explore the parameter space
+        return aux.pure_global_search(self.l_settings, self.n,
+                                      len(self.node_pos),
+                                      self.l_lower, self.l_upper,
+                                      self.node_pos, mat,
+                                      self.integer_vars)
+    # -- end function
+
+    def restoration_step(self):
+        """Perform restoration step to repair RBF matrix.
+
+        Try to repair an ill-conditioned RBF matrix by selecting
+        random points far enough from current interpolation nodes,
+        until numerical stability is restored.
+
+        Returns
+        -------
+        bool
+            Indicates whether the matrix was restored or not.
+
+        """
+        restoration_done = False
+        cons_restoration = 0
+        Amat = None
+        Amatinv = None
+        while (not restoration_done and cons_restoration < 
+               self.l_settings.max_consecutive_restoration):
+            next_p = [random.uniform(self.var_lower[i], self.var_upper[i])
+                      for i in range(self.n)]
+            ru.round_integer_vars(next_p, self.integer_vars)
+            if (ru.get_min_distance(next_p, self.node_pos) >
+                self.l_settings.min_dist):
+                # Try inverting the RBF matrix to see if
+                # nonsingularity is restored
+                try:
+                    Amat = ru.get_rbf_matrix(self.l_settings, self.n, 
+                                             len(self.node_pos) + 1,
+                                             self.node_pos + [next_p])
+                    Amatinv = ru.get_matrix_inverse(self.l_settings, Amat)
+                    restoration_done = True
+                except np.linalg.LinAlgError:
+                    cons_restoration += 1
+            else:
+                cons_restoration += 1
+        return restoration_done
+    # -- end function
+
+    def local_step(self, rbf_lambda, rbf_h, tfv, fast_node_index, 
+                   Amat, Amatinv):
+        """Perform local search step, possibly adjusted.
+
+        Perform a local search step. This typically accepts the
+        minimum of the RBF model as the next point if it is a viable
+        option; if this is not viable, it will perform an adjusted
+        local search and try to generate a different candidate. It
+        also verifies if it is better to evaluate a brand new point,
+        or re-evaluate a previously known point. The test is based on
+        bumpiness of the resulting interpolant.
+        
+        Parameters
+        ----------
+        rbf_lambda : List[float]
+            The lambda coefficients of the RBF interpolant,
+            corresponding to the radial basis functions. List of
+            dimension k.
+
+        rbf_h : List[float]
+            The h coefficients of the RBF interpolant, corresponding
+            to the polynomial. List of dimension n+1.
+
+        tfv : (List[float], float, float, List[(float, float)])
+            Transformed function values: scaled node values, scaled
+            minimum, scaled maximum, and node error bounds.
+
+        fast_node_index : List[int]
+            List of indices of nodes whose function value should be
+            considered variable withing the allowed range.
+
+        Amat : numpy.matrix
+            RBF matrix, i.e. [Phi P; P^T 0].
+
+        Amatinv : numpy.matrix
+            Inverse of the RBF matrix, i.e. [Phi P; P^T 0]^{-1}.
+
+        Returns
+        -------
+        (bool, List[float] or None, int)
+            A triple (adjusted, point, index) where adjusted is True if
+            the local search was adjusted rather than a pure local
+            search, point is the point to be evaluated next (or None
+            if errors occurred), and int is the insertion index for
+            the point. Typically, the insertion index will be equal to
+            the length of node_pos, but it may be a smaller index in
+            case a point previously evaluated in fast mode needs to be
+            re-evaluated in accurate mode.
+
+        See also
+        --------
+        rbfopt_utils.transform_function_values()
+
+        """
+        assert(len(rbf_lambda)==len(self.node_pos))
+        assert(isinstance(Amat, np.matrix))
+        assert(isinstance(Amatinv, np.matrix))
+        scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
+        k = len(self.node_pos)
+        # Local search: compute the minimum of the RBF.
+        min_rbf = aux.minimize_rbf(self.l_settings, self.n, k,
+                                   self.l_lower, self.l_upper,
+                                   self.node_pos, rbf_lambda, rbf_h,
+                                   self.integer_vars)
+        if (min_rbf is not None):
+            min_rbf_val = ru.evaluate_rbf(self.l_settings, min_rbf, self.n, 
+                                          k, self.node_pos, rbf_lambda, rbf_h)
+        # If the RBF cannot me minimized, or if the minimum is
+        # larger than the node with smallest value, just take the
+        # node with the smallest value.
+        if (min_rbf is None or 
+            (min_rbf_val >= scaled_fmin + self.l_settings.eps_zero)):
+            min_rbf = self.node_pos[self.fmin_index]
+            min_rbf_val = scaled_fmin
+        # Check if point can be accepted: is there an improvement?
+        if (min_rbf_val <= (scaled_fmin - self.l_settings.eps_impr * 
+                            max(1.0, abs(scaled_fmin)))):
+            target_val = min_rbf_val
+            next_p = min_rbf
+            adjusted = False
+        else:
+            # If the point is not improving, we solve a global
+            # search problem, rescaling the search box to enforce
+            # some sort of local search
+            target_val = scaled_fmin - 0.01*max(1.0, abs(scaled_fmin))
+            dist_weight = 0.05
+            local_varl = [max(self.l_lower[i], min_rbf[i] -
+                              self.l_settings.local_search_box_scaling * 
+                              0.33 * (self.l_upper[i] - self.l_lower[i]))
+                          for i in range(self.n)]
+            local_varu = [min(self.l_upper[i], min_rbf[i] +
+                              self.l_settings.local_search_box_scaling * 
+                              0.33 * (self.l_upper[i] - self.l_lower[i]))
+                          for i in range(self.n)]
+            ru.round_integer_bounds(local_varl, local_varu, 
+                                    self.integer_vars)
+            next_p  = aux.global_search(self.l_settings, self.n, k, 
+                                        local_varl, local_varu, 
+                                        self.node_pos, rbf_lambda, 
+                                        rbf_h, Amatinv, target_val,
+                                        dist_weight, self.integer_vars)
+            adjusted = True
+        
+        # If previous points were evaluated in low quality and we are
+        # now in high-quality local search mode, then we should verify
+        # if it is better to evaluate a brand new point or re-evaluate
+        # a previously known point.
+        if ((self.two_phase_optimization == True) and
+            (self.current_mode == 'accurate')):
+            (ind, bump) = ru.get_min_bump_node(self.l_settings, self.n, 
+                                               k, Amat, scaled_node_val,
+                                               fast_node_index, 
+                                               node_err_bounds, target_val)
+            
+            if (ind is not None and next_p is not None):
+                # Check if the newly proposed point is very close to
+                # an existing one.
+                if (ru.get_min_distance(next_p, self.node_pos) >
+                    self.l_settings.min_dist):
+                    # If not, compute bumpiness of the newly proposed
+                    # point.
+                    n_bump = ru.get_bump_new_node(self.l_settings, self.n, 
+                                                  k, self.node_pos, 
+                                                  scaled_node_val, next_p,
+                                                  fast_node_index,
+                                                  node_err_bounds,
+                                                  target_val)
+                else:
+                    # If yes, we will simply reevaluate the existing
+                    # point (if it can be reevaluated).
+                    ind = ru.get_min_distance_index(next_p, self.node_pos)
+                    n_bump = (float('inf') if self.node_is_fast[ind] 
+                              else float('-inf'))
+                if (n_bump > bump):
+                    # In this case we want to put the new point at the
+                    # same location as one of the old points.
+                    return (True, self.node_pos.pop[ind], ind)
+            # -- end if
+        # -- end if
+        return (adjusted, next_p, len(self.node_pos))
+
+    # -- end function
+
+    def global_step(self, rbf_lambda, rbf_h, scaled_fmin, 
+                    scaled_node_val, Amatinv):
+        """Perform global search step.
+
+        Perform a global search step, with a different methodology
+        depending on the algorithm chosen.
+        
+        Parameters
+        ----------
+        rbf_lambda : List[float]
+            The lambda coefficients of the RBF interpolant,
+            corresponding to the radial basis functions. List of
+            dimension k.
+
+        rbf_h : List[float]
+            The h coefficients of the RBF interpolant, corresponding
+            to the polynomial. List of dimension n+1.
+
+        scaled_fmin : float
+            Minimum value among interpolation nodes, after scaling.
+
+        scaled_node_val : List[float]
+            Function value at the interpolation nodes, after scaling.
+
+        Amatinv : numpy.matrix
+            Inverse of the RBF matrix, i.e. [Phi P; P^T 0]^{-1}.
+
+        Returns
+        -------
+        (float, List[float] or None)
+            A pair target_valThe point to be evaluated next, or None if errors 
+            occurred.
+
+        """
+        assert(len(rbf_lambda)==len(self.node_pos))
+        assert(isinstance(Amatinv, np.matrix))
+        k = len(self.node_pos)
+        # Global search: compromise between finding a good value
+        # of the objective function, and improving the model.
+        if (self.l_settings.algorithm == 'Gutmann'):
+            # If we use Gutmann's algorithm, we need the minimum
+            # of the RBF interpolant to choose the target value.
+            min_rbf = aux.minimize_rbf(self.l_settings, self.n, k,
+                                       self.l_lower, self.l_upper,
+                                       self.node_pos, rbf_lambda, 
+                                       rbf_h, self.integer_vars)
+            if (min_rbf is not None):
+                min_rbf_val = ru.evaluate_rbf(self.l_settings, min_rbf, 
+                                              self.n, k, self.node_pos,
+                                              rbf_lambda, rbf_h)
+            # If the RBF cannot me minimized, or if the minimum is
+            # larger than the node with smallest value, just take 
+            # the node with the smallest value.
+            if (min_rbf is None or 
+                min_rbf_val >= scaled_fmin + self.l_settings.eps_zero):
+                min_rbf = self.node_pos[self.fmin_index]
+                min_rbf_val = scaled_fmin
+        else:
+            # For the Metric SRSM method, pick the node with the
+            # smallest value as minimum of the RBF.
+            min_rbf = self.node_pos[self.fmin_index]
+            min_rbf_val = self.fmin
+            
+        # Compute the function value used to determine the
+        # target value. This is given by the sorted value in
+        # position sigma_n, where sigma_n is a function
+        # described in the paper by Gutmann (2001). If
+        # clipping is disabled, we simply take the largest
+        # function value.
+        if (self.l_settings.targetval_clipping):
+            local_fmax = ru.get_fmax_current_iter(self.l_settings, self.n, 
+                                                  k, self.current_step,
+                                                  scaled_node_val)
+        else:
+            local_fmax = self.fmax
+                    
+        # For Gutmann's RBF method, the scaling factor is 1 -
+        # h/kappa, where h goes from 0 to kappa-1 over the
+        # course of one global search cycle, and kappa is the
+        # number of global searches.
+        scaling = (1 - ((self.current_step - 1) /
+                        self.l_settings.num_global_searches))**2
+        target_val = (min_rbf_val - 
+                      scaling * (local_fmax - min_rbf_val))
+        # For Metric SRSM, The weighting factor for the
+        # distance is is (h+1)/kappa, where h goes from 0 to
+        # kappa-1 over the course of one global search cycle,
+        # and kappa is the number of global searches. If
+        # dist_weight would be 0, we set it to 0.05.
+        dist_weight = (1 - (self.current_step / 
+                            self.l_settings.num_global_searches)
+                       if (self.current_step < 
+                           self.l_settings.num_global_searches)
+                       else 0.05)
+
+
+        # If the global search is almost a local search, we
+        # restrict the search to a box following Regis and
+        # Shoemaker (2007)
+        if (scaling <= config.LOCAL_SEARCH_THRESHOLD):
+            local_varl = [max(self.l_lower[i], min_rbf[i] -
+                              self.l_settings.local_search_box_scaling * 
+                              math.sqrt(scaling) * 
+                              (self.l_upper[i] - self.l_lower[i]))
+                          for i in range(self.n)]
+            local_varu = [min(self.l_upper[i], min_rbf[i] +
+                              self.l_settings.local_search_box_scaling * 
+                              math.sqrt(scaling) * 
+                              (self.l_upper[i] - self.l_lower[i]))
+                          for i in range(self.n)]
+            ru.round_integer_bounds(local_varl, local_varu,
+                                    self.integer_vars)
+        else:
+            # Otherwise, use original bounds
+            local_varl = self.l_lower
+            local_varu = self.l_upper
+
+        return aux.global_search(self.l_settings, self.n, k,
+                                 local_varl, local_varu,
+                                 self.node_pos, rbf_lambda, rbf_h,
+                                 Amatinv, target_val, dist_weight,
+                                 self.integer_vars)
+    # -- end function
+
+    def phase_update(self):
+        """Check if we should switch phase in two-phase optimization.
+
+        Check if we should switch to the second phase of two-phase
+        optimization. The conditions for switching are:
+        1) Optimization in fast mode restarted too many times.
+        2) We reached the limit of fast mode iterations.
+        If both are met, the switch is performed.
+        """
+        if ((self.two_phase_optimization == True) and 
+            (self.current_mode == 'fast') and
+            ((self.num_fast_restarts > self.l_settings.max_fast_restarts) or
+             (self.itercount >= self.l_settings.max_fast_iterations) or
+             (self.fast_evalcount >= self.l_settings.max_fast_evaluations))):
+            self.update_log('Switching to accurate mode')
+            self.current_mode = 'accurate'            
+    # -- end function
+
+    def advance_step_counter(self):
+        """Advance the step counter of the optimization algorithm.
+        
+        Determine the next search step of the optimization algorithm,
+        and proceed to it.
+        """
+        # If we are in local search and there has been sufficient
+        # improvement, repeat it.
+        if ((self.current_step == self.local_search_step) and
+            (self.node_val[-1] <= self.fmin -
+             self.l_settings.eps_impr*max(1.0,abs(self.fmin))) and
+            (self.num_cons_ls < 
+             self.l_settings.max_consecutive_local_searches - 1)):
+            self.num_cons_ls += 1
+        # Otherwise, advance to next step.
+        else:            
+            self.current_step = ((self.current_step + 1) % 
+                                 self.cycle_length)
+            self.num_cons_ls = 0                    
+    # -- end function
+
+    def stalling_update(self):
+        """Check if the algorithm is stalling.
+
+        Check if the algorithm is stalling, and perform the
+        corresponding updates.
+        """
+        if (self.current_step <= self.first_step): 
+            if (self.fmin <= (self.fmin_cycle_start - 
+                              self.l_settings.max_stalled_objfun_impr
+                              * max(1.0, abs(self.fmin_cycle_start)))):
+                self.num_stalled_cycles = 0
+                self.fmin_cycle_start = self.fmin
+            else:
+                self.num_stalled_cycles += 1
+    # -- end function
+
+
+
+    def require_accurate_evaluation(self, fast_val):
+        """Check if a given fast value qualifies for accurate evaluation.
+
+        Verify if a point with the given objective function value in
+        fast mode qualifies for an immediate accurate re-evaluation.
+
+        Parameters
+        ----------
+        fast_val : float
+            Value of the point to be tested, in fast mode.
+
+        Returns
+        -------
+        bool
+            True if the point should be re-evaluated in accurate mode
+            immediately.
+        """
+        # Check if the point improves over existing points, 
+        # or if it could be optimal according to tolerances. 
+        # In this case, perform a double evaluation.
+        best_possible = ((ru.get_fast_error_bounds(self.l_settings,
+                                                   self.fmin)[0]
+                          if self.is_best_fast else 0.0) +  self.fmin)
+        if ((fast_val <= best_possible -
+             self.l_settings.eps_impr*max(1.0, abs(best_possible))) or
+            (fast_val <= self.l_settings.target_objval +
+             self.l_settings.eps_opt*abs(self.l_settings.target_objval) -
+             ru.get_fast_error_bounds(self.l_settings, fast_val)[0])):
+            return True
+        else:
+            return False
+    # -- end function
 # -- end class

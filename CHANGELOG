@@ -1,3 +1,8 @@
+2016-03-07  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (OptAlgorithm): Added class for optimization
+	algorithm. Allows saving/loading algorithm state.
+	* rbfopt.py (rbf_optimize): Now simply redirects to OptAlgorithm.
+	
 2016-02-28  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* test_rbfopt.py: Moved to tests/rbfopt_test_interface.py.
 	* tests/: Added unit tests for all modules to documentation.

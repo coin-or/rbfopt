@@ -150,7 +150,7 @@ class TestGutmann(unittest.TestCase):
             print()
             print('Solving st_miqp1 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gurmann', 
+            settings = RbfSettings(algorithm = 'Gutmann', 
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
