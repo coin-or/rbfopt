@@ -939,6 +939,29 @@ def get_fast_error_bounds(settings, value):
 
 # -- end function
 
+def compute_gap(settings, fmin, is_best_fast):
+    """Compute the optimality gap w.r.t. the target value.
+
+    Returns
+    -------
+    float
+        The current optimality gap, i.e. relative distance from target
+        value.
+    """
+    assert(isinstance(settings, RbfSettings))    
+    # Denominator of errormin
+    gap_den = (abs(settings.target_objval) 
+               if (abs(settings.target_objval) >= settings.eps_zero)
+               else 1.0)
+    # Shift due to fast function evaluation
+    gap_shift = (get_fast_error_bounds(settings, fmin)[1]
+                 if is_best_fast else 0.0)
+    # Compute current minimum distance from the optimum
+    gap = ((fmin + gap_shift - settings.target_objval) /
+           gap_den)
+    return gap
+# -- end function
+
 def transform_function_values(settings, node_val, fmin, fmax,
                               fast_node_index = list()):
     """Rescale function values.

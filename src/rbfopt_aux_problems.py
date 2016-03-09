@@ -73,7 +73,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
 
     Returns
     -------
-    float
+    List[float]
         A maximizer. It is difficult to do global optimization so
         typically this method returns a local maximum.
 
@@ -189,7 +189,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
 
     Returns
     -------
-    float
+    List[float]
         A minimizer. It is difficult to do global optimization so
         typically this method returns a local minimum.
 
@@ -313,7 +313,7 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
 
     Returns
     -------
-    float
+    List[float]
         A maximizer. It is difficult to do global optimization so
         typically this method returns a local maximum.
 
