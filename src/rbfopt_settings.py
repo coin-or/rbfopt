@@ -48,6 +48,9 @@ class RbfSettings:
     max_clock_time : float
         Maximum wall clock time in seconds. Default 1.0e30.
 
+    num_cpus : int
+        Number of CPUs used. Default 1.
+
     target_objval : float
         The objective function value we want to reach, i.e. the value
         of the unknown optimum. It can be set to an acceptable value,
@@ -216,6 +219,7 @@ class RbfSettings:
                  max_evaluations = 250,
                  max_fast_evaluations = 150,
                  max_clock_time = 1.0e30,
+                 num_cpus = 1,
                  target_objval = -1.0e10,
                  eps_opt = 1.0e-2,
                  eps_zero = 1.0e-15,
@@ -252,6 +256,7 @@ class RbfSettings:
         self.max_evaluations = max_evaluations
         self.max_fast_evaluations = max_fast_evaluations
         self.max_clock_time = max_clock_time
+        self.num_cpus = num_cpus
         self.target_objval = target_objval
         self.eps_opt = eps_opt
         self.eps_zero = eps_zero

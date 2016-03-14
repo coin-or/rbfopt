@@ -16,7 +16,6 @@ from __future__ import division
 from __future__ import absolute_import
 
 import math
-import random
 import numpy as np
 import pyomo.environ
 import pyomo.opt
@@ -417,8 +416,8 @@ def initialize_instance_variables(settings, instance):
 
     # Initialize variables for local search
     for i in instance.N:
-        instance.x[i] = random.uniform(instance.var_lower[i], 
-                                       instance.var_upper[i])
+        instance.x[i] = np.random.uniform(instance.var_lower[i], 
+                                          instance.var_upper[i])
     for j in instance.K:
         instance.u_pi[j] = rbf(math.sqrt(math.fsum((instance.x[i].value - 
                                                      instance.node[j, i])**2 
@@ -601,7 +600,7 @@ def set_minlp_solver_options(solver):
     for (opt_name, opt_value) in config.MINLP_SOLVER_OPTIONS:
         solver.options[opt_name] = opt_value
     if (config.MINLP_SOLVER_RAND_SEED_OPTION is not None):
-        solver.options[config.MINLP_SOLVER_RAND_SEED_OPTION] = random.randint(0, config.MINLP_SOLVER_MAX_SEED)
+        solver.options[config.MINLP_SOLVER_RAND_SEED_OPTION] = np.random.randint(config.MINLP_SOLVER_MAX_SEED)
 
 # -- end function
 
@@ -620,7 +619,7 @@ def set_nlp_solver_options(solver):
     for (opt_name, opt_value) in config.NLP_SOLVER_OPTIONS:
         solver.options[opt_name] = opt_value
     if (config.NLP_SOLVER_RAND_SEED_OPTION is not None):
-        solver.options[config.NLP_SOLVER_RAND_SEED_OPTION] = random.randint(0, config.NLP_SOLVER_MAX_SEED)
+        solver.options[config.NLP_SOLVER_RAND_SEED_OPTION] = np.random.randint(config.NLP_SOLVER_MAX_SEED)
 
 # -- end function
 

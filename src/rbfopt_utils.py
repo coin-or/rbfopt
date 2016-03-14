@@ -15,7 +15,6 @@ from __future__ import absolute_import
 
 import sys
 import math
-import random
 import itertools
 import numpy as np
 import scipy.spatial as ss
@@ -227,7 +226,7 @@ def get_random_corners(var_lower, var_upper):
     n = len(var_lower)
     node_pos = list()
     while (len(node_pos) < n+1):
-        point = [var_lower[i] if (random.random() <= 0.5) else var_upper[i]
+        point = [var_lower[i] if (np.random.rand() <= 0.5) else var_upper[i]
                  for i in range(n)]
         if (not node_pos or get_min_distance(point, node_pos) > 0):
             node_pos.append(point)
@@ -1396,5 +1395,71 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
                           for h in range(k+1) for j in range(k+1))
 
     return bumpiness
-
 # -- end function
+
+def results_ready(results):
+    """Check if some asynchronous results completed.
+    
+    Given a list containing results of asynchronous computations
+    dispatched to a worker pool, verify if some of them are ready for
+    processing.
+
+    Parameters
+    ----------
+    results : List[(multiprocessing.pool.AsyncResult, any)]
+        A list of tasks, where each task is a list and the first
+        element is the output of a call to apply_async. The other
+        elements of the list will never be scanned by this function,
+        and they could be anything.
+
+    Returns
+    -------
+    bool
+        True if at least one result has completed.
+    """
+    for res in results:
+        if res[0].ready():
+            return True
+    return False
+# -- end if
+
+def get_ready_indices(results):
+    """Get indices of results of async computations that are ready.
+    
+    Given a list containing results of asynchronous computations
+    dispatched to a worker pool, obtain the index of computations that
+    have concluded.
+
+    Parameters
+    ----------
+    results : List[(multiprocessing.pool.AsyncResult, any)]
+        A list of tasks, where each task is a list and the first
+        element is the output of a call to apply_async. The other
+        elements of the list will never be scanned by this function,
+        and they could be anything.
+
+    Returns
+    -------
+    List[int]
+        List of indices of computations that completed, from the
+        largest to the smallest.
+
+    """
+    ready = list()
+    for i in reversed(range(len(results))):
+        if results[i][0].ready():
+            ready.append(i)
+    return ready
+# -- end if
+
+def init_rand_seed(seed):
+    """Initialize the random seed.
+
+    Parameters
+    ----------
+    seed : any
+        A hashable object that can be used to initialize numpy's
+        internal random number generator.
+    """
+    np.random.seed(seed)
+# -- end if

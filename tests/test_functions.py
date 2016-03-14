@@ -1,10 +1,13 @@
-"""Suite of global optimization test functions.
-
-This module contains several continuous and mixed-integer nonlinear
-functions that can be used as test cases for RBFOpt. These functions
-are not protected by copyright, and neither is this file.
-
-"""
+#######################################################################
+#  File:      test_functions.py
+#  Author(s): Giacomo Nannicini
+#             Singapore University of Technology and Design
+#             nannicini@sutd.edu.sg
+#  Date:      02/09/14
+#
+#  This file is NOT part of RBFOpt and is NOT protected by copyright.
+#  It implements a number of already known mathematical functions.
+#######################################################################
 
 from __future__ import print_function
 from __future__ import division
@@ -35,7 +38,7 @@ class branin:
     additional_optima = [ [-3.14159265, 12.27500000],
                           [3.14159265, 2.27500000] ]
     optimum_value = 0.397887357729739
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -69,7 +72,7 @@ class hartman3:
     var_upper = [1, 1, 1]
     optimum_point = [0.1, 0.55592003, 0.85218259]
     optimum_value = -3.86278214782076
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -110,7 +113,7 @@ class hartman6:
     optimum_point = [0.20168952, 0.15001069, 0.47687398,
                      0.27533243, 0.31165162, 0.65730054]
     optimum_value = -3.32236801141551
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -134,7 +137,7 @@ class camel:
     var_upper = [3, 2]
     optimum_point = [0.08984201, -0.08984201]
     optimum_value = -1.0316284535
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -162,7 +165,7 @@ class goldsteinprice:
     var_upper = [2, 2]
     optimum_point = [0.0, -1.0]
     optimum_value = 3
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -195,7 +198,7 @@ class shekel5:
     var_upper = [10, 10, 10, 10]
     optimum_point = [4, 4, 4, 4]
     optimum_value = -10.1531996790582
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -228,7 +231,7 @@ class shekel7:
     var_upper = [10, 10, 10, 10]
     optimum_point = [4, 4, 4, 4]
     optimum_value = -10.4029405668187;
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -261,7 +264,7 @@ class shekel10:
     var_upper = [10, 10, 10, 10]
     optimum_point = [4, 4, 4, 4]
     optimum_value = -10.5364098166920
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -287,7 +290,7 @@ class ex4_1_1:
     var_upper = [11] 
     optimum_point = [-1.19131]
     optimum_value = -7.4873
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -322,7 +325,7 @@ class ex4_1_2:
     var_upper = [2] 
     optimum_point = [1.09106]
     optimum_value = -663.4993631230575
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -346,7 +349,7 @@ class ex8_1_1:
     var_upper = [2, 1] 
     optimum_point = [2.0, 0.105783]
     optimum_value = -2.02181
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -370,7 +373,7 @@ class ex8_1_4:
     var_upper = [4, 2] 
     optimum_point = [0.0, 0.0]
     optimum_value = 0.0
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -399,7 +402,7 @@ class least:
     var_upper = [600, 200, 5] 
     optimum_point = [516.651174172, -149.351893696, -0.206642767973]
     optimum_value = 14085.1398
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -424,7 +427,7 @@ class rbrock:
     var_upper = [5, 10] 
     optimum_point = [1.0, 1.0]
     optimum_value = 0.0
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -453,7 +456,7 @@ class perm_6:
     var_upper = [6 for i in range(6)] 
     optimum_point = [(i+1) for i in range(6)]
     optimum_value = 1000.0
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -482,7 +485,7 @@ class perm0_8:
     var_upper = [1 for i in range(8)] 
     optimum_point = [1.0/(i+1) for i in range(8)]
     optimum_value = 1000.0
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -557,17 +560,14 @@ class schoen_6_1:
         numerator = 0.0
         denominator = 0.0
 
-        prod = 1.0
-        all_distances = list()
         for i in range(50):
-            dist = math.fsum([ (x[k] - z[i][k])**2
-                               for k in range(6) ])
-            prod *= dist
-            all_distances.append(dist)
-
-        for i in range(50):
-            numerator += f[i]*prod/all_distances[i]
-            denominator += prod/all_distances[i]
+            prod = 1.0
+            for j in range(50):
+                if (i != j):
+                    prod *= math.fsum([ (x[k] - z[j][k])**2
+                                        for k in range(6) ])
+            numerator += f[i]*prod
+            denominator += prod
         
         value = numerator/denominator
         return(value)
@@ -578,7 +578,7 @@ class schoen_6_1:
     optimum_point = [0.298854, 0.181010, 0.984817,
                      0.125272, 0.548396, 0.894658]
     optimum_value = -1000
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -653,18 +653,15 @@ class schoen_6_2:
         numerator = 0.0
         denominator = 0.0
 
-        prod = 1.0
-        all_distances = list()
         for i in range(50):
-            dist = math.fsum([ (x[k] - z[i][k])**2
-                               for k in range(6) ])
-            prod *= dist
-            all_distances.append(dist)
-
-        for i in range(50):
-            numerator += f[i]*prod/all_distances[i]
-            denominator += prod/all_distances[i]
-        
+            prod = 1.0
+            for j in range(50):
+                if (i != j):
+                    prod *= math.fsum([ (x[k] - z[j][k])**2
+                                        for k in range(6) ])
+                    numerator += f[i]*prod
+                    denominator += prod
+                    
         value = numerator/denominator
         return(value)
 
@@ -674,7 +671,7 @@ class schoen_6_2:
     optimum_point = [0.669711, 0.815540, 0.646120,
                      0.377447, 0.111538, 0.040529]
     optimum_value = -1000
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -799,17 +796,14 @@ class schoen_10_1:
         numerator = 0.0
         denominator = 0.0
 
-        prod = 1.0
-        all_distances = list()
         for i in range(50):
-            dist = math.fsum([ (x[k] - z[i][k])**2
-                               for k in range(6) ])
-            prod *= dist
-            all_distances.append(dist)
-
-        for i in range(50):
-            numerator += f[i]*prod/all_distances[i]
-            denominator += prod/all_distances[i]
+            prod = 1.0
+            for j in range(50):
+                if (i != j):
+                    prod *= math.fsum([ (x[k] - z[j][k])**2
+                                        for k in range(10) ])
+            numerator += f[i]*prod
+            denominator += prod
         
         value = numerator/denominator
         return(value)
@@ -820,7 +814,7 @@ class schoen_10_1:
     optimum_point = [0.914871, 0.765230, 0.139426, 0.617466, 0.823635, 
                      0.794003, 0.801171, 0.568811, 0.279434, 0.540422]
     optimum_value = -1000
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -945,17 +939,14 @@ class schoen_10_2:
         numerator = 0.0
         denominator = 0.0
 
-        prod = 1.0
-        all_distances = list()
         for i in range(50):
-            dist = math.fsum([ (x[k] - z[i][k])**2
-                               for k in range(6) ])
-            prod *= dist
-            all_distances.append(dist)
-
-        for i in range(50):
-            numerator += f[i]*prod/all_distances[i]
-            denominator += prod/all_distances[i]
+            prod = 1.0
+            for j in range(50):
+                if (i != j):
+                    prod *= math.fsum([ (x[k] - z[j][k])**2
+                                        for k in range(10) ])
+            numerator += f[i]*prod
+            denominator += prod
         
         value = numerator/denominator
         return(value)
@@ -966,7 +957,7 @@ class schoen_10_2:
     optimum_point = [0.131461, 0.965235, 0.046134, 0.983011, 0.719813, 
                      0.827542, 0.662422, 0.570546, 0.578707, 0.013264]
     optimum_value = -1000
-    integer_vars = None
+    integer_vars = []
 
 # -- end class
 
@@ -1132,7 +1123,7 @@ class nvs06:
     @staticmethod
     def evaluate(x):
         """
-        nvs04 function of the MINLPLib test set.
+        nvs06 function of the MINLPLib test set.
         """
         assert(len(x)==2)
 
@@ -1276,6 +1267,7 @@ class nvs15:
         # - x[0] - x[1] - 2*x[2] + 3 >= 0
         penalty = 0.0
         penalty += 10*max(0, -(-x[0] - x[1] - 2*x[2] + 3))
+        print(penalty)
         return(value + penalty)
 
     dimension = 3
@@ -1329,6 +1321,8 @@ class prob03:
         # There is one constraint:
         # x[0]*x[1] - 3.5 >= 0
         penalty = 10*max(0, -(x[0]*x[1] - 3.5))
+        print(x)
+        print(penalty)
         return(value + penalty)
 
     dimension = 2

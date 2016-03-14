@@ -6,6 +6,7 @@ algorithmic options using a standard UNIX sintax.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
+(C) Copyright International Business Machines Corporation 2016.
 Research partially supported by SUTD-MIT International Design Center.
 """
 
@@ -16,9 +17,10 @@ from __future__ import absolute_import
 import sys
 import argparse
 import ast
+import importlib
 import rbfopt
-import black_box as bb
 from rbfopt_settings import RbfSettings
+from rbfopt_black_box import BlackBox
 from rbfopt_algorithm import OptAlgorithm
 
 
@@ -65,6 +67,13 @@ def register_options(parser):
                             type = type_fun,
                             help = param_help[i],
                             default = getattr(default, param_name[i]))
+    parser.add_argument('--black_box_module', '-m', action = 'store',
+                        metavar = 'MODULE_NAME', dest = 'black_box_module',
+                        type = str, default = 'rbfopt_black_box_example',
+                        help = 'name of module containing black box function'
+                        + 'and the description of its characteristics.' +
+                        'This module should implement a BlackBox class' +
+                        'derived from rbfopt_black_box.BlackBox.')
     parser.add_argument('--log', '-o', action = 'store',
                         metavar = 'LOG_FILE_NAME', dest = 'output_stream',
                         help = 'name of log file for output redirection')
@@ -93,19 +102,12 @@ def rbfopt_cl_interface(args, black_box):
         A dictionary containing the values of the parameters in a
         format args['name'] = value. 
 
-    black_box : black_box.BlackBox
-        An object containing the function to be optimized and its main
-        characteristics. It is possible to pass an object of a
-        different class, provided that it as the same public
-        attributes.
+    black_box : rbfopt_black_box.BlackBox
+        The black box to be optimized.
     """
-
-    assert(hasattr(black_box, 'dimension'))
-    assert(hasattr(black_box, 'var_lower'))
-    assert(hasattr(black_box, 'var_upper'))
-    assert(hasattr(black_box, 'integer_vars'))
-    assert(hasattr(black_box, 'evaluate'))
-    assert(hasattr(black_box, 'evaluate_fast'))
+    if (not isinstance(black_box, BlackBox)):
+        raise ValueError('The specified module does not contain a ' +
+                         'valid BlackBox instance')
 
     # Open output stream if necessary
     if (args['output_stream'] is None):
@@ -120,6 +122,7 @@ def rbfopt_cl_interface(args, black_box):
     # Make a copy of parameters and adjust them, deleting keys
     # that are not recognized as valid by RbfSettings.
     local_args = args.copy()
+    del local_args['black_box_module']
     del local_args['output_stream']
     del local_args['load_state']
     del local_args['dump_state']
@@ -129,18 +132,21 @@ def rbfopt_cl_interface(args, black_box):
     settings.print(output_stream = output_stream)
     if (args['load_state'] is not None):
         alg = OptAlgorithm.load_from_file(args['load_state'],
-                                          black_box.evaluate,
-                                          black_box.evaluate_fast)
+                                          objfun,
+                                          objfun_fast)
     else:
         alg = OptAlgorithm(settings = settings,
-                           dimension = black_box.dimension, 
-                           var_lower = black_box.var_lower,
-                           var_upper = black_box.var_upper,
-                           objfun = black_box.evaluate,
-                           objfun_fast = black_box.evaluate_fast,
-                           integer_vars = black_box.integer_vars)
+                           black_box = black_box)
     alg.set_output_stream(output_stream)
-    result = alg.optimize(args['pause'])
+    if (args['num_cpus'] == -1):
+        # TODO: hack for when we want to test parallel mode with a
+        # single CPU. Will have to be removed.
+        alg.settings.num_cpus = 1
+        alg.l_settings.num_cpus = 1
+        alg.optimize_parallel(args['pause'])
+        result = [alg.fmin]
+    else:
+        result = alg.optimize(args['pause'])
     print('OptAlgorithm.optimize() returned ' + 
           'function value {:.15f}'.format(result[0]),
           file = output_stream)
@@ -158,11 +164,11 @@ if (__name__ == "__main__"):
         print('Please use Python 2.7')
         exit()
     # Create command line parsers
-    desc = ('Apply the RBF method to the class "BlackBox" in black_box.py.' + 
-            '\nSee rbfopt.py for a detailed description of all options.')
+    desc = ('Apply the RBF method to an object of class "BlackBox".')
     parser = argparse.ArgumentParser(description = desc)
     # Add options to parser and parse arguments
     register_options(parser)
     args = parser.parse_args()
+    bb = importlib.import_module(args.black_box_module)
     # Run the interface
     rbfopt_cl_interface(vars(args), bb.BlackBox())
