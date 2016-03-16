@@ -2,7 +2,7 @@
 
 This module contains the definition of the black box function that is
 optimized by RBFOpt, when using the default command line
-interface. This is an abstract class with methods that must be
+interface. This is an abstract class: all methods *must* be
 reimplemented by the user.
 
 Licensed under Revised BSD license, see LICENSE.
@@ -21,20 +21,6 @@ class BlackBox:
     methods to describe a black-box function. The user can implement a
     derived class and use it to compute the function that must be
     optimized.
-
-    Attributes
-    ----------
-        
-
-    var_upper : List[float]
-        Upper bounds of the decision variables.
-
-    evaluate : Callable[List[float]]
-        The function implementing the black-box.
-
-    evaluate_fast : Callable[List[float]]
-        The function implementing a faster, potentially noisy version
-        of the black-box, or None if not available.
 
     """
     __metaclass__ = ABCMeta

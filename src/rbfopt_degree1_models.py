@@ -14,14 +14,13 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyomo.environ import *
-import rbfopt
 import rbfopt_utils as ru
 import numpy as np
 import rbfopt_config as config
 from rbfopt_settings import RbfSettings
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos, 
-                         rbf_lambda, rbf_h, integer_vars = None):
+                         rbf_lambda, rbf_h, integer_vars):
     """Create the concrete model to minimize the RBF.
 
     Create the concrete model to minimize the RBF.
@@ -29,7 +28,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos,
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -131,14 +130,14 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos,
                                          rule=_nonhomo_constraint_rule)
 
     # Add integer variables if necessary
-    if (integer_vars is not None and len(integer_vars) > 0):
+    if (len(integer_vars) > 0):
         add_integrality_constraints(model, integer_vars)
 
     return model
 # -- end function
 
 def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper, 
-                                 node_pos, mat, integer_vars = None):
+                                 node_pos, mat, integer_vars):
 
     """Create the concrete model to maximize 1/\mu.
 
@@ -151,7 +150,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -264,7 +263,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
                                          rule=_nonhomo_constraint_rule)
 
     # Add integer variables if necessary
-    if (integer_vars is not None and len(integer_vars) > 0):
+    if (len(integer_vars) > 0):
         add_integrality_constraints(model, integer_vars)
 
     return model
@@ -272,7 +271,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
 
 def create_max_h_k_model(settings, n, k, var_lower, var_upper,
                          node_pos, rbf_lambda, rbf_h, mat, target_val,
-                         integer_vars = None):
+                         integer_vars):
     """Create the abstract model to maximize h_k.
 
     Create the abstract model to maximize h_k, also known as the
@@ -281,7 +280,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -424,7 +423,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper,
     model.MukdefConstraint = Constraint(rule=_mukdef_constraint_rule)
 
     # Add integer variables if necessary
-    if (integer_vars is not None and len(integer_vars) > 0):
+    if (len(integer_vars) > 0):
         add_integrality_constraints(model, integer_vars)
 
     return model
@@ -442,7 +441,7 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int

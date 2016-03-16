@@ -22,7 +22,6 @@ import pyomo.opt
 from pyomo.opt import SolverStatus, TerminationCondition
 import rbfopt_utils as ru
 import rbfopt_config as config
-import rbfopt
 import rbfopt_degree1_models
 import rbfopt_degree0_models
 from rbfopt_settings import RbfSettings
@@ -42,7 +41,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
     Parameters
     ----------
  
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -60,14 +59,15 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
     node_pos : List[List[float]]
         List of coordinates of the nodes
 
-    mat : numpy.matrix
+    mat : numpy.matrix or None
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a square numpy.matrix of appropriate dimension.
+        be a square numpy.matrix of appropriate dimension if
+        given. Can be None when using the MSRSM algorithm.
 
     integer_vars : List[int] or None
         A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
+        variables. If empty list, all variables are assumed to
         be continuous.
 
     Returns
@@ -82,16 +82,17 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
         If the type of radial basis function is not supported.
     RuntimeError
         If the solver cannot be found.
+
     """
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(node_pos)==k)
-    assert(isinstance(mat, np.matrix))
     assert(isinstance(settings, RbfSettings))
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
-    assert(mat.shape==(k + p, k + p))
+    assert((mat is None and settings.algorithm == 'MSRSM' )
+           or (isinstance(mat, np.matrix) and mat.shape==(k + p, k + p)))
 
     # Instantiate model
     if (ru.get_degree_polynomial(settings) == 1):
@@ -155,7 +156,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -181,9 +182,9 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
-    integer_vars: List[int] or None
+    integer_vars: List[int]
         A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
+        variables. If empty list, all variables are assumed to
         be continuous.
 
     Returns
@@ -264,7 +265,7 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -290,10 +291,11 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
-    mat : numpy.matrix
+    mat : numpy.matrix or None
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a square numpy.matrix of appropriate dimension.
+        be a square numpy.matrix of appropriate dimension, or None if
+        using the MSRSM algorithm.
 
     target_val : float
         Value f* that we want to find in the unknown objective
@@ -322,17 +324,18 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
         If the type of radial basis function is not supported.
     RuntimeError
         If the solver cannot be found.
+
     """
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
-    assert(isinstance(mat, np.matrix))
     assert(isinstance(settings, RbfSettings))
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
-    assert(mat.shape==(k + p, k + p))
+    assert((mat is None and settings.algorithm == 'MSRSM' )
+           or (isinstance(mat, np.matrix) and mat.shape==(k + p, k + p)))
     assert(len(rbf_h)==(p))
 
     # Instantiate model
@@ -403,7 +406,7 @@ def initialize_instance_variables(settings, instance):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     instance : pyomo.ConcreteModel
@@ -442,7 +445,7 @@ def initialize_h_k_aux_variables(settings, instance):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     instance : pyomo.ConcreteModel
@@ -474,7 +477,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -634,7 +637,7 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int

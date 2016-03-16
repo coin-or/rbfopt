@@ -51,6 +51,10 @@ class BlackBox(bb.BlackBox):
     exponent : float
         The power to which the sum of the variables should be
         raised. Should be nonnegative.
+
+    See also
+    --------
+    :class:`rbfopt_black_box.BlackBox`
     """
 
     def __init__(self, exponent = 1):

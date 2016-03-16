@@ -25,7 +25,7 @@ import rbfopt_algorithm as ra
 class TestGutmann(unittest.TestCase):
     """Test Gutmann's algorithm on a small set of problems."""
 
-    rand_seeds = [512319876412, 231974198123, 90865241837]
+    rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05        
 
     def test_gutmann_goldsteinprice(self):
@@ -151,7 +151,7 @@ class TestGutmann(unittest.TestCase):
 class TestGutmannParallel(unittest.TestCase):
     """Test Gutmann's algorithm in parallel on a small set of problems."""
 
-    rand_seeds = [512319876412, 231974198123, 90865241837]
+    rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05        
 
     def test_gutmann_parallel_goldsteinprice(self):
@@ -282,7 +282,7 @@ class TestGutmannParallel(unittest.TestCase):
 class TestMSRSM(unittest.TestCase):
     """Test MSRSM algorithm on a small set of problems."""
 
-    rand_seeds = [512319876412, 231974198123, 90865241837]
+    rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05
 
     def test_msrsm_hartman3(self):
@@ -407,7 +407,7 @@ class TestMSRSM(unittest.TestCase):
 class TestMSRSMParallel(unittest.TestCase):
     """Test MSRSM algorithm in parallel on a small set of problems."""
 
-    rand_seeds = [512319876412, 231974198123, 90865241837]
+    rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05
 
     def test_msrsm_parallel_hartman3(self):
@@ -537,7 +537,7 @@ class TestMSRSMParallel(unittest.TestCase):
 class TestState(unittest.TestCase):
     """Test load/save state methods."""
 
-    rand_seeds = [512319876412, 231974198123, 90865241837]
+    rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05
 
     def test_state_reload(self):

@@ -51,6 +51,12 @@ class RbfSettings:
     num_cpus : int
         Number of CPUs used. Default 1.
 
+    parallel_wakeup_time : float
+        Time (in seconds) after which the main optimization engine
+        checks the arrival of results from workers busy with function
+        evaluations or other computations. This parameter is only used
+        by the parallel optimizer. Default 0.1.
+
     target_objval : float
         The objective function value we want to reach, i.e. the value
         of the unknown optimum. It can be set to an acceptable value,
@@ -87,7 +93,8 @@ class RbfSettings:
 
     max_consecutive_local_searches : int
         Maximum number of consecutive local searches during the
-        optimization phase. Default 1.
+        optimization phase. This parameter is ignored by the parallel
+        optimizer. Default 1.
 
     init_strategy : str
         Strategy to select initial points. Choice of 'all_corners',
@@ -181,7 +188,9 @@ class RbfSettings:
         stdout. Default False.
 
     rand_seed : int
-        Seed for the random number generator. Default 937627691.
+        Seed for the random number generator. The maximum number
+        supported by numpy on all platforms is 2^32. Default
+        937627691.
 
     Attributes
     ----------
@@ -200,6 +209,7 @@ class RbfSettings:
         Allowed model selection method.
     _allowed_algorithm : Dict[str]
         Allowed algorithms.
+
     """
 
     # Allowed values for multiple choice options
@@ -220,6 +230,7 @@ class RbfSettings:
                  max_fast_evaluations = 150,
                  max_clock_time = 1.0e30,
                  num_cpus = 1,
+                 parallel_wakeup_time = 0.1,
                  target_objval = -1.0e10,
                  eps_opt = 1.0e-2,
                  eps_zero = 1.0e-15,
@@ -257,6 +268,7 @@ class RbfSettings:
         self.max_fast_evaluations = max_fast_evaluations
         self.max_clock_time = max_clock_time
         self.num_cpus = num_cpus
+        self.parallel_wakeup_time = parallel_wakeup_time
         self.target_objval = target_objval
         self.eps_opt = eps_opt
         self.eps_zero = eps_zero

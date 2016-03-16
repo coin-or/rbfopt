@@ -18,7 +18,6 @@ import sys
 import argparse
 import ast
 import importlib
-import rbfopt
 from rbfopt_settings import RbfSettings
 from rbfopt_black_box import BlackBox
 from rbfopt_algorithm import OptAlgorithm
@@ -102,7 +101,7 @@ def rbfopt_cl_interface(args, black_box):
         A dictionary containing the values of the parameters in a
         format args['name'] = value. 
 
-    black_box : rbfopt_black_box.BlackBox
+    black_box : :class:`rbfopt_black_box.BlackBox`
         The black box to be optimized.
     """
     if (not isinstance(black_box, BlackBox)):

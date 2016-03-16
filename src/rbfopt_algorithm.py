@@ -41,10 +41,10 @@ class OptAlgorithm:
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
-    black_box : rbfopt_black_box.BlackBox
+    black_box : :class:`rbfopt_black_box.BlackBox`
         An object derived from class BlackBox, that describes the
         problem.
 
@@ -291,7 +291,6 @@ class OptAlgorithm:
 
         # Update timer
         self.elapsed_time += time.time() - start_time
-
     # -- end function
 
     def set_output_stream(self, output_stream):
@@ -306,6 +305,7 @@ class OptAlgorithm:
         assert('write' in dir(output_stream))
         assert('flush' in dir(output_stream))
         self.output_stream = output_stream
+    # -- end function
 
     def update_log(self, tag, node_is_fast = None, obj_value = None, 
                    min_dist = None, gap = None):
@@ -421,6 +421,14 @@ class OptAlgorithm:
 
         is_fast : bool
             Is the node evaluated in fast mode?
+
+        Returns
+        -------
+        bool
+            True if there is a significant objective function
+            improvement (significant is determined by the parameter
+            RbfSettings.eps_opt), False otherwise.
+
         """
         self.node_pos.append(point)
         self.node_val.append(value)
@@ -428,12 +436,17 @@ class OptAlgorithm:
         self.all_node_pos.append(orig_point)
         self.all_node_val.append(value)
         self.all_node_is_fast.append(is_fast)
+        improvement = False
         # Update fmin and fmax
+        self.fmax = max(self.fmax, value)
         if (value < self.fmin):
+            if (value <= self.fmin -
+                self.l_settings.eps_impr*max(1.0, abs(self.fmin))):
+                improvement = True
             self.fmin_index = len(self.node_pos) - 1
             self.fmin = value
             self.is_best_fast = is_fast
-        self.fmax = max(self.fmax, value)
+        return improvement
     # -- end function
 
     def save_to_file(self, filename):
@@ -596,8 +609,8 @@ class OptAlgorithm:
                self.evalcount < l_settings.max_evaluations and
                time.time() - start_time < l_settings.max_clock_time and
                gap > l_settings.eps_opt):
-            # If the user wants to skip inf_step as in the original paper
-            # of Gutmann (2001), we proceed to the next iteration.
+            # If the user wants to skip inf_step, we proceed to the
+            # next iteration.
             if (self.current_step == self.inf_step and 
                 not l_settings.do_infstep):
                 self.advance_step_counter()
@@ -611,7 +624,6 @@ class OptAlgorithm:
                  self.evalcount + n + 1 < l_settings.max_evaluations and
                  l_settings.init_strategy != 'all_corners' and
                  l_settings.init_strategy != 'lower_corners')):
-
                 self.update_log('Restart')
                 self.restart(gap)
 
@@ -707,7 +719,8 @@ class OptAlgorithm:
 
             elif (self.current_step == self.restoration_step):
                 # Restoration
-                if (not self.restore_matrix()):
+                next_p = self.restoration_search()
+                if (next_p is None ):
                     self.update_log('Restoration phase failed. Abort.')
                     # This will force the optimization process to return
                     break
@@ -775,11 +788,18 @@ class OptAlgorithm:
                         curr_is_fast = False
 
                 # Add to the lists
-                self.add_node(next_p, next_p_orig, next_val, curr_is_fast)
-
-                self.advance_step_counter()
+                improved = self.add_node(next_p, next_p_orig, next_val, 
+                                         curr_is_fast)
+                # If we are in local search and there has been sufficient
+                # improvement, repeat it.
+                if (improved and 
+                    (self.current_step == self.local_search_step) and
+                    (self.num_cons_ls < 
+                     self.l_settings.max_consecutive_local_searches - 1)):
+                    self.num_cons_ls += 1
+                else:
+                    self.advance_step_counter()
                 self.num_cons_discarded = 0
-                        
                 gap = min(ru.compute_gap(l_settings, next_val, 
                                          self.is_best_fast), gap)
                 self.update_log(iteration_id, self.node_is_fast[-1], 
@@ -851,6 +871,9 @@ class OptAlgorithm:
         # the format: [result, is_node_fast, iteration_id], where
         # result is an object of class AsyncResult.
         res_search = list()
+        # List of point evaluations removed from the computation
+        # because numerically unstable. Same format as res_eval above.
+        res_removed = list()
 
         # Save number of iterations at start
         itercount_at_start = self.itercount
@@ -880,28 +903,30 @@ class OptAlgorithm:
                 # Obtain all point evaluations that are ready
                 ready_indices = ru.get_ready_indices(res_eval)
                 for j in ready_indices:
-                    (res, next_p, node_is_fast, 
-                     iteration_id) = res_eval.pop(j)
+                    (res, next_p, node_is_fast, iid) = res_eval.pop(j)
                     next_val = res.get()
                     min_dist = ru.get_min_distance(next_p, self.node_pos)
                     # Transform back to original space if necessary
                     next_p_orig = ru.transform_domain(l_settings, var_lower,
                                                       var_upper, next_p, True)
                     # Add to the lists.
-                    self.add_node(next_p, next_p_orig,
-                                  next_val, node_is_fast)
+                    self.add_node(next_p, next_p_orig, next_val, node_is_fast)
                     gap = min(ru.compute_gap(l_settings, next_val, 
                                              self.is_best_fast), gap)
-                    self.update_log(iteration_id, self.node_is_fast[-1], 
+                    self.update_log(iid, self.node_is_fast[-1], 
                                     next_val, min_dist, gap)
                     # Update iteration number
                     self.itercount += 1
                     # Remove from list of temporary points
-                    ind = temp_node_pos.index(next_p)
-                    temp_node_pos.pop(ind)
-                    temp_node_val.pop(ind)
-                    temp_node_is_fast.pop(ind)
+                    temp_node_pos.pop(j)
+                    temp_node_val.pop(j)
+                    temp_node_is_fast.pop(j)
+                    # Perform main updates
+                    self.stalling_update()
+                    self.phase_update()
                 # -- end for
+                # Force another pass to check termination conditions
+                continue
             # -- end if
 
             # At this point, the model could be updated. Are there
@@ -973,18 +998,16 @@ class OptAlgorithm:
                 # -- end for
             # -- end if
             
-            # If there are no available CPUs, wait a bit and try
-            # again.
+            # If no CPUs are available, wait a bit and try again.
             if (len(res_eval) + len(res_search) >= l_settings.num_cpus):
-                # TODO: this should probably be a parameter
-                time.sleep(0.01)
+                time.sleep(l_settings.parallel_wakeup_time)
                 continue
             
             # At this point, we know that there are free workers, so
             # we should try to generate new search points.
 
-            # If the user wants to skip inf_step as in the original paper
-            # of Gutmann (2001), we proceed to the next iteration.
+            # If the user wants to skip inf_step, we proceed to the
+            # next iteration.
             if (self.current_step == self.inf_step and 
                 not l_settings.do_infstep):
                 self.advance_step_counter()
@@ -1106,10 +1129,19 @@ class OptAlgorithm:
 
             elif (self.current_step == self.restoration_step):
                 # Restoration
-                if (not self.restore_matrix()):
+                (next_p, 
+                 to_remove) = self.restoration_search_parallel(temp_node_pos)
+                if (next_p is None):
                     self.update_log('Restoration phase failed. Abort.')
                     # This will force the optimization process to return
                     break
+                # Remove necessary nodes and move them to the
+                # temporary list
+                for j in reversed(to_remove):
+                    temp_node_pos.pop(j)
+                    temp_node_val.pop(j)
+                    temp_node_is_fast.pop(j)
+                    res_removed.append(res_eval.pop(j))
                 iteration_id = 'Restoration'
             
             elif (self.current_step == self.local_search_step):
@@ -1140,22 +1172,13 @@ class OptAlgorithm:
             # Move forward, without waiting for results
             self.advance_step_counter()
 
-            # At the beginning of each loop of the cyclic optimization
-            # strategy, check if the main loop is stalling
-            self.stalling_update()
-
-            # Check if we should switch to the second phase of
-            # two-phase optimization.
-            self.phase_update()            
         # -- end while
         
         # Wait for all results to complete
         pool.close()
         pool.join()
         # Obtain all point evaluations that are ready
-        ready_indices = ru.get_ready_indices(res_eval)
-        for j in ready_indices:
-            (res, next_p, node_is_fast, iteration_id) = res_eval[j]
+        for (res, next_p, node_is_fast, iid) in res_eval + res_removed:
             next_val = res.get()
             min_dist = ru.get_min_distance(next_p, self.node_pos)
             # Transform back to original space if necessary
@@ -1165,8 +1188,8 @@ class OptAlgorithm:
             self.add_node(next_p, next_p_orig, next_val, node_is_fast)
             gap = min(ru.compute_gap(l_settings, next_val, 
                                      self.is_best_fast), gap)
-            self.update_log(iteration_id, self.node_is_fast[-1], 
-                            next_val, min_dist, gap)
+            self.update_log(iid, self.node_is_fast[-1], next_val,
+                            min_dist, gap)
             # Update iteration number
             self.itercount += 1
         # -- end for
@@ -1262,31 +1285,42 @@ class OptAlgorithm:
 
     # -- end function
 
-    def restore_matrix(self):
+    def restoration_search(self):
         """Perform restoration step to repair RBF matrix.
 
         Try to repair an ill-conditioned RBF matrix by selecting
-        random points far enough from current interpolation nodes,
-        until numerical stability is restored.
+        points far enough from current interpolation nodes, until
+        numerical stability is restored.
 
         Returns
         -------
-        bool
-            Indicates whether the matrix was restored or not.
+        List[float] or None
+            The next point to be evaluated, or None if it cannot be
+            found.
 
         """
         restoration_done = False
         cons_restoration = 0
-        Amat = None
-        Amatinv = None
         self.node_val.pop()
         self.node_pos.pop()
         self.node_is_fast.pop()
 
         while (not restoration_done and cons_restoration < 
                self.l_settings.max_consecutive_restoration):
-            next_p = [random.uniform(self.var_lower[i], self.var_upper[i])
-                      for i in range(self.n)]
+            if (cons_restoration == 0):
+                # First, try to get the next point through something
+                # similar to a global search, using the MSRSM
+                # algorithm with default settings for speed
+                next_p = pure_global_step(RbfSettings(algorithm = 'MSRSM'), 
+                                          self.n, len(self.node_pos),
+                                          self.l_lower, self.l_upper,
+                                          self.node_pos, None,
+                                          self.integer_vars)
+            else:
+                # If that does not work (unlikely), generate a random point
+                next_p = [random.uniform(self.var_lower[i], 
+                                         self.var_upper[i])
+                          for i in range(self.n)]
             ru.round_integer_vars(next_p, self.integer_vars)
             if (ru.get_min_distance(next_p, self.node_pos) >
                 self.l_settings.min_dist):
@@ -1302,7 +1336,72 @@ class OptAlgorithm:
                     cons_restoration += 1
             else:
                 cons_restoration += 1
-        return restoration_done
+        return (next_p if restoration_done else None)
+    # -- end function
+
+    def restoration_search_parallel(self, temp_node_pos):
+        """Perform restoration step; version for parallel optimizer. 
+
+        Try to repair an ill-conditioned RBF matrix by selecting
+        points far enough from current interpolation nodes, until
+        numerical stability is restored. This version of the function
+        only works for the parallel optimizer, because it works with
+        the list of temporary nodes, i.e. points that are in the
+        process of being evaluated.
+
+        Parameters
+        ----------
+        temp_node_pos : List[List[float]]
+            List of coordinates of temporary nodes.
+
+        Returns
+        -------
+        (List[float] or None, List[index])
+            The next point to be evaluated, or None if it cannot be
+            found, and the list of indices of temporary nodes to be
+            removed for stability.
+
+        """
+        restoration_done = False
+        cons_restoration = 0
+        to_be_removed = list()
+        # Get a point far from all current nodes
+        next_p = pure_global_step(RbfSettings(algorithm = 'MSRSM'),
+                                  self.n, len(self.node_pos) +
+                                  len(temp_node_pos), self.l_lower,
+                                  self.l_upper, self.node_pos +
+                                  temp_node_pos, None,
+                                  self.integer_vars)
+        # Loop through all temporary nodes, and try to restore the
+        # matrix by substituting the above point.
+        i = len(temp_node_pos) - 1
+        while (not restoration_done and i >= 0 and
+               cons_restoration <  
+               self.l_settings.max_consecutive_restoration):
+            red_node_pos = temp_node_pos[:i] + temp_node_pos[(i+1):]
+            # Try inverting the RBF matrix to see if
+            # nonsingularity is restored
+            try:
+                Amat = ru.get_rbf_matrix(self.l_settings, self.n,
+                                         len(red_node_pos), red_node_pos)
+                Amatinv = ru.get_matrix_inverse(self.l_settings, Amat)
+                to_be_removed = [i]
+                restoration_done = True
+            except np.linalg.LinAlgError:
+                cons_restoration += 1
+        # At this point, if the restoration is complete we are done,
+        # otherwise we try to remove all indices
+        if (not restoration_done):
+            try:
+                Amat = ru.get_rbf_matrix(self.l_settings, self.n,
+                                         len(self.node_pos), self.node_pos)
+                Amatinv = ru.get_matrix_inverse(self.l_settings, Amat)
+                to_be_removed = [i for i in range(len(temp_node_pos))]
+                restoration_done = True
+            except np.linalg.LinAlgError:
+                cons_restoration += 1
+        return (next_p if restoration_done else None, to_be_removed)
+
     # -- end function
 
     def phase_update(self):
@@ -1325,23 +1424,14 @@ class OptAlgorithm:
 
     def advance_step_counter(self):
         """Advance the step counter of the optimization algorithm.
-        
-        Determine the next search step of the optimization algorithm,
-        and proceed to it.
+
+        Advance the step counter of the optimization algorithm, and
+        reset the number of consecutive local searches.
         """
-        # If we are in local search and there has been sufficient
-        # improvement, repeat it.
-        if ((self.current_step == self.local_search_step) and
-            (self.node_val[-1] <= self.fmin -
-             self.l_settings.eps_impr*max(1.0,abs(self.fmin))) and
-            (self.num_cons_ls < 
-             self.l_settings.max_consecutive_local_searches - 1)):
-            self.num_cons_ls += 1
-        # Otherwise, advance to next step.
-        else:            
-            self.current_step = ((self.current_step + 1) % 
-                                 self.cycle_length)
-            self.num_cons_ls = 0                    
+        # Advance to next step.
+        self.current_step = ((self.current_step + 1) % 
+                             self.cycle_length)
+        self.num_cons_ls = 0                    
     # -- end function
 
     def stalling_update(self):
@@ -1350,7 +1440,8 @@ class OptAlgorithm:
         Check if the algorithm is stalling, and perform the
         corresponding updates.
         """
-        if (self.current_step <= self.first_step): 
+        # if (self.current_step <= self.first_step): 
+        if (self.itercount % (self.cycle_length - self.first_step) == 0):
             if (self.fmin <= (self.fmin_cycle_start - 
                               self.l_settings.max_stalled_objfun_impr
                               * max(1.0, abs(self.fmin_cycle_start)))):
@@ -1405,7 +1496,7 @@ def pure_global_step(settings, n, k, var_lower, var_upper,
         of the matrix [Phi P; P^T 0]. Must be a square numpy.matrix of
         appropriate dimension.
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1464,7 +1555,7 @@ def local_step(settings, n, k, var_lower, var_upper, node_pos,
     
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1635,7 +1726,7 @@ def global_step(settings, n, k, var_lower, var_upper, node_pos,
         
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int

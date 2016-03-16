@@ -32,7 +32,7 @@ def get_rbf_function(settings):
     Parameters
     ----------
     
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     
     Returns
@@ -83,7 +83,7 @@ def get_degree_polynomial(settings):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     Returns
@@ -109,7 +109,7 @@ def get_size_P_matrix(settings, n):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -368,7 +368,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     var_lower : List[float]
@@ -628,7 +628,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
     
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings.
+    settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
     n : int
@@ -689,7 +689,7 @@ def get_matrix_inverse(settings, Amat):
     
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     Amat : numpy.matrix
         The matrix to invert.
@@ -733,7 +733,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings.
+    settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
     n : int
@@ -781,7 +781,7 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings.
+    settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
     point : List[float]
@@ -841,7 +841,7 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings.
+    settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
     points : List[List[float]]
@@ -919,7 +919,7 @@ def get_fast_error_bounds(settings, value):
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     value : float
         The value for which the error interval should be computed.
@@ -972,7 +972,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
        Global and algorithmic settings.
 
     node_val : List[float]
@@ -1063,7 +1063,7 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     var_lower : List[float]
@@ -1120,7 +1120,7 @@ def transform_domain_bounds(settings, var_lower, var_upper):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     var_lower : List[float]
         List of lower bounds of the variables.
@@ -1195,7 +1195,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     n : int
         Dimension of the problem, i.e. the space where the point lives.
@@ -1242,7 +1242,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1329,7 +1329,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
