@@ -18,7 +18,6 @@ import sys
 import argparse
 import random
 import test_rbfopt_env
-import rbfopt
 import rbfopt_cl_interface
 import test_functions
 from rbfopt_black_box import BlackBox

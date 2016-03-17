@@ -308,7 +308,7 @@ class OptAlgorithm:
     # -- end function
 
     def update_log(self, tag, node_is_fast = None, obj_value = None, 
-                   min_dist = None, gap = None):
+                   gap = None):
         """Print a single line in the log.
 
         Update the program's log, writing information about an
@@ -327,30 +327,26 @@ class OptAlgorithm:
         obj_value : float or None
             Objective function value to print.
 
-        min_dist : float or None
-            Euclidean distance to the closest node.
-
         gap : float or None
             Relative distance from the optimum. This will be
             multiplied by 100 before printing.
 
         """
-        if (node_is_fast is None or obj_value is None or 
-            min_dist is None or gap is None):
+        if (node_is_fast is None or obj_value is None or gap is None):
             print('Iteration {:3d}'.format(self.itercount) + 
                   ' {:s}'.format(tag), file = self.output_stream)
         else:
-            print('Iteration {:3d}'.format(self.itercount) + 
-                  ' {:16s}'.format(tag) +
-                  ': objval{:s}'.format('~' if node_is_fast else ' ') +
+            print('Iter {:3d}'.format(self.itercount) + 
+                  ' {:15s}'.format(tag) +
+                  ': obj{:s}'.format('~' if node_is_fast else ' ') +
                   ' {:16.6f}'.format(obj_value) +
-                  ' min_dist {:9.4f}'.format(min_dist) +
+                  ' time {:7.2f}'.format(time.time() - self.start_time) +
                   ' gap {:8.2f}'.format(gap*100),
                   file = self.output_stream)
         self.output_stream.flush()
     # -- end function
 
-    def print_summary_line(self, optimization_time, node_is_fast, gap):
+    def print_summary_line(self, node_is_fast, gap):
         """Print summary line of the algorithm.
         
         Parameters
@@ -366,7 +362,7 @@ class OptAlgorithm:
         print('Summary: iters {:3d}'.format(self.itercount) + 
               ' evals {:3d}'.format(self.evalcount) + 
               ' fast_evals {:3d}'.format(self.fast_evalcount) + 
-              ' opt_time {:7.2f}'.format(optimization_time) + 
+              ' opt_time {:7.2f}'.format(time.time() - self.start_time) + 
               ' tot_time {:7.2f}'.format(self.elapsed_time) + 
               ' objval{:s}'.format('~' if node_is_fast else ' ') +
               ' {:15.6f}'.format(self.fmin) + 
@@ -535,7 +531,7 @@ class OptAlgorithm:
             'fast' mode.
 
         """
-        start_time = time.time()
+        self.start_time = time.time()
         if (self.l_settings.num_cpus == 1):
             self.optimize_serial(pause_after_iters)
         else:
@@ -551,8 +547,7 @@ class OptAlgorithm:
         self.elapsed_time += time.time() - start_time_retrieve_min
 
         # Print summary and return
-        self.print_summary_line(time.time() - start_time,
-                                self.all_node_is_fast[i], gap)
+        self.print_summary_line(self.all_node_is_fast[i], gap)
         return (self.all_node_val[i], self.all_node_pos[i],
                 self.itercount, self.evalcount, self.fast_evalcount)
 
@@ -779,8 +774,7 @@ class OptAlgorithm:
                     next_val = objfun_fast([self.bb, next_p_orig])
                     self.fast_evalcount += 1
                     if (self.require_accurate_evaluation(next_val)):
-                        self.update_log(iteration_id, True, next_val,
-                                        min_dist, gap)
+                        self.update_log(iteration_id, True, next_val, gap)
                         next_val = objfun([self.bb, next_p_orig])
                         self.evalcount += 1
                         curr_is_fast = False
@@ -803,7 +797,7 @@ class OptAlgorithm:
                 gap = min(ru.compute_gap(l_settings, next_val, 
                                          self.is_best_fast), gap)
                 self.update_log(iteration_id, self.node_is_fast[-1], 
-                                next_val, min_dist, gap)
+                                next_val, gap)
 
             # Update iteration number
             self.itercount += 1
@@ -913,8 +907,7 @@ class OptAlgorithm:
                     self.add_node(next_p, next_p_orig, next_val, node_is_fast)
                     gap = min(ru.compute_gap(l_settings, next_val, 
                                              self.is_best_fast), gap)
-                    self.update_log(iid, self.node_is_fast[-1], 
-                                    next_val, min_dist, gap)
+                    self.update_log(iid, self.node_is_fast[-1], next_val, gap)
                     # Update iteration number
                     self.itercount += 1
                     # Remove from list of temporary points
@@ -1188,8 +1181,7 @@ class OptAlgorithm:
             self.add_node(next_p, next_p_orig, next_val, node_is_fast)
             gap = min(ru.compute_gap(l_settings, next_val, 
                                      self.is_best_fast), gap)
-            self.update_log(iid, self.node_is_fast[-1], next_val,
-                            min_dist, gap)
+            self.update_log(iid, self.node_is_fast[-1], next_val, gap)
             # Update iteration number
             self.itercount += 1
         # -- end for
@@ -1280,8 +1272,7 @@ class OptAlgorithm:
             min_dist = ru.get_min_distance(self.node_pos[i], 
                                            self.node_pos[:i] + 
                                            self.node_pos[(i+1):])
-            self.update_log('Initialization', self.node_is_fast[i],
-                            val, min_dist, gap)
+            self.update_log('Initialization', self.node_is_fast[i], val, gap)
 
     # -- end function
 

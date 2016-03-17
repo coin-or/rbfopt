@@ -1,3 +1,7 @@
+2016-03-17  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (update_log): Log file format change to fit
+	within 80 characters, and print elapsed time.
+	
 2016-03-16  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_algorithm.py (OptAlgorithm.optimize_parallel): Added
 	parallel version of the optimization engine.
