@@ -333,8 +333,10 @@ class OptAlgorithm:
 
         """
         if (node_is_fast is None or obj_value is None or gap is None):
-            print('Iteration {:3d}'.format(self.itercount) + 
-                  ' {:s}'.format(tag), file = self.output_stream)
+            print('Iter {:3d}'.format(self.itercount) + 
+                  ' {:38s}'.format(tag) +
+                  ' time {:7.2f}'.format(time.time() - self.start_time),
+                  file = self.output_stream)
         else:
             print('Iter {:3d}'.format(self.itercount) + 
                   ' {:15s}'.format(tag) +
@@ -364,7 +366,7 @@ class OptAlgorithm:
               ' fast_evals {:3d}'.format(self.fast_evalcount) + 
               ' opt_time {:7.2f}'.format(time.time() - self.start_time) + 
               ' tot_time {:7.2f}'.format(self.elapsed_time) + 
-              ' objval{:s}'.format('~' if node_is_fast else ' ') +
+              ' obj{:s}'.format('~' if node_is_fast else ' ') +
               ' {:15.6f}'.format(self.fmin) + 
               ' gap {:6.2f}'.format(100*gap),
               file = self.output_stream)
