@@ -150,8 +150,8 @@ class OptAlgorithm:
         For each interpolation node in all_node_pos, was it evaluated
         in 'fast' mode?
 
-    all_node_pos_size_at_restart : int
-        Index of the first node in all_node_pos after the latest
+    num_nodes_at_restart : int
+        Index of the first new node in all_node_pos after the latest
         restart.
 
     l_lower : List[float]
@@ -168,12 +168,6 @@ class OptAlgorithm:
 
     fmax : float
         Maximum value among the nodes.
-
-    gap_den : float 
-        Denominator of errormin.
-
-    gap : float
-        Minimum distance from the optimum.
 
     fmin_cycle_start : float
         Best value function at the beginning of the latest
@@ -270,7 +264,7 @@ class OptAlgorithm:
         self.node_is_fast, self.all_node_is_fast = list(), list()
         # We need to remember the index of the first node in all_node_pos
         # after every restart
-        self.all_node_pos_size_at_restart = 0
+        self.num_nodes_at_restart = 0
 
         # Update domain bounds if necessary
         (self.l_lower, 
@@ -736,7 +730,7 @@ class OptAlgorithm:
 
                 # Re-evaluate point if necessary
                 if (ind is not None):
-                    self.remove_node(ind, self.all_node_pos_size_at_restart)
+                    self.remove_node(ind, self.num_nodes_at_restart)
                     # We must update k here to make sure it is consistent
                     # until the start of the next iteration.
                     k = len(self.node_pos)
@@ -944,7 +938,7 @@ class OptAlgorithm:
                                 l_settings.eps_zero):
                                 ind = self.node_pos.index(next_p)
                             self.remove_node(ind, 
-                                             self.all_node_pos_size_at_restart)
+                                             self.num_nodes_at_restart)
                             # We must update k here to make sure it is
                             # consistent until the start of the next
                             # iteration.
@@ -1218,7 +1212,7 @@ class OptAlgorithm:
         self.num_fast_restarts += (1 if self.current_mode == 'fast' 
                                    else 0)
         # Store the current number of nodes
-        self.all_node_pos_size_at_restart = len(self.all_node_pos)
+        self.num_nodes_at_restart = len(self.all_node_pos)
         if (self.itercount > 0 or self.init_node_pos is None):
             # Compute a new set of starting points
             node_pos = ru.initialize_nodes(self.l_settings, self.var_lower, 
