@@ -1,3 +1,7 @@
+2016-04-20  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (__init__, optimize): Fixed variables no
+	longer cause numerical issues and are correctly handled.
+
 2016-03-17  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_algorithm.py (update_log): Log file format change to fit
 	within 80 characters, and print elapsed time.
@@ -6,7 +10,7 @@
 	* rbfopt_algorithm.py (OptAlgorithm.optimize_parallel): Added
 	parallel version of the optimization engine.
 	* rbfopt_algorithm.py (OptAlgorithm.optimize_serial): Code for the
-	serial (standard) optimizar was moved here.
+	serial (standard) optimizer was moved here.
 	* rbfopt_algorithm.py (optimize): Now simply redirects to either
 	the serial or parallel version.
 	* rbfopt_black_box.py (BlackBox): Added abstract class to define a

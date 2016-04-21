@@ -190,9 +190,24 @@ class OptAlgorithm:
         self.settings = settings
         self.bb = black_box
         dimension = black_box.get_dimension()
+        assert(dimension >= 1)
         var_lower = black_box.get_var_lower()
         var_upper = black_box.get_var_upper()
         integer_vars = black_box.get_integer_vars()
+        # Check for fixed variables
+        fixed_vars = list()
+        for i in range(dimension):
+            if (var_lower[i] >= var_upper[i] - settings.eps_zero):
+                fixed_vars.append(i)
+        self.fixed_vars = [(i, var_lower[i]) for i in fixed_vars]
+        # Adjust basic data if there are fixed vars
+        if (fixed_vars):
+            var_lower = [var_lower[i] for i in range(dimension) 
+                         if i not in fixed_vars]
+            var_upper = [var_upper[i] for i in range(dimension) 
+                         if i not in fixed_vars]
+            integer_vars = [i for i in integer_vars if i not in fixed_vars]
+            dimension -= len(fixed_vars)
         self.var_lower, self.var_upper = var_lower, var_upper
         self.integer_vars = integer_vars
 
@@ -528,7 +543,14 @@ class OptAlgorithm:
 
         """
         self.start_time = time.time()
-        if (self.l_settings.num_cpus == 1):
+        if (self.n == 0 and self.fixed_vars):
+            # There is nothing to do in this case
+            self.update_log('All variables fixed, nothing to do!')
+            self.add_node(self.var_lower, self.var_lower, 
+                          objfun([self.bb, self.var_lower, self.fixed_vars]), 
+                          False)
+            self.evalcount += 1
+        elif (self.l_settings.num_cpus == 1):
             self.optimize_serial(pause_after_iters)
         else:
             self.optimize_parallel(pause_after_iters)
@@ -763,19 +785,21 @@ class OptAlgorithm:
                                                   var_upper, next_p, True)
                 # Evaluate the new point, in accurate mode or fast mode
                 if (self.current_mode == 'accurate'):
-                    next_val = objfun([self.bb, next_p_orig])
+                    next_val = objfun([self.bb, next_p_orig, self.fixed_vars])
                     self.evalcount += 1
                     curr_is_fast = False
                 else: 
-                    next_val = objfun_fast([self.bb, next_p_orig])
+                    next_val = objfun_fast([self.bb, next_p_orig, 
+                                            self.fixed_vars])
                     self.fast_evalcount += 1
                     if (self.require_accurate_evaluation(next_val)):
                         self.update_log(iteration_id, True, next_val, gap)
-                        next_val = objfun([self.bb, next_p_orig])
+                        next_val = objfun([self.bb, next_p_orig, 
+                                           self.fixed_vars])
                         self.evalcount += 1
                         curr_is_fast = False
                     else:
-                        curr_is_fast = False
+                        curr_is_fast = True
 
                 # Add to the lists
                 improved = self.add_node(next_p, next_p_orig, next_val, 
@@ -942,7 +966,7 @@ class OptAlgorithm:
                             # We must update k here to make sure it is
                             # consistent until the start of the next
                             # iteration.
-                            k = len(self.node_pos)
+                            k = len(node_pos)
                         if (adj):
                             iteration_id = 'AdjLocalStep'
                         else:
@@ -967,12 +991,14 @@ class OptAlgorithm:
                         if (node_is_fast):
                             new_res = pool.apply_async(objfun_fast, 
                                                        ([self.bb, 
-                                                         next_p_orig], ))
+                                                         next_p_orig,
+                                                         self.fixed_vars], ))
                             self.fast_evalcount += 1
                         else: 
                             new_res = pool.apply_async(objfun,  
                                                        ([self.bb, 
-                                                         next_p_orig], ))
+                                                         next_p_orig,
+                                                         self.fixed_vars], ))
                             self.evalcount += 1
                         res_eval.append([new_res, next_p, node_is_fast, 
                                          iteration_id])
@@ -1222,17 +1248,20 @@ class OptAlgorithm:
                 (self.fast_evalcount + self.n + 1 >=
                  self.l_settings.max_fast_evaluations)):
                 if (pool is None):
-                    node_val = [objfun([self.bb, point]) for point in node_pos]
+                    node_val = [objfun([self.bb, point, self.fixed_vars]) 
+                                for point in node_pos]
                 else:
-                    map_arg = [[self.bb, point] for point in node_pos]
+                    map_arg = [[self.bb, point, self.fixed_vars] 
+                               for point in node_pos]
                     node_val = pool.map(objfun, map_arg)
                 self.evalcount += len(node_val)
             else:
                 if (pool is None):
-                    node_val = [objfun_fast([self.bb, point])
+                    node_val = [objfun_fast([self.bb, point, self.fixed_vars])
                                 for point in node_pos]
                 else:
-                    map_arg = [[self.bb, point] for point in node_pos]
+                    map_arg = [[self.bb, point, self.fixed_vars] 
+                               for point in node_pos]
                     node_val = pool.map(objfun_fast, map_arg)
                 self.fast_evalcount += len(node_val)
             self.node_is_fast = [self.current_mode == 'fast' 
@@ -1855,11 +1884,12 @@ def objfun(data):
 
     Parameters
     ----------
-    data : (rbfopt_black_box.BlackBox, List[float])
-        A pair or list with two elements (black_box, point) containing
-        an object derived from class BlackBox, that describes the
-        problem, and the point at which we want to apply the
-        evaluate() method.
+    data : (rbfopt_black_box.BlackBox, List[float], List[(int, float)])
+        A triple or list with three elements (black_box, point,
+        fixed_vars) containing an object derived from class BlackBox,
+        that describes the problem, the point at which we want to
+        apply the evaluate() method, and a list of fixed variables
+        given as pairs (indices, value)..
     
     Returns
     -------
@@ -1867,9 +1897,15 @@ def objfun(data):
         The value of the function evaluate() at the point.
 
     """
-    assert(len(data)==2)
+    assert(len(data)==3)
     assert(isinstance(data[0], BlackBox))
-    return data[0].evaluate(data[1])
+    if (data[2]):
+        point = [val for val in data[1]]
+        for (i, val) in data[2]:
+            point.insert(i, val)
+    else:
+        point = data[1]
+    return data[0].evaluate(point)
 # -- end function
 
 def objfun_fast(data):
@@ -1881,19 +1917,25 @@ def objfun_fast(data):
 
     Parameters
     ----------
-    data : (rbfopt_black_box.BlackBox, List[float])
-        A pair or list with two elements (black_box, point) containing
-        an object derived from class BlackBox, that describes the
-        problem, and the point at which we want to apply the
-        evaluate_fast() method.
-
+    data : (rbfopt_black_box.BlackBox, List[float], List[(int, float)])
+        A triple or list with three elements (black_box, point,
+        fixed_vars) containing an object derived from class BlackBox,
+        that describes the problem, the point at which we want to
+        apply the evaluate() method, and a list of fixed variables
+        given as pairs (indices, value).
     Returns
     -------
     float
         The value of the function evaluate_fast() at the point.
 
     """
-    assert(len(data)==2)
+    assert(len(data)==3)
     assert(isinstance(data[0], BlackBox))
-    return data[0].evaluate_fast(data[1])
+    if (data[2]):
+        point = [val for val in data[1]]
+        for (i, val) in data[2]:
+            point.insert(i, val)
+    else:
+        point = data[1]
+    return data[0].evaluate_fast(point)
 # -- end function
