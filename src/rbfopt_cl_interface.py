@@ -130,22 +130,12 @@ def rbfopt_cl_interface(args, black_box):
     settings = RbfSettings.from_dictionary(local_args)
     settings.print(output_stream = output_stream)
     if (args['load_state'] is not None):
-        alg = OptAlgorithm.load_from_file(args['load_state'],
-                                          objfun,
-                                          objfun_fast)
+        alg = OptAlgorithm.load_from_file(args['load_state'])
     else:
         alg = OptAlgorithm(settings = settings,
                            black_box = black_box)
     alg.set_output_stream(output_stream)
-    if (args['num_cpus'] == -1):
-        # TODO: hack for when we want to test parallel mode with a
-        # single CPU. Will have to be removed.
-        alg.settings.num_cpus = 1
-        alg.l_settings.num_cpus = 1
-        alg.optimize_parallel(args['pause'])
-        result = [alg.fmin]
-    else:
-        result = alg.optimize(args['pause'])
+    result = alg.optimize(args['pause'])
     print('OptAlgorithm.optimize() returned ' + 
           'function value {:.15f}'.format(result[0]),
           file = output_stream)
