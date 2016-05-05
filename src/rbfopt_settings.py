@@ -181,6 +181,17 @@ class RbfSettings:
         Multiplier for the dimension of the problem to determine the
         number of samples used by the Metric SRSM algorithm at every
         iteration. Default 1000.
+
+    save_state_interval : int 
+        Number of iterations after which the state of the algorithm
+        should be dumped to file. The algorithm can be resumed from a
+        saved state. It can be useful in case something goes
+        wrong. Default 100000.
+
+    save_state_file : string
+        Name of the file in which the state of the algorithm will be
+        saved at regular intervals, see save_state_interval. Default
+        'optalgorithm_state.dat'.
     
     print_solver_output : bool
         Print the output of the solvers to screen? Note that this
@@ -259,6 +270,8 @@ class RbfSettings:
                  targetval_clipping = True,
                  num_samples_aux_problems = 1000,                 
                  print_solver_output = False,
+                 save_state_interval = 100000,
+                 save_state_file = 'optalgorithm_state.dat',
                  rand_seed = 937627691):
         """Class constructor with default values. 
         """
@@ -297,6 +310,8 @@ class RbfSettings:
         self.targetval_clipping = targetval_clipping
         self.num_samples_aux_problems = num_samples_aux_problems
         self.print_solver_output = print_solver_output
+        self.save_state_interval = save_state_interval
+        self.save_state_file = save_state_file
         self.rand_seed = rand_seed
 
         if (self.rbf not in RbfSettings._allowed_rbf):

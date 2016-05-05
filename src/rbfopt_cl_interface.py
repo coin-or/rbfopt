@@ -69,17 +69,21 @@ def register_options(parser):
     parser.add_argument('--black_box_module', '-m', action = 'store',
                         metavar = 'MODULE_NAME', dest = 'black_box_module',
                         type = str, default = 'rbfopt_black_box_example',
-                        help = 'name of module containing black box function'
-                        + 'and the description of its characteristics.' +
-                        'This module should implement a BlackBox class' +
+                        help = 'Name of module containing black box function'
+                        + ' and the description of its characteristics. ' +
+                        'This module should implement a BlackBox class ' +
                         'derived from rbfopt_black_box.BlackBox.')
     parser.add_argument('--log', '-o', action = 'store',
                         metavar = 'LOG_FILE_NAME', dest = 'output_stream',
-                        help = 'name of log file for output redirection')
+                        help = 'Name of log file for output redirection')
     parser.add_argument('--load', '-l', action = 'store', dest = 'load_state',
-                        help = 'file to read state to resume optimization')
+                        help = 'File to read state to resume optimization')
     parser.add_argument('--save', '-s', action = 'store', dest = 'dump_state',
-                        help = 'file to save state after optimization')
+                        help = 'File to save state after optimization. ' +
+                        'Note that this is different from the options ' +
+                        'save_state_interval and save_state_file because ' +
+                        'here the state is only saved at the end of ' +
+                        'the optimization (or after a pause).')
     parser.add_argument('--pause', '-p', action = 'store', dest = 'pause',
                         default = sys.maxint, type = int,
                         help = 'number of iterations after which ' +

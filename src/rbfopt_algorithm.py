@@ -457,7 +457,6 @@ class OptAlgorithm:
     # -- end function
 
     def save_to_file(self, filename):
-
         """Save object on file, with its state.
 
         Saves the current state of the algorithm on file. The
@@ -829,8 +828,12 @@ class OptAlgorithm:
             # Check if we should switch to the second phase of
             # two-phase optimization.
             self.phase_update()
-            
+
+            # Check if we should save the state.
+            if (self.itercount % l_settings.save_state_interval == 0):
+                self.save_to_file(l_settings.save_state_file)            
         # -- end while
+
         # Update timer
         self.elapsed_time += time.time() - start_time
     # -- end function
@@ -930,6 +933,9 @@ class OptAlgorithm:
                     self.update_log(iid, self.node_is_fast[-1], next_val, gap)
                     # Update iteration number
                     self.itercount += 1
+                    # Check if we should save the state.
+                    if (self.itercount % l_settings.save_state_interval == 0):
+                        self.save_to_file(l_settings.save_state_file)
                     # Remove from list of temporary points
                     temp_node_pos.pop(j)
                     temp_node_val.pop(j)
