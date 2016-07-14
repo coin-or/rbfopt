@@ -478,7 +478,7 @@ class OptAlgorithm:
         output_stream = self.output_stream
         self.output_stream = None
         # Dump to file
-        pickle.dump(self, open(filename, 'w'), pickle.HIGHEST_PROTOCOL)
+        pickle.dump(self, open(filename, 'wb'), pickle.HIGHEST_PROTOCOL)
         # Restore erased attribute
         self.output_stream = output_stream
     # -- end function
@@ -507,7 +507,7 @@ class OptAlgorithm:
 
         """
         assert(os.path.isfile(filename))
-        alg = pickle.load(open(filename, 'r'))
+        alg = pickle.load(open(filename, 'rb'))
         np.random.set_state(alg.random_state)
         # Set default output stream
         alg.output_stream = sys.stdout

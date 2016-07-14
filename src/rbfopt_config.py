@@ -7,8 +7,13 @@ as a static configuration file.
 Attributes
 ----------
 
-MINLP_SOLVER_EXEC : str 
-    MINLP solver executable - should be in your path.
+MINLP_SOLVER_NAME : str
+    Name of the MINLP solver.
+
+MINLP_SOLVER_PATH : str 
+    MINLP solver executable, including path if the executable is not
+    in your path. Use '/' to delimit directories, even on Windows, to
+    avoid issues with escaping backward slashes.
 
 MINLP_SOLVER_OPTIONS : List[(str, Any)]
     Options passed on to the MINLP solver, in the form ('option_name',
@@ -22,8 +27,13 @@ MINLP_SOLVER_MAX_SEED : int
     Maximum integer that can be used to seed the MINLP solver's random
     seed.
 
-NLP_SOLVER_EXEC : str 
-    NLP solver executable - should be in your path.
+NLP_SOLVER_NAME : str
+    Name of the NLP solver.
+
+NLP_SOLVER_PATH : str 
+    NLP solver executable, including path if the executable is not
+    in your path. Use '/' to delimit directories, even on Windows, to
+    avoid issues with escaping backward slashes.
 
 NLP_SOLVER_OPTIONS : List[(str, Any)]
     Options passed on to the NLP solver, in the form ('option_name',
@@ -74,7 +84,10 @@ from __future__ import division
 from __future__ import absolute_import
 
 
-MINLP_SOLVER_EXEC = 'bonmin'
+MINLP_SOLVER_NAME = 'bonmin'
+# If the path contains directories, use forward slashes '/' to
+# separate them, even on Windows.
+MINLP_SOLVER_PATH = 'bonmin'
 MINLP_SOLVER_OPTIONS = [('bonmin.num_resolve_at_root', 10),
                         ('bonmin.num_retry_unsolved_random_point', 5),
                         ('bonmin.num_resolve_at_infeasibles', 5),
@@ -83,15 +96,18 @@ MINLP_SOLVER_OPTIONS = [('bonmin.num_resolve_at_root', 10),
                         ('max_cpu_time', 20),
                         ('max_iter', 1000)]
 MINLP_SOLVER_RAND_SEED_OPTION = 'bonmin.random_generator_seed'
-MINLP_SOLVER_MAX_SEED = 2147483647
+MINLP_SOLVER_MAX_SEED = 2047983647
 
-NLP_SOLVER_EXEC = 'ipopt'
+NLP_SOLVER_NAME = 'ipopt'
+# If the path contains directories, use forward slashes '/' to
+# separate them, even on Windows.
+NLP_SOLVER_PATH = 'ipopt'
 NLP_SOLVER_OPTIONS = [('acceptable_tol', 1.0e-3),
                       ('honor_original_bounds', 'no'),
                       ('max_cpu_time', 20),
                       ('max_iter', 1000)]
 NLP_SOLVER_RAND_SEED_OPTION = None
-NLP_SOLVER_MAX_SEED = 2147483647
+NLP_SOLVER_MAX_SEED = 2047983647
 
 GAMMA = 1.0
 

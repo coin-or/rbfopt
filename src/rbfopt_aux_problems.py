@@ -19,7 +19,6 @@ import math
 import numpy as np
 import pyomo.environ
 import pyomo.opt
-from pyomo.opt import SolverStatus, TerminationCondition
 import rbfopt_utils as ru
 import rbfopt_config as config
 import rbfopt_degree1_models
@@ -114,9 +113,11 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
         initialize_instance_variables(settings, instance)
 
         # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_EXEC, solver_io='nl')
+        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
+                                      executable = config.MINLP_SOLVER_PATH,
+                                      solver_io='nl')
         if opt is None:
-            raise RuntimeError('Solver ' + config.MINLP_SOLVER_EXEC + 
+            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
                                ' not found')
         set_minlp_solver_options(opt)
 
@@ -126,7 +127,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
                                 tee = settings.print_solver_output)
             if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
                 (results.solver.termination_condition == 
-                 TerminationCondition.optimal)):
+                 pyomo.opt.TerminationCondition.optimal)):
                 # this is feasible and optimal
                 instance.solutions.load_from(results)
                 point = [instance.x[i].value for i in instance.N]
@@ -227,9 +228,11 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
     initialize_instance_variables(settings, instance)
 
     # Instantiate optimizer
-    opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_EXEC, solver_io='nl')
+    opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
+                                  executable = config.MINLP_SOLVER_PATH,
+                                  solver_io='nl')
     if opt is None:
-        raise RuntimeError('Solver ' + config.MINLP_SOLVER_EXEC + 
+        raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
                            'not found')
     set_minlp_solver_options(opt)
 
@@ -239,7 +242,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
                             tee = settings.print_solver_output)
         if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
             (results.solver.termination_condition == 
-             TerminationCondition.optimal)):
+             pyomo.opt.TerminationCondition.optimal)):
             # this is feasible and optimal
             instance.solutions.load_from(results)
             point = [instance.x[i].value for i in instance.N]
@@ -359,9 +362,11 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
         initialize_h_k_aux_variables(settings, instance)
 
         # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_EXEC, solver_io='nl')
+        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
+                                      executable = config.MINLP_SOLVER_PATH,
+                                      solver_io='nl')
         if opt is None:
-            raise RuntimeError('Solver ' + config.MINLP_SOLVER_EXEC + 
+            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
                                ' not found')
         set_minlp_solver_options(opt)
 
@@ -371,7 +376,7 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
                                 tee = settings.print_solver_output)
             if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
                 (results.solver.termination_condition == 
-                 TerminationCondition.optimal)):
+                 pyomo.opt.TerminationCondition.optimal)):
                 # this is feasible and optimal
                 instance.solutions.load_from(results)
                 point = [instance.x[i].value for i in instance.N]
@@ -549,9 +554,11 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
                                            fast_node_err_bounds)
 
     # Instantiate optimizer
-    opt = pyomo.opt.SolverFactory(config.NLP_SOLVER_EXEC, solver_io='nl')
+    opt = pyomo.opt.SolverFactory(config.NLP_SOLVER_NAME, 
+                                  executable = config.NLP_SOLVER_PATH,
+                                  solver_io='nl')
     if opt is None:
-        raise RuntimeError('Solver ' + config.NLP_SOLVER_EXEC + ' not found')
+        raise RuntimeError('Solver ' + config.NLP_SOLVER_NAME + ' not found')
     set_nlp_solver_options(opt)
 
     # Initialize instance variables with the solution provided (if
@@ -569,7 +576,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
                             tee = settings.print_solver_output)
         if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
             (results.solver.termination_condition == 
-             TerminationCondition.optimal)):
+             pyomo.opt.TerminationCondition.optimal)):
             # this is feasible and optimal
             instance.solutions.load_from(results)
             rbf_lambda = [instance.rbf_lambda[i].value for i in instance.K]

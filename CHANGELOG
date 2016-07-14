@@ -1,3 +1,17 @@
+2016-07-14  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Updated dependency to Pyomo 4.3.11388.
+	* rbfopt_config.py: Added MINLP_SOLVER_PATH and NLP_SOLVER_PATH
+	options.
+	* rbfopt_aux_problems.py: Now use PATH option.
+	* rbfopt_algorithm.py: Using binary mode to load/save state to fix
+	issues on Windows.
+
+2016-05-05  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_settings.py: Added save_state_interval and
+	save_state_file settings.
+	* rbfopt_algorithm.py (optimize_serial, optimize_parallel):
+	Supports periodic state save according to the two options above.
+
 2016-04-20  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_algorithm.py (__init__, optimize): Fixed variables no
 	longer cause numerical issues and are correctly handled.

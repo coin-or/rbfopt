@@ -28,13 +28,13 @@ class TestGutmann(unittest.TestCase):
     rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05        
 
-    def test_gutmann_goldsteinprice(self):
-        """Check solution of goldsteinprice with Gutmann's method."""
-        bb = ti.TestBlackBox('hartman3')
+    def test_gutmann_ex8_1_4(self):
+        """Check solution of ex8_1_4 with Gutmann's method."""
+        bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving goldsteinprice with random seed ' +
+            print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
                                    target_objval = optimum,
@@ -44,7 +44,7 @@ class TestGutmann(unittest.TestCase):
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve goldstein with Gutmann\'s algorithm'
+            msg = 'Could not solve ex8_1_4 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
@@ -75,9 +75,9 @@ class TestGutmann(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_gutmann_branin_log(self):
-        """Check solution of branin with Gutmann, log scaling, infstep."""
-        bb = ti.TestBlackBox('branin')
+    def test_gutmann_ex8_1_4_log(self):
+        """Check solution of ex8_1_4 with Gutmann, log scaling, infstep."""
+        bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -101,13 +101,13 @@ class TestGutmann(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_gutmann_st_miqp1_noisy(self):
-        """Check solution of noisy st_miqp1 with Gutmann."""
-        bb = ti.TestNoisyBlackBox('st_miqp1', 0.1, 0.01)
+    def test_gutmann_st_miqp3_noisy(self):
+        """Check solution of noisy st_miqp3 with Gutmann."""
+        bb = ti.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving st_miqp1 with random seed ' +
+            print('Solving st_miqp3 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
                                    target_objval = optimum,
@@ -119,7 +119,7 @@ class TestGutmann(unittest.TestCase):
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve st_miqp1 with Gutmann\'s algorithm'
+            msg = 'Could not solve st_miqp3 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
@@ -136,7 +136,7 @@ class TestGutmann(unittest.TestCase):
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
                                    target_objval = optimum,
-                                   eps_opt = self.eps_opt,
+                                   eps_opt = 0.0,
                                    max_clock_time = 2.0,
                                    rand_seed = seed)
             start_time = time.time()
@@ -144,7 +144,7 @@ class TestGutmann(unittest.TestCase):
             res = alg.optimize()
             tot_time = time.time() - start_time
             msg = 'Time limit exceeded with Gutmann algorithm'
-            self.assertLessEqual(tot_time, 4.0, msg = msg)
+            self.assertLessEqual(tot_time, 5.0, msg = msg)
     # -- end function
 # -- end class
 
@@ -154,9 +154,9 @@ class TestGutmannParallel(unittest.TestCase):
     rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05        
 
-    def test_gutmann_parallel_goldsteinprice(self):
-        """Check solution of goldsteinprice with Gutmann's method."""
-        bb = ti.TestBlackBox('goldsteinprice')
+    def test_gutmann_parallel_ex8_1_4(self):
+        """Check solution of ex8_1_4 with Gutmann's method."""
+        bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -171,7 +171,7 @@ class TestGutmannParallel(unittest.TestCase):
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve goldstein with Gutmann\'s algorithm'
+            msg = 'Could not solve ex8_1_4 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
@@ -192,7 +192,7 @@ class TestGutmannParallel(unittest.TestCase):
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
                                    max_evaluations = 300,
-                                   num_cpus = 4,
+                                   num_cpus = 2,
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
@@ -203,9 +203,9 @@ class TestGutmannParallel(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_gutmann_parallel_branin_log(self):
-        """Check solution of branin with Gutmann, log scaling, infstep."""
-        bb = ti.TestBlackBox('branin')
+    def test_gutmann_parallel_ex8_1_4_log(self):
+        """Check solution of ex8_1_4 with Gutmann, log scaling, infstep."""
+        bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -217,7 +217,7 @@ class TestGutmannParallel(unittest.TestCase):
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
                                    max_evaluations = 300,
-                                   num_cpus = 4,
+                                   num_cpus = 2,
                                    function_scaling = 'log',
                                    do_infstep = True,
                                    rand_seed = seed)
@@ -230,26 +230,26 @@ class TestGutmannParallel(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_gutmann_parallel_st_miqp1_noisy(self):
-        """Check solution of noisy st_miqp1 with Gutmann."""
-        bb = ti.TestNoisyBlackBox('st_miqp1', 0.1, 0.01)
+    def test_gutmann_parallel_st_miqp3_noisy(self):
+        """Check solution of noisy st_miqp3 with Gutmann."""
+        bb = ti.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving st_miqp1 with random seed ' +
+            print('Solving st_miqp3 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
                                    max_evaluations = 300,
-                                   num_cpus = 4,
+                                   num_cpus = 2,
                                    fast_objfun_rel_error = 0.1,
                                    fast_objfun_abs_error = 0.01,
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve st_miqp1 with Gutmann\'s algorithm'
+            msg = 'Could not solve st_miqp3 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
@@ -265,9 +265,9 @@ class TestGutmannParallel(unittest.TestCase):
             print('Solving hartman6 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
-                                   num_cpus = 4,
+                                   num_cpus = 2,
                                    target_objval = optimum,
-                                   eps_opt = self.eps_opt,
+                                   eps_opt = 0.0,
                                    max_clock_time = 2.0,
                                    rand_seed = seed)
             start_time = time.time()
@@ -275,7 +275,7 @@ class TestGutmannParallel(unittest.TestCase):
             res = alg.optimize()
             tot_time = time.time() - start_time
             msg = 'Time limit exceeded with Gutmann algorithm'
-            self.assertLessEqual(tot_time, 4.0, msg = msg)
+            self.assertLessEqual(tot_time, 5.0, msg = msg)
     # -- end function
 # -- end class
 
@@ -285,13 +285,13 @@ class TestMSRSM(unittest.TestCase):
     rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05
 
-    def test_msrsm_hartman3(self):
-        """Check solution of hartman3 with the MSRSM algorithm."""
-        bb = ti.TestBlackBox('hartman3')
+    def test_msrsm_ex8_1_4(self):
+        """Check solution of ex8_1_4 with the MSRSM algorithm."""
+        bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving hartman3 with random seed ' +
+            print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
                                    rbf = 'linear',
@@ -309,13 +309,13 @@ class TestMSRSM(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_msrsm_nvs03(self):
-        """Check solution of nvs03 with the MSRSM algorithm."""
-        bb = ti.TestBlackBox('nvs03')
+    def test_msrsm_prob03(self):
+        """Check solution of prob03 with the MSRSM algorithm."""
+        bb = ti.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving nvs03 with random seed ' +
+            print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
                                    target_objval = optimum,
@@ -325,20 +325,20 @@ class TestMSRSM(unittest.TestCase):
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve nvs03 with MSRSM algorithm'
+            msg = 'Could not solve prob03 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_msrsm_nvs06_no_local_search(self):
-        """Check solution of nvs06 with MSRSM and no local search."""
-        bb = ti.TestBlackBox('nvs06')
+    def test_msrsm_prob03_no_local_search(self):
+        """Check solution of prob03 with MSRSM and no local search."""
+        bb = ti.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving nvs06 with random seed ' +
+            print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(rbf = 'cubic',
                                    algorithm = 'MSRSM', 
@@ -350,16 +350,16 @@ class TestMSRSM(unittest.TestCase):
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve nvs06 with Gutmann\'s algorithm'
+            msg = 'Could not solve prob03 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_msrsm_goldsteinprice_noisy(self):
-        """Check solution of noisy goldsteinprice with MSRSM."""
-        bb = ti.TestNoisyBlackBox('goldsteinprice', 0.1, 0.01)
+    def test_msrsm_st_miqp3_noisy(self):
+        """Check solution of noisy st_miqp3 with MSRSM."""
+        bb = ti.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -392,7 +392,7 @@ class TestMSRSM(unittest.TestCase):
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
                                    target_objval = optimum,
-                                   eps_opt = self.eps_opt,
+                                   eps_opt = 0.0,
                                    max_clock_time = 2.0,
                                    rand_seed = seed)
             start_time = time.time()
@@ -400,7 +400,7 @@ class TestMSRSM(unittest.TestCase):
             res = alg.optimize()
             tot_time = time.time() - start_time
             msg = 'Time limit exceeded with MSRSM algorithm'
-            self.assertLessEqual(tot_time, 4.0, msg = msg)
+            self.assertLessEqual(tot_time, 5.0, msg = msg)
     # -- end function
 # -- end class
 
@@ -410,13 +410,13 @@ class TestMSRSMParallel(unittest.TestCase):
     rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05
 
-    def test_msrsm_parallel_hartman3(self):
-        """Check solution of hartman3 with the MSRSM algorithm."""
-        bb = ti.TestBlackBox('hartman3')
+    def test_msrsm_parallel_ex8_1_4(self):
+        """Check solution of ex8_1_4 with the MSRSM algorithm."""
+        bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving hartman3 with random seed ' +
+            print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
                                    rbf = 'linear',
@@ -428,20 +428,20 @@ class TestMSRSMParallel(unittest.TestCase):
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve hartman3 with MSRSM algorithm'
+            msg = 'Could not solve ex8_1_4 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_msrsm_parallel_nvs03(self):
-        """Check solution of nvs03 with the MSRSM algorithm."""
-        bb = ti.TestBlackBox('nvs03')
+    def test_msrsm_parallel_prob0303(self):
+        """Check solution of prob03 with the MSRSM algorithm."""
+        bb = ti.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving nvs03 with random seed ' +
+            print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
                                    target_objval = optimum,
@@ -452,16 +452,16 @@ class TestMSRSMParallel(unittest.TestCase):
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve nvs03 with MSRSM algorithm'
+            msg = 'Could not solve prob03 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_msrsm_parallel_nvs06_no_local_search(self):
-        """Check solution of nvs06 with MSRSM and no local search."""
-        bb = ti.TestBlackBox('nvs06')
+    def test_msrsm_parallel_st_miqp3_no_local_search(self):
+        """Check solution of st_miqp3 with MSRSM and no local search."""
+        bb = ti.TestBlackBox('st_miqp3')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -478,20 +478,20 @@ class TestMSRSMParallel(unittest.TestCase):
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve nvs06 with Gutmann\'s algorithm'
+            msg = 'Could not solve st_miqp3 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
-    def test_msrsm_parallel_goldsteinprice_noisy(self):
-        """Check solution of noisy goldsteinprice with MSRSM."""
-        bb = ti.TestNoisyBlackBox('goldsteinprice', 0.1, 0.01)
+    def test_msrsm_parallel_prob03_noisy(self):
+        """Check solution of noisy prob03 with MSRSM."""
+        bb = ti.TestNoisyBlackBox('prob03', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving goldsteinprice with random seed ' +
+            print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
                                    target_objval = optimum,
@@ -504,7 +504,7 @@ class TestMSRSMParallel(unittest.TestCase):
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve goldsteinprice with MSRSM algorithm'
+            msg = 'Could not solve prob03 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
@@ -520,7 +520,7 @@ class TestMSRSMParallel(unittest.TestCase):
             print('Solving hartman6 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM',
-                                   num_cpus = 4,
+                                   num_cpus = 2,
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_clock_time = 2.0,
@@ -530,7 +530,7 @@ class TestMSRSMParallel(unittest.TestCase):
             res = alg.optimize()
             tot_time = time.time() - start_time
             msg = 'Time limit exceeded with MSRSM algorithm in parallel'
-            self.assertLessEqual(tot_time, 4.0, msg = msg)
+            self.assertLessEqual(tot_time, 5.0, msg = msg)
     # -- end function
 # -- end class
 
@@ -541,13 +541,13 @@ class TestState(unittest.TestCase):
     eps_opt = 0.05
 
     def test_state_reload(self):
-        """Check solution of hartman3 after state save/reload."""
-        bb = ti.TestBlackBox('hartman3')
+        """Check solution of ex8_1_4 after state save/reload."""
+        bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         handle, filename = tempfile.mkstemp()
         for seed in self.rand_seeds:
             print()
-            print('Solving hartman3 with random seed ' +
+            print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
                                    rbf = 'linear',
@@ -561,11 +561,12 @@ class TestState(unittest.TestCase):
             alg.save_to_file(filename)
             alg_reload = ra.OptAlgorithm.load_from_file(filename)
             res = alg_reload.optimize()
-            msg = 'Could not solve hartman3 after reload'
+            msg = 'Could not solve ex8_1_4 after reload'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero 
                                 else self.eps_opt) 
             self.assertLessEqual(res[0], target, msg = msg)
+        os.close(handle)
         os.remove(filename)
     # -- end function
 # -- end class
