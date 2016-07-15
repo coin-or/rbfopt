@@ -4,6 +4,7 @@ This module contains the settings of the main optimization algorithm.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2015.
+(C) Copyright International Business Machines Corporation 2016.
 Research partially supported by SUTD-MIT International Design Center.
 """
 
@@ -169,7 +170,7 @@ class RbfSettings:
     algorithm : string
         Optimization algorithm used. Choice of 'Gutmann' and 'MSRSM',
         see References Gutmann (2001) and Regis and Shoemaker
-        (2007). Default 'Gutmann'.
+        (2007). Default 'MSRSM'.
 
     targetval_clipping : bool
         Clip target value selection based on periodically eliminating
@@ -180,7 +181,7 @@ class RbfSettings:
     num_samples_aux_problems : int
         Multiplier for the dimension of the problem to determine the
         number of samples used by the Metric SRSM algorithm at every
-        iteration. Default 1000.
+        iteration. Default 2000.
 
     save_state_interval : int 
         Number of iterations after which the state of the algorithm
@@ -266,9 +267,9 @@ class RbfSettings:
                  max_fast_restarts = 2,
                  max_fast_iterations = 100,
                  model_selection_solver = 'numpy',
-                 algorithm = 'Gutmann',
+                 algorithm = 'MSRSM',
                  targetval_clipping = True,
-                 num_samples_aux_problems = 1000,                 
+                 num_samples_aux_problems = 2000,
                  print_solver_output = False,
                  save_state_interval = 100000,
                  save_state_file = 'optalgorithm_state.dat',

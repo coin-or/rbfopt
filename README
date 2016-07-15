@@ -94,7 +94,7 @@ This package requires the following software:
 Python 2.7.* (latest 2.7.* release recommended)
 NumPy version >= 1.8.1
 SciPy version >= 0.13.3
-Pyomo version 4.1.10509
+Pyomo version 4.3.11388
 
 The software has been tested with the versions indicated above. It may
 work with earlier version and should work with subsequent version, if
@@ -174,7 +174,8 @@ The two packages above are optional.
    pip show pyomo
 
 2) Edit rbfopt_config.py to point to the correct location for the NLP
-   and MINLP solvers.
+   and MINLP solvers, using the MINLP_SOLVER_PATH and NLP_SOLVER PATH 
+   variables.
 
 3) Enjoy!
 
@@ -191,7 +192,11 @@ The two packages above are optional.
 
 5) Unit tests for the library can be executed by running:
    python2.7 -m unittest discover -s tests/
-   from the current (main) directory. This may take some time.
+   from the current (main) directory. This may take some time. If some
+   of the tests fail, the library may or may not work correctly. Some
+   of the test failures are relatively harmless. You are advised to
+   contact the mailing list (see below) if you are unsure about some
+   test failure.
 
 5) To run the library on a user-defined black-box function, have a
    look at the example in src/rbfopt_black_box_example.py. You can
