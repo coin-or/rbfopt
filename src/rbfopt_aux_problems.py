@@ -24,7 +24,6 @@ import rbfopt_config as config
 import rbfopt_degree1_models
 import rbfopt_degree0_models
 from rbfopt_settings import RbfSettings
-import time
 
 def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
                        mat, integer_vars):
@@ -137,10 +136,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
         except:
             point = None
     elif (settings.algorithm == 'MSRSM'):
-        samples = generate_sample_points(settings, n, var_lower,
-                                         var_upper, integer_vars)
-        distance = ru.bulk_get_min_distance(samples, node_pos)
-        point = samples[distance.index(max(distance))]
+        point = msrsm_ga_optimize(settings, n, k, var_lower, var_upper,
+                                  node_pos, None, None, 1.0, integer_vars)
     else:
         raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
 
@@ -386,15 +383,9 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
         except:
             point = None
     elif (settings.algorithm == 'MSRSM'):
-        samples = generate_sample_points(settings, n, var_lower,
-                                         var_upper, integer_vars)
-        # Compute distance and objective function value
-        objfun, distance = ru.bulk_evaluate_rbf(settings, samples, n,
-                                                k, node_pos, rbf_lambda, 
-                                                rbf_h, True)
-        srms_obj = MetricSRSMObj(settings, distance, objfun, dist_weight)
-        scores = map(srms_obj.evaluate, distance, objfun)
-        point = samples[scores.index(min(scores))]
+        point = msrsm_ga_optimize(settings, n, k, var_lower, var_upper,
+                                  node_pos, rbf_lambda, rbf_h, dist_weight, 
+                                  integer_vars)
     else:
         raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
 
@@ -633,7 +624,7 @@ def set_nlp_solver_options(solver):
 
 # -- end function
 
-def generate_sample_points(settings, n, var_lower, var_upper,
+def generate_sample_points(settings, n, var_lower, var_upper, num_samples,
                            integer_vars = None):
     """Generate sample points uniformly at random.
 
@@ -656,7 +647,10 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     var_upper : List[float]
         Vector of variable upper bounds.
 
-    integer_vars: List[int] or None
+    num_samples : int
+        Number of samples to generate
+
+    integer_vars : List[int] or None
         A list containing the indices of the integrality constrained
         variables. If None or empty list, all variables are assumed to
         be continuous.
@@ -669,7 +663,6 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(isinstance(settings, RbfSettings))
-    num_samples = n * settings.num_samples_aux_problems
     values_by_var = list()
     for i in range(n):
         low = var_lower[i]
@@ -682,6 +675,224 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     return ([[v[0, i] for v in values_by_var] for i in range(num_samples)])
 
 # -- end function
+
+def msrsm_ga_optimize(settings, n, k, var_lower, var_upper, node_pos,
+                      rbf_lambda, rbf_h, dist_weight, integer_vars):
+    """Compute and optimize the MSRSM fitness function.
+
+    Use a simple genetic algorithm to quickly find a good solution for
+    the MSRSM global search subproblem, or the MSRSM infstep in which
+    minimum distance is maximized.
+
+    Parameters
+    ----------
+ 
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        The dimension of the problem, i.e. size of the space.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    var_lower : List[float]
+        Vector of variable lower bounds.
+    
+    var_upper : List[float]
+        Vector of variable upper bounds.
+
+    node_pos : List[List[float]]
+        List of coordinates of the nodes.
+
+    rbf_lambda : List[float]
+        The lambda coefficients of the RBF interpolant, corresponding
+        to the radial basis functions. List of dimension k. Can be
+        None if dist_weight is equal to 1, in which case RBF values
+        are not used.
+
+    rbf_h : List[float]
+k        The h coefficients of the RBF interpolant, corresponding to
+        the polynomial. List of dimension n+1. Can be None if
+        dist_weight is equal to 1, in which case RBF values are not
+        used.
+
+    dist_weight : float
+        Relative weight of the distance and objective function value,
+        when selecting the next point with a sampling strategy. A
+        weight of 1.0 corresponds to using solely distance, 0.0 to
+        objective function.
+
+    integer_vars : List[int] or None
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to
+        be continuous.
+
+    Returns
+    -------
+    List[float]
+        The best solution found for the MSRSM fitness function.
+
+    """
+    assert(len(var_lower)==n)
+    assert(len(var_upper)==n)
+    assert(len(node_pos)==k)
+    assert(isinstance(settings, RbfSettings))
+    assert((rbf_lambda is None and rbf_h is None and dist_weight == 1.0) or 
+           len(rbf_lambda)==k)
+    assert(len(node_pos)==k)
+    assert(isinstance(settings, RbfSettings))
+    
+    # Define parameters here, for now. Will move them to
+    # rbfopt_settings later if it seems that the user should be able
+    # to change their value.
+    population_size = settings.ga_base_population_size + 20 * n//5
+    mutation_rate = 0.1
+    max_generations = 20
+
+    # Derived parameters. Since the best individual will always remain
+    # and mutate, there is a -1 in the count for new individuals.
+    num_surviving = population_size//3
+    num_new = population_size - 2*num_surviving - 1
+
+    # Generate boolean vector of integer variables for convenience
+    is_integer = [False] * n
+    for i in integer_vars:
+        is_integer[i] = True
+
+    # Compute initial population
+    population = generate_sample_points(settings, n, var_lower,
+                                        var_upper, population_size,
+                                        integer_vars)
+    for gen in range(max_generations):
+        # Mutation rate and maximum perturbed coordinates for this
+        # generation of individuals
+        curr_mutation_rate = (mutation_rate * (max_generations - gen) / 
+                              max_generations)
+        max_size_pert = max(2, int(n * curr_mutation_rate))
+        # Compute fitness score to determine remaining individuals
+        if (dist_weight == 1.0):
+            # If we only care for distance, speed up computation
+            distance = ru.bulk_get_min_distance(population, node_pos)
+            fitness_val = [-val for val in distance]
+        else:
+            # Otherwise evaluate both distance and RBF value
+            objfun, distance = ru.bulk_evaluate_rbf(settings, population, n,
+                                                    k, node_pos, rbf_lambda, 
+                                                    rbf_h, True)
+            srms_obj = MetricSRSMObj(settings, distance, objfun, dist_weight)
+            fitness_val = map(srms_obj.evaluate, distance, objfun)
+        rank = sorted([(fitness_val[i], i) for i in range(population_size)])
+        best_individuals = [population[i[1]] for i in rank[:num_surviving]]
+        # Crossover: select how mating is done, then create offspring
+        father = [best_individuals[i] 
+                  for i in np.random.permutation(num_surviving)]
+        mother = [best_individuals[i] 
+                  for i in np.random.permutation(num_surviving)]
+        offspring = map(msrsm_ga_mate, father, mother)
+        # New individuals
+        new_individuals = generate_sample_points(settings, n, var_lower, 
+                                                 var_upper, num_new,
+                                                 integer_vars)
+        # Make a copy of best individual, and mutate it
+        best_mutated = [val for val in best_individuals[0]]
+        msrsm_ga_mutate(n, var_lower, var_upper, is_integer, 
+                        best_mutated, max_size_pert)
+        # Mutate surviving (except best) if necessary
+        for point in best_individuals[1:]:
+            if (np.random.uniform() < curr_mutation_rate):
+                msrsm_ga_mutate(n, var_lower, var_upper, is_integer, 
+                                point, max_size_pert)
+        # Generate new population
+        population = (best_individuals + offspring + new_individuals + 
+                      [best_mutated])
+    # Determine ranking of last generation.
+    # Compute fitness score to determine remaining individuals
+    if (dist_weight == 1.0):
+        # If we only care for distance, speed up computation
+        distance = ru.bulk_get_min_distance(population, node_pos)
+        fitness_val = [-val for val in distance]
+    else:
+        # Otherwise evaluate both distance and RBF value
+        objfun, distance = ru.bulk_evaluate_rbf(settings, population, n,
+                                                k, node_pos, rbf_lambda, 
+                                                rbf_h, True)
+        srms_obj = MetricSRSMObj(settings, distance, objfun, dist_weight)
+        fitness_val = map(srms_obj.evaluate, distance, objfun)
+    rank = sorted([(fitness_val[i], i) for i in range(population_size)])
+    best_individuals = [population[i[1]] for i in rank[:num_surviving]]
+    # Return best individual
+    return population[rank[0][1]]
+
+# -- end function
+
+def msrsm_ga_mate(father, mother):
+    """Generate offspring for genetic algorithm.
+
+    The offspring will get genes uniformly at random from the mother
+    and the father.
+    
+    Parameters
+    ----------
+    father : List[float]
+        First individual for mating.
+
+    mother : List[float]
+        Second individual for mating.
+
+    Returns
+    -------
+    List[float]
+        The offspring. Same size as mother and father.
+    """
+    assert(len(father) == len(mother))
+    prob = np.random.uniform(size = len(father))
+    return [(father[i] if prob[i] < 0.5 else mother[i])
+            for i in range(len(father))]
+
+# -- end function
+
+def msrsm_ga_mutate(n, var_lower, var_upper, is_integer, 
+                    individual, max_size_pert):
+    """Mutate an individual (point) for the genetic algorithm.
+
+    The mutation is performed in place.
+
+    Parameters
+    ----------
+
+    n : int
+        The dimension of the problem, i.e. size of the space.
+
+    var_lower : List[float]
+        Vector of variable lower bounds.
+    
+    var_upper : List[float]
+        Vector of variable upper bounds.
+
+    is_integer : List[bool]
+        List of size n, each element is True if the corresponding
+        variable is integer.
+
+    individual : List[float]
+        Point to be mutated.
+
+    max_size_pert : int
+        Maximum size of the perturbation for the mutation,
+        i.e. maximum number of coordinates that can change.
+
+    """
+    # Randomly mutate some of the coordinates. First determine how
+    # many are mutated, then pick them randomly.
+    size_pert = np.random.randint(max_size_pert)
+    perturbed = np.random.choice(np.arange(n), size_pert, replace = False)
+    for i in perturbed:
+        if is_integer[i]:
+            individual[i] = np.random.randint(var_lower[i], var_upper[i] + 1)
+        else:
+            individual[i] = np.random.uniform(var_lower[i], var_upper[i])
+
+# -- end function    
 
 class MetricSRSMObj:
     """Objective functon for the Metric SRM method.

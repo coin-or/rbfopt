@@ -178,10 +178,12 @@ class RbfSettings:
         (2001) and later Regis and Shoemaker (2007). Used by Gutmann
         RBF method only. Default True.
 
-    num_samples_aux_problems : int
-        Multiplier for the dimension of the problem to determine the
-        number of samples used by the Metric SRSM algorithm at every
-        iteration. Default 2000.
+    ga_base_population_size : int
+        Minimum population size for the genetic algorithm used to
+        optimize the global search step or infstep in the Metric SRSM
+        algorithm. The final population is computed as the minimum
+        population + n/5, where n is the number of decision
+        variables. Default 200.
 
     save_state_interval : int 
         Number of iterations after which the state of the algorithm
@@ -269,7 +271,7 @@ class RbfSettings:
                  model_selection_solver = 'numpy',
                  algorithm = 'MSRSM',
                  targetval_clipping = True,
-                 num_samples_aux_problems = 2000,
+                 ga_base_population_size = 200,
                  print_solver_output = False,
                  save_state_interval = 100000,
                  save_state_file = 'optalgorithm_state.dat',
@@ -309,7 +311,7 @@ class RbfSettings:
         self.model_selection_solver = model_selection_solver
         self.algorithm = algorithm
         self.targetval_clipping = targetval_clipping
-        self.num_samples_aux_problems = num_samples_aux_problems
+        self.ga_base_population_size = ga_base_population_size
         self.print_solver_output = print_solver_output
         self.save_state_interval = save_state_interval
         self.save_state_file = save_state_file
