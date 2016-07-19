@@ -17,6 +17,7 @@ from __future__ import absolute_import
 
 import math
 import numpy as np
+import scipy.spatial as ss
 import pyomo.environ
 import pyomo.opt
 import rbfopt_utils as ru
@@ -101,43 +102,56 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
     if (settings.algorithm == 'Gutmann'):
-        # Optimize using Pyomo
-        instance = model.create_max_one_over_mu_model(settings, n, k,
-                                                      var_lower,
-                                                      var_upper,
-                                                      node_pos, mat,
-                                                      integer_vars)
+        if (settings.global_search_method == 'genetic'):
+            mu_k_obj = GutmannMukObj(settings, n, k, node_pos, mat)
+            point = ga_optimize(settings, n, k, var_lower, var_upper,
+                                mu_k_obj.bulk_evaluate, integer_vars)
+        elif (settings.global_search_method == 'traditional'):
+            # Optimize using Pyomo
+            instance = model.create_max_one_over_mu_model(settings, n, k,
+                                                          var_lower,
+                                                          var_upper,
+                                                          node_pos, mat,
+                                                          integer_vars)
 
-        # Initialize variables for local search
-        initialize_instance_variables(settings, instance)
+            # Initialize variables for local search
+            initialize_instance_variables(settings, instance)
 
-        # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
-                                      executable = config.MINLP_SOLVER_PATH,
-                                      solver_io='nl')
-        if opt is None:
-            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
-                               ' not found')
-        set_minlp_solver_options(opt)
+            # Instantiate optimizer
+            opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
+                                          executable = 
+                                          config.MINLP_SOLVER_PATH,
+                                          solver_io='nl')
+            if opt is None:
+                raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
+                                   ' not found')
+            set_minlp_solver_options(opt)
 
-        # Solve and load results
-        try:
-            results = opt.solve(instance, keepfiles = False, 
-                                tee = settings.print_solver_output)
-            if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
-                (results.solver.termination_condition == 
-                 pyomo.opt.TerminationCondition.optimal)):
-                # this is feasible and optimal
-                instance.solutions.load_from(results)
-                point = [instance.x[i].value for i in instance.N]
-                ru.round_integer_vars(point, integer_vars)
-            else:
+            # Solve and load results
+            try:
+                results = opt.solve(instance, keepfiles = False, 
+                                    tee = settings.print_solver_output)
+                if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
+                    (results.solver.termination_condition == 
+                     pyomo.opt.TerminationCondition.optimal)):
+                    # this is feasible and optimal
+                    instance.solutions.load_from(results)
+                    point = [instance.x[i].value for i in instance.N]
+                    ru.round_integer_vars(point, integer_vars)
+                else:
+                    point = None
+            except:
                 point = None
-        except:
-            point = None
     elif (settings.algorithm == 'MSRSM'):
-        point = msrsm_ga_optimize(settings, n, k, var_lower, var_upper,
-                                  node_pos, None, None, 1.0, integer_vars)
+        mmdist_obj = MaximinDistanceObj(settings, n, k, node_pos)
+        if (settings.global_search_method == 'genetic'):
+            point = ga_optimize(settings, n, k, var_lower, var_upper,
+                                mmdist_obj.bulk_evaluate, integer_vars)
+        elif (settings.global_search_method == 'traditional'):
+            samples = generate_sample_points(settings, n, var_lower,
+                                             var_upper, integer_vars)
+            scores = mmdist_obj.bulk_evaluate(samples)
+            point = samples[scores.index(min(scores))]
     else:
         raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
 
@@ -347,45 +361,59 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
     if (settings.algorithm == 'Gutmann'):
-        # Optimize using Pyomo    
-        instance = model.create_max_h_k_model(settings, n, k,
-                                              var_lower, var_upper,
-                                              node_pos, rbf_lambda,
-                                              rbf_h, mat, target_val,
-                                              integer_vars)
+        if (settings.global_search_method == 'genetic'):
+            h_k_obj = GutmannHkObj(settings, n, k, node_pos, rbf_lambda, 
+                                   rbf_h, mat, target_val)
+            point = ga_optimize(settings, n, k, var_lower, var_upper,
+                                h_k_obj.bulk_evaluate, integer_vars)
+        elif (settings.global_search_method == 'traditional'):
+            # Optimize using Pyomo    
+            instance = model.create_max_h_k_model(settings, n, k,
+                                                  var_lower, var_upper,
+                                                  node_pos, rbf_lambda,
+                                                  rbf_h, mat, target_val,
+                                                  integer_vars)
 
-        # Initialize variables for local search
-        initialize_instance_variables(settings, instance)
-        initialize_h_k_aux_variables(settings, instance)
+            # Initialize variables for local search
+            initialize_instance_variables(settings, instance)
+            initialize_h_k_aux_variables(settings, instance)
 
-        # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
-                                      executable = config.MINLP_SOLVER_PATH,
-                                      solver_io='nl')
-        if opt is None:
-            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
-                               ' not found')
-        set_minlp_solver_options(opt)
+            # Instantiate optimizer
+            opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
+                                          executable = 
+                                          config.MINLP_SOLVER_PATH,
+                                          solver_io='nl')
+            if opt is None:
+                raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
+                                   ' not found')
+            set_minlp_solver_options(opt)
 
-        # Solve and load results
-        try:
-            results = opt.solve(instance, keepfiles = False,
-                                tee = settings.print_solver_output)
-            if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
-                (results.solver.termination_condition == 
-                 pyomo.opt.TerminationCondition.optimal)):
-                # this is feasible and optimal
-                instance.solutions.load_from(results)
-                point = [instance.x[i].value for i in instance.N]
-                ru.round_integer_vars(point, integer_vars)
-            else:
+            # Solve and load results
+            try:
+                results = opt.solve(instance, keepfiles = False,
+                                    tee = settings.print_solver_output)
+                if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
+                    (results.solver.termination_condition == 
+                     pyomo.opt.TerminationCondition.optimal)):
+                    # this is feasible and optimal
+                    instance.solutions.load_from(results)
+                    point = [instance.x[i].value for i in instance.N]
+                    ru.round_integer_vars(point, integer_vars)
+                else:
+                    point = None
+            except:
                 point = None
-        except:
-            point = None
     elif (settings.algorithm == 'MSRSM'):
-        point = msrsm_ga_optimize(settings, n, k, var_lower, var_upper,
-                                  node_pos, rbf_lambda, rbf_h, dist_weight, 
-                                  integer_vars)
+        srms_obj = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda, 
+                                 rbf_h, dist_weight)
+        if (settings.global_search_method == 'genetic'):
+            point = ga_optimize(settings, n, k, var_lower, var_upper,
+                                srms_obj.bulk_evaluate, integer_vars)
+        elif (settings.global_search_method == 'traditional'):
+            samples = generate_sample_points(settings, n, var_lower,
+                                             var_upper, integer_vars)
+            scores = srms_obj.bulk_evaluate(samples)
+            point = samples[scores.index(min(scores))]
     else:
         raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
 
@@ -676,13 +704,12 @@ def generate_sample_points(settings, n, var_lower, var_upper, num_samples,
 
 # -- end function
 
-def msrsm_ga_optimize(settings, n, k, var_lower, var_upper, node_pos,
-                      rbf_lambda, rbf_h, dist_weight, integer_vars):
-    """Compute and optimize the MSRSM fitness function.
+def ga_optimize(settings, n, k, var_lower, var_upper, objfun,
+                integer_vars):
+    """Compute and optimize a fitness function.
 
     Use a simple genetic algorithm to quickly find a good solution for
-    the MSRSM global search subproblem, or the MSRSM infstep in which
-    minimum distance is maximized.
+    a minimization subproblem.
 
     Parameters
     ----------
@@ -702,28 +729,13 @@ def msrsm_ga_optimize(settings, n, k, var_lower, var_upper, node_pos,
     var_upper : List[float]
         Vector of variable upper bounds.
 
-    node_pos : List[List[float]]
-        List of coordinates of the nodes.
+    objfun : Callable[List[List[float]]]
+        The objective function. This must be a callable function that
+        can be applied to a list of points, and must return a list
+        containing one fitness vale for each point, such that lower
+        values are better.
 
-    rbf_lambda : List[float]
-        The lambda coefficients of the RBF interpolant, corresponding
-        to the radial basis functions. List of dimension k. Can be
-        None if dist_weight is equal to 1, in which case RBF values
-        are not used.
-
-    rbf_h : List[float]
-k        The h coefficients of the RBF interpolant, corresponding to
-        the polynomial. List of dimension n+1. Can be None if
-        dist_weight is equal to 1, in which case RBF values are not
-        used.
-
-    dist_weight : float
-        Relative weight of the distance and objective function value,
-        when selecting the next point with a sampling strategy. A
-        weight of 1.0 corresponds to using solely distance, 0.0 to
-        objective function.
-
-    integer_vars : List[int] or None
+    integer_vars : List[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to
         be continuous.
@@ -731,24 +743,18 @@ k        The h coefficients of the RBF interpolant, corresponding to
     Returns
     -------
     List[float]
-        The best solution found for the MSRSM fitness function.
+        The best solution found.
 
     """
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
-    assert(len(node_pos)==k)
-    assert(isinstance(settings, RbfSettings))
-    assert((rbf_lambda is None and rbf_h is None and dist_weight == 1.0) or 
-           len(rbf_lambda)==k)
-    assert(len(node_pos)==k)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfSettings))            
     
     # Define parameters here, for now. Will move them to
     # rbfopt_settings later if it seems that the user should be able
     # to change their value.
     population_size = settings.ga_base_population_size + 20 * n//5
     mutation_rate = 0.1
-    max_generations = 20
 
     # Derived parameters. Since the best individual will always remain
     # and mutate, there is a -1 in the count for new individuals.
@@ -764,24 +770,15 @@ k        The h coefficients of the RBF interpolant, corresponding to
     population = generate_sample_points(settings, n, var_lower,
                                         var_upper, population_size,
                                         integer_vars)
-    for gen in range(max_generations):
+    for gen in range(settings.ga_num_generations):
         # Mutation rate and maximum perturbed coordinates for this
         # generation of individuals
-        curr_mutation_rate = (mutation_rate * (max_generations - gen) / 
-                              max_generations)
+        curr_mutation_rate = (mutation_rate *
+                              (settings.ga_num_generations - gen) /
+                              settings.ga_num_generations)
         max_size_pert = max(2, int(n * curr_mutation_rate))
         # Compute fitness score to determine remaining individuals
-        if (dist_weight == 1.0):
-            # If we only care for distance, speed up computation
-            distance = ru.bulk_get_min_distance(population, node_pos)
-            fitness_val = [-val for val in distance]
-        else:
-            # Otherwise evaluate both distance and RBF value
-            objfun, distance = ru.bulk_evaluate_rbf(settings, population, n,
-                                                    k, node_pos, rbf_lambda, 
-                                                    rbf_h, True)
-            srms_obj = MetricSRSMObj(settings, distance, objfun, dist_weight)
-            fitness_val = map(srms_obj.evaluate, distance, objfun)
+        fitness_val = objfun(population)
         rank = sorted([(fitness_val[i], i) for i in range(population_size)])
         best_individuals = [population[i[1]] for i in rank[:num_surviving]]
         # Crossover: select how mating is done, then create offspring
@@ -789,36 +786,26 @@ k        The h coefficients of the RBF interpolant, corresponding to
                   for i in np.random.permutation(num_surviving)]
         mother = [best_individuals[i] 
                   for i in np.random.permutation(num_surviving)]
-        offspring = map(msrsm_ga_mate, father, mother)
+        offspring = map(ga_mate, father, mother)
         # New individuals
         new_individuals = generate_sample_points(settings, n, var_lower, 
                                                  var_upper, num_new,
                                                  integer_vars)
         # Make a copy of best individual, and mutate it
         best_mutated = [val for val in best_individuals[0]]
-        msrsm_ga_mutate(n, var_lower, var_upper, is_integer, 
-                        best_mutated, max_size_pert)
+        ga_mutate(n, var_lower, var_upper, is_integer, 
+                  best_mutated, max_size_pert)
         # Mutate surviving (except best) if necessary
         for point in best_individuals[1:]:
             if (np.random.uniform() < curr_mutation_rate):
-                msrsm_ga_mutate(n, var_lower, var_upper, is_integer, 
-                                point, max_size_pert)
+                ga_mutate(n, var_lower, var_upper, is_integer, 
+                          point, max_size_pert)
         # Generate new population
         population = (best_individuals + offspring + new_individuals + 
                       [best_mutated])
     # Determine ranking of last generation.
     # Compute fitness score to determine remaining individuals
-    if (dist_weight == 1.0):
-        # If we only care for distance, speed up computation
-        distance = ru.bulk_get_min_distance(population, node_pos)
-        fitness_val = [-val for val in distance]
-    else:
-        # Otherwise evaluate both distance and RBF value
-        objfun, distance = ru.bulk_evaluate_rbf(settings, population, n,
-                                                k, node_pos, rbf_lambda, 
-                                                rbf_h, True)
-        srms_obj = MetricSRSMObj(settings, distance, objfun, dist_weight)
-        fitness_val = map(srms_obj.evaluate, distance, objfun)
+    fitness_val = objfun(population)
     rank = sorted([(fitness_val[i], i) for i in range(population_size)])
     best_individuals = [population[i[1]] for i in rank[:num_surviving]]
     # Return best individual
@@ -826,7 +813,7 @@ k        The h coefficients of the RBF interpolant, corresponding to
 
 # -- end function
 
-def msrsm_ga_mate(father, mother):
+def ga_mate(father, mother):
     """Generate offspring for genetic algorithm.
 
     The offspring will get genes uniformly at random from the mother
@@ -852,7 +839,7 @@ def msrsm_ga_mate(father, mother):
 
 # -- end function
 
-def msrsm_ga_mutate(n, var_lower, var_upper, is_integer, 
+def ga_mutate(n, var_lower, var_upper, is_integer, 
                     individual, max_size_pert):
     """Mutate an individual (point) for the genetic algorithm.
 
@@ -895,55 +882,101 @@ def msrsm_ga_mutate(n, var_lower, var_upper, is_integer,
 # -- end function    
 
 class MetricSRSMObj:
-    """Objective functon for the Metric SRM method.
+    """Objective function for the Metric SRM method.
 
     This class facilitates the computation of the objective function
     for the Metric SRSM. The objective function combines the distance
     from the closest point, and the response surface (i.e. RBF
-    interpolant) value.
+    interpolant) value. Lower values are better.
 
     Parameters
     ----------
-    distance_values : List[float]
-        Minimum distance of sample points from interpolation nodes.
 
-    objfun_values : List[float]
-        Value of the RBF interpolant at the sample points. This array
-        must have the same length as `distance`.
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        The dimension of the problem, i.e. size of the space.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    node_pos : List[List[float]]
+        List of coordinates of the nodes.
+
+    rbf_lambda : List[float]
+        The lambda coefficients of the RBF interpolant, corresponding
+        to the radial basis functions. List of dimension k. Can be
+        None if dist_weight is equal to 1, in which case RBF values
+        are not used.
+
+    rbf_h : List[float]
+        The h coefficients of the RBF interpolant, corresponding to
+        the polynomial. List of dimension n+1. Can be None if
+        dist_weight is equal to 1, in which case RBF values are not
+        used.
 
     dist_weight : float
         Relative weight of the distance and objective function value.
         A weight of 1.0 corresponds to using solely distance, 0.0 to
         objective function.
     """
-    def __init__(self, settings, distance_values, objfun_values,
-                 dist_weight):
+    def __init__(self, settings, n, k, node_pos, rbf_lambda, 
+                 rbf_h, dist_weight):
         """Constructor.
         """
-        assert(len(distance_values) == len(objfun_values))
-        assert(len(distance_values) >= 1)
+        assert(len(node_pos)==k)
+        assert(len(rbf_lambda)==k)
         assert(0 <= dist_weight <= 1)
         assert(isinstance(settings, RbfSettings))
+        p = ru.get_size_P_matrix(settings, n)
+        assert(len(rbf_h)==(p))
+        self.settings = settings
+        self.n = n
+        self.k = k
+        self.node_pos = node_pos
+        self.rbf_lambda = rbf_lambda
+        self.rbf_h = rbf_h
+        self.dist_weight = dist_weight
+    # -- end function
+    
+    def bulk_evaluate(self, points):
+        """Evaluate the objective for Metric SRSM.
+
+        Evaluate the score of a set of points.
+
+        Parameters
+        ----------
+        points : List[List[float]]
+            Points at which we want to evaluate the objective function.
+        
+        Returns
+        -------
+        float
+            The score for the Metric SRSM algorithm (lower is better).
+        """
+        # Determine distance and surrogate model value
+        obj, dist = ru.bulk_evaluate_rbf(self.settings, points, self.n,
+                                         self.k, self.node_pos, 
+                                         self.rbf_lambda, self.rbf_h, 'min')
         # Determine scaling factors
-        min_dist, max_dist = min(distance_values), max(distance_values)
-        min_obj, max_obj = min(objfun_values), max(objfun_values)
-        self.dist_denom = (max_dist - min_dist if max_dist > min_dist
-                           + settings.eps_zero else 1.0)
+        min_dist, max_dist = min(dist), max(dist)
+        min_obj, max_obj = min(obj), max(obj)
+        self.dist_denom = (max_dist - min_dist if max_dist > min_dist +
+                           self.settings.eps_zero else 1.0)
         self.obj_denom = (max_obj - min_obj if max_obj > min_obj +
-                          settings.eps_zero else 1.0)
+                          self.settings.eps_zero else 1.0)
         # Store useful parameters
         self.max_dist = max_dist
         self.min_obj = min_obj
-        self.dist_weight = dist_weight
-        self.min_dist = settings.min_dist
+        return map(self.evaluate, dist, obj)
+    # -- end function
 
-    # -- end function        
-    
     def evaluate(self, distance, objfun):
         """Evaluate the objective for Metric SRSM.
 
-        Evaluate the score of a point, given its distance value and
-        its RBF interpolant value.
+        Evaluate the score of a single point, given its distance value
+        and its RBF interpolant value.
 
         Parameters
         ----------
@@ -958,13 +991,282 @@ class MetricSRSMObj:
         -------
         float
             The score for the Metric SRSM algorithm (lower is better).
+
         """
-        if (distance <= self.min_dist):
+        if (distance <= self.settings.min_dist):
             return float('inf')
         dist_score = (self.max_dist - distance)/self.dist_denom
         obj_score = (objfun - self.min_obj)/self.obj_denom
         return obj_score + self.dist_weight * dist_score
-
     # -- end function
+# -- end class MetricSRSMObj
 
-# -- end Class MetricSRSMObj
+class MaximinDistanceObj:
+    """Objective function for the Maximin Distance criterion.
+
+    This class facilitates the computation of the objective function
+    for the Maximin Distance criterion. The objective function is the
+    minimum distance from the closest point, multiplied by -1 so that
+    lower values are better (we always minimize).
+
+    Parameters
+    ----------
+
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        The dimension of the problem, i.e. size of the space.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    node_pos : List[List[float]]
+        List of coordinates of the nodes.
+    """
+    def __init__(self, settings, n, k, node_pos):
+        """Constructor.
+        """
+        assert(len(node_pos)==k)
+        assert(isinstance(settings, RbfSettings))
+        self.settings = settings
+        self.n = n
+        self.k = k
+        self.node_pos = node_pos
+    # -- end function
+    
+    def bulk_evaluate(self, points):
+        """Evaluate the objective for Maximin Distance.
+
+        Evaluate the score of a set of points.
+
+        Parameters
+        ----------
+        points : List[List[float]]
+            Points at which we want to evaluate the objective function.
+        
+        Returns
+        -------
+        float
+            The score for Maximin Distance algorithm (lower is better).
+        """
+        dist = ru.bulk_get_min_distance(points, self.node_pos)
+        return [-val for val in dist]
+    # -- end function
+# -- end class MaximinDistanceObj
+
+class GutmannHkObj:
+    """Objective function h_k for the Gutmann method.
+
+    This class computes the value of the h_k objective function for
+    the Gutmann method. Lower values are better.
+
+    Parameters
+    ----------
+
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        The dimension of the problem, i.e. size of the space.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    node_pos : List[List[float]]
+        List of coordinates of the nodes.
+
+    rbf_lambda : List[float]
+        The lambda coefficients of the RBF interpolant, corresponding
+        to the radial basis functions. List of dimension k. Can be
+        None if dist_weight is equal to 1, in which case RBF values
+        are not used.
+
+    rbf_h : List[float]
+        The h coefficients of the RBF interpolant, corresponding to
+        the polynomial. List of dimension n+1. Can be None if
+        dist_weight is equal to 1, in which case RBF values are not
+        used.
+
+    Amatinv : numpy.matrix or None
+        The matrix necessary for the computation. This is the inverse
+        of the matrix [Phi P; P^T 0]. Must be a square numpy.matrix of
+        appropriate dimension.
+
+    target_val : float
+        Value f* that we want to find in the unknown objective
+        function. Used by Gutmann's RBF method only.
+
+    """
+    def __init__(self, settings, n, k, node_pos, rbf_lambda, 
+                 rbf_h, Amatinv, target_val):
+        """Constructor.
+        """
+        assert(len(rbf_lambda)==k)
+        assert(len(node_pos)==k)
+        assert(isinstance(settings, RbfSettings))
+        # Determine the size of the P matrix
+        p = ru.get_size_P_matrix(settings, n)
+        assert(isinstance(Amatinv, np.matrix) and 
+               Amatinv.shape==(k + p, k + p))
+        assert(len(rbf_h)==(p))
+
+        self.settings = settings
+        self.n = n
+        self.k = k
+        self.node_pos = node_pos
+        self.rbf_lambda = rbf_lambda
+        self.rbf_h = rbf_h
+        self.Amatinv = Amatinv
+        self.target_val = target_val
+    # -- end function
+    
+    def bulk_evaluate(self, points):
+        """Evaluate the objective for the Gutmann h_k objective.
+
+        We should maximize (1/(\mu_k(x) [s_k(x) - f^\ast]^2)), but
+        since we want a problem in minimization form, we minimize the
+        reciprocal. That is, we minimize \mu_k(x) [s_k(x) - f^\ast]^2,
+        where s_k is the value of the RBF interpolant, and f^\ast is
+        the target value. So this function computes \mu_k(x) [s_k(x) -
+        f^\ast]^2.
+
+        Parameters
+        ----------
+        points : List[List[float]]
+            Points at which we want to evaluate the objective function.
+        
+        Returns
+        -------
+        float
+            The score for the h_k criterion (lower is better).
+
+        """
+        rbf_function = ru.get_rbf_function(self.settings)
+        p = ru.get_size_P_matrix(self.settings, self.n)
+        # Formula:
+        # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
+
+        # Convert to numpy
+        point_mat = np.array(points)
+        node_mat = np.array(self.node_pos)
+        # Create distance matrix
+        dist_mat = ss.distance.cdist(point_mat, node_mat)
+        # Evaluate radial basis function on each distance
+        rbf_vec = map(rbf_function, dist_mat.ravel())
+        u_mat = np.reshape(np.array(rbf_vec), (len(point_mat), -1))
+        # Contributions to the RBF interpolant value s_k: the u part,
+        # the pi part, and the nonhomogenous part. At the same time,
+        # build the matrix with the vectors u_pi.
+        part1 = np.dot(u_mat, self.rbf_lambda)
+        if (ru.get_degree_polynomial(self.settings) == 1):
+            part2 = np.dot(point_mat, self.rbf_h[:-1])
+            u_pi_mat = np.concatenate((u_mat, point_mat, 
+                                       np.ones((len(point_mat), 1))), axis=1)
+        else:
+            part2 = np.zeros(len(point_mat))
+            u_pi_mat = np.concatenate((u_mat, np.ones((len(point_mat), 1))),
+                                      axis=1)
+        part3 = self.rbf_h[-1] if (p > 0) else 0.0
+        # The vector rbf_value contains the value of the RBF interpolant
+        rbf_value = part1 + part2 + part3
+        # This is the shift in the computation of \mu_k
+        shift = rbf_function(0.0)
+        sign = (-1)**ru.get_degree_polynomial(self.settings)
+        return [(rbf_value[i] - self.target_val)**2 / 
+                (sign * (np.dot(np.dot(u_pi_mat[i, ], self.Amatinv), 
+                                u_pi_mat[i, ]) - shift))
+                for i in range(len(points))]
+    # -- end function
+# -- end class GutmannHkObj
+
+class GutmannMukObj:
+    """Objective function \mu_k for the Gutmann method.
+
+    This class computes the value of the \mu_k objective function for
+    the Gutmann method. Lower values are better.
+
+    Parameters
+    ----------
+
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        The dimension of the problem, i.e. size of the space.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    node_pos : List[List[float]]
+        List of coordinates of the nodes.
+
+    Amatinv : numpy.matrix or None
+        The matrix necessary for the computation. This is the inverse
+        of the matrix [Phi P; P^T 0]. Must be a square numpy.matrix of
+        appropriate dimension.
+
+    """
+    def __init__(self, settings, n, k, node_pos, Amatinv):
+        """Constructor.
+        """
+        assert(len(node_pos)==k)
+        assert(isinstance(settings, RbfSettings))
+        # Determine the size of the P matrix
+        p = ru.get_size_P_matrix(settings, n)
+        assert(isinstance(Amatinv, np.matrix) and 
+               Amatinv.shape==(k + p, k + p))
+
+        self.settings = settings
+        self.n = n
+        self.k = k
+        self.node_pos = node_pos
+        self.Amatinv = Amatinv
+    # -- end function
+    
+    def bulk_evaluate(self, points):
+        """Evaluate the objective for the Gutmann \mu objective.
+
+        We should maximize 1/\mu_k(x), but since we want a problem in
+        minimization form, we minimize the reciprocal. So this
+        function computes \mu_k(x).
+
+        Parameters
+        ----------
+        points : List[List[float]]
+            Points at which we want to evaluate the objective function.
+        
+        Returns
+        -------
+        float
+            The score for the \mu_k criterion (lower is better).
+
+        """
+        rbf_function = ru.get_rbf_function(self.settings)
+        p = ru.get_size_P_matrix(self.settings, self.n)
+        # Formula:
+        # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
+
+        # Convert to numpy
+        point_mat = np.array(points)
+        node_mat = np.array(self.node_pos)
+        # Create distance matrix
+        dist_mat = ss.distance.cdist(point_mat, node_mat)
+        # Evaluate radial basis function on each distance
+        rbf_vec = map(rbf_function, dist_mat.ravel())
+        u_mat = np.reshape(np.array(rbf_vec), (len(point_mat), -1))
+        # Build the matrix with the vectors u_pi.
+        if (ru.get_degree_polynomial(self.settings) == 1):
+            u_pi_mat = np.concatenate((u_mat, point_mat, 
+                                       np.ones((len(point_mat), 1))), axis=1)
+        else:
+            u_pi_mat = np.concatenate((u_mat, np.ones((len(point_mat), 1))),
+                                      axis=1)
+        # This is the shift in the computation of \mu_k
+        shift = rbf_function(0.0)
+        sign = (-1)**ru.get_degree_polynomial(self.settings)
+        return [1 / (sign * (np.dot(np.dot(u_pi_mat[i, ], self.Amatinv), 
+                                    u_pi_mat[i, ]) + shift)) 
+                for i in range(len(points))]
+    # -- end function
+# -- end class GutmannMukObj

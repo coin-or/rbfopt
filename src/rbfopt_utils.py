@@ -829,15 +829,15 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
 # -- end function
 
 def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
-                      compute_min_dist = False):
+                      return_distances = 'no'):
     """Evaluate the RBF interpolant at all points in a given list.
 
     Evaluate the RBF interpolant at all points in a given list. This
     version uses numpy and should be faster than individually
     evaluating the RBF at each single point, provided that the list of
-    points is large enough. It also computes the minimum distance of
-    each point from the interpolation nodes, if requested (since this
-    comes almost for free).
+    points is large enough. It also computes the distance or the
+    minimum distance of each point from the interpolation nodes, if
+    requested, since this comes almost for free.
 
     Parameters
     ----------
@@ -865,9 +865,10 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
         The h coefficients of the RBF interpolant, corresponding to he
         polynomial. List of dimension given by get_size_P_matrix().
 
-    compute_min_dist : bool
-        Compute and return minimum distance of points to the
-        interpolation nodes.
+    return_distances : string
+        If 'no', do nothing. If 'min', return the minimum distance of
+        each point to interpolation nodes. If 'all', return the full
+        distance matrix to the interpolation nodes.
 
     Returns
     -------
@@ -875,6 +876,7 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
         Value of the RBF interpolant at each point; if
         compute_min_dist is True, additionally returns the minimum
         distance of each point from the interpolation nodes.
+
     """
     assert(points)
     assert(len(rbf_lambda)==k)
@@ -901,9 +903,11 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     else:
         part2 = np.zeros(len(point_mat))
     part3 = rbf_h[-1] if (p > 0) else 0.0
-    if (compute_min_dist):
+    if (return_distances == 'min'):
         return ((part1 + part2 + part3).tolist(), 
                 (np.amin(dist_mat, 1)).tolist())
+    elif (return_distances == 'all'):
+        return ((part1 + part2 + part3).tolist(), dist_mat)
     else:
         return (part1 + part2 + part3).tolist()
 

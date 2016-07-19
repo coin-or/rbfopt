@@ -178,12 +178,25 @@ class RbfSettings:
         (2001) and later Regis and Shoemaker (2007). Used by Gutmann
         RBF method only. Default True.
 
+    global_search_method : string
+        The methodology to be used in the solution of global search
+        problems, i.e. the infstep and the global step. The options
+        are 'traditional' and 'genetic'. If 'traditional', Gutmann
+        optimizes using solver, while MSRSM uses random sampling. If
+        'genetic', a heuristic based on a genetic algorithm is
+        used. Default 'genetic'.
+
     ga_base_population_size : int
         Minimum population size for the genetic algorithm used to
-        optimize the global search step or infstep in the Metric SRSM
-        algorithm. The final population is computed as the minimum
-        population + n/5, where n is the number of decision
-        variables. Default 200.
+        optimize the global search step or infstep, when the genetic
+        global search method is chosen. The final population is
+        computed as the minimum population + n/5, where n is the
+        number of decision variables. Default 200.
+
+    ga_num_generations : int
+        Number of generations for the genetic algorithm used to
+        optimize the global search step or infstep, when the genetic
+        global search method is chosen. Default 20.
 
     save_state_interval : int 
         Number of iterations after which the state of the algorithm
@@ -223,6 +236,8 @@ class RbfSettings:
         Allowed model selection method.
     _allowed_algorithm : Dict[str]
         Allowed algorithms.
+    _allowed_global_search_method : Dict[str]
+        Allowed global search methods.
 
     """
 
@@ -236,6 +251,7 @@ class RbfSettings:
     _allowed_dynamism_clipping = {'off', 'median', 'clip_at_dyn', 'auto'}
     _allowed_model_selection_solver = {'clp', 'cplex', 'numpy'}
     _allowed_algorithm = {'Gutmann', 'MSRSM'}
+    _allowed_global_search_method = {'traditional', 'genetic'}
 
     def __init__(self,
                  rbf = 'thin_plate_spline',
@@ -271,7 +287,9 @@ class RbfSettings:
                  model_selection_solver = 'numpy',
                  algorithm = 'MSRSM',
                  targetval_clipping = True,
+                 global_search_method = 'genetic',
                  ga_base_population_size = 200,
+                 ga_num_generations = 20,
                  print_solver_output = False,
                  save_state_interval = 100000,
                  save_state_file = 'optalgorithm_state.dat',
@@ -311,7 +329,9 @@ class RbfSettings:
         self.model_selection_solver = model_selection_solver
         self.algorithm = algorithm
         self.targetval_clipping = targetval_clipping
+        self.global_search_method = global_search_method
         self.ga_base_population_size = ga_base_population_size
+        self.ga_num_generations = ga_num_generations
         self.print_solver_output = print_solver_output
         self.save_state_interval = save_state_interval
         self.save_state_file = save_state_file
@@ -342,6 +362,11 @@ class RbfSettings:
         if (self.algorithm not in RbfSettings._allowed_algorithm):
             raise ValueError('settings.algorithm = ' + 
                              str(self.algorithm) + ' not supported')
+        if (self.global_search_method not in 
+            RbfSettings._allowed_global_search_method):
+            raise ValueError('settings.global_search_method = ' + 
+                             str(self.global_search_method) + 
+                             ' not supported')
     # -- end function
 
     @classmethod

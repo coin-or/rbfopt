@@ -1,3 +1,15 @@
+2016-07-19  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_settings.py: Added global_search_method option to allow
+	for solution of auxiliary subproblems not based on solvers.
+	* rbfopt_aux_problems.py (ga_optimize, ga_mate, ga_mutate): New
+	functions for genetic algorithm, which can be used instead of the
+	solvers.
+	* rbfopt_aux_problems.py (MetricSRSMObj): Reworked for faster
+	computation.
+	* rbfopt_aux_problem.py (MaximinDistanceObj, GutmannHkObj)
+	(GutmannMukObj): New classes to allow solution of auxiliary
+	problems via genetic algorithms.
+
 2016-07-14  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Updated dependency to Pyomo 4.3.11388.
 	* rbfopt_config.py: Added MINLP_SOLVER_PATH and NLP_SOLVER_PATH
