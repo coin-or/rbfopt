@@ -198,6 +198,11 @@ class RbfSettings:
         optimize the global search step or infstep, when the genetic
         global search method is chosen. Default 20.
 
+    num_samples_aux_problems : int
+        Multiplier for the dimension of the problem to determine the
+        number of samples used by the Metric SRSM traditional
+        algorithm at every iteration. Default 1000.
+
     save_state_interval : int 
         Number of iterations after which the state of the algorithm
         should be dumped to file. The algorithm can be resumed from a
@@ -290,6 +295,7 @@ class RbfSettings:
                  global_search_method = 'genetic',
                  ga_base_population_size = 200,
                  ga_num_generations = 20,
+                 num_samples_aux_problems = 1000,
                  print_solver_output = False,
                  save_state_interval = 100000,
                  save_state_file = 'optalgorithm_state.dat',
@@ -332,6 +338,7 @@ class RbfSettings:
         self.global_search_method = global_search_method
         self.ga_base_population_size = ga_base_population_size
         self.ga_num_generations = ga_num_generations
+        self.num_samples_aux_problems = num_samples_aux_problems
         self.print_solver_output = print_solver_output
         self.save_state_interval = save_state_interval
         self.save_state_file = save_state_file

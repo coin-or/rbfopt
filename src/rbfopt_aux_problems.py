@@ -148,8 +148,10 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
             point = ga_optimize(settings, n, k, var_lower, var_upper,
                                 mmdist_obj.bulk_evaluate, integer_vars)
         elif (settings.global_search_method == 'traditional'):
+            num_samples = n * settings.num_samples_aux_problems
             samples = generate_sample_points(settings, n, var_lower,
-                                             var_upper, integer_vars)
+                                             var_upper, num_samples,
+                                             integer_vars)
             scores = mmdist_obj.bulk_evaluate(samples)
             point = samples[scores.index(min(scores))]
     else:
@@ -410,8 +412,10 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
             point = ga_optimize(settings, n, k, var_lower, var_upper,
                                 srms_obj.bulk_evaluate, integer_vars)
         elif (settings.global_search_method == 'traditional'):
+            num_samples = n * settings.num_samples_aux_problems
             samples = generate_sample_points(settings, n, var_lower,
-                                             var_upper, integer_vars)
+                                             var_upper, num_samples, 
+                                             integer_vars)
             scores = srms_obj.bulk_evaluate(samples)
             point = samples[scores.index(min(scores))]
     else:

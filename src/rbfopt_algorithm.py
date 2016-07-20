@@ -206,7 +206,11 @@ class OptAlgorithm:
                          if i not in fixed_vars]
             var_upper = [var_upper[i] for i in range(dimension) 
                          if i not in fixed_vars]
-            integer_vars = [i for i in integer_vars if i not in fixed_vars]
+            integer_vars_dense = [True if i in integer_vars else False 
+                                  for i in range(dimension)]
+            reduced = [integer_vars_dense[i] for i in range(dimension)
+                       if i not in fixed_vars]
+            integer_vars = [i for i in range(len(reduced)) if reduced[i]]
             dimension -= len(fixed_vars)
         self.var_lower, self.var_upper = var_lower, var_upper
         self.integer_vars = integer_vars
