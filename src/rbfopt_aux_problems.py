@@ -777,7 +777,7 @@ def ga_optimize(settings, n, var_lower, var_upper, objfun,
         curr_mutation_rate = (mutation_rate *
                               (settings.ga_num_generations - gen) /
                               settings.ga_num_generations)
-        max_size_pert = max(2, int(n * curr_mutation_rate))
+        max_size_pert = min(n, max(2, int(n * curr_mutation_rate)))
         # Compute fitness score to determine remaining individuals
         fitness_val = objfun(population)
         rank = sorted([(fitness_val[i], i) for i in range(population_size)])
