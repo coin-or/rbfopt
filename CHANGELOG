@@ -1,3 +1,9 @@
+2016-07-20  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (__init__): Resolved a bug in handling fixed
+	variables with integer variables.
+	* rbfopt_aux_algorithm.py (GutmannHkObj): Improved numerical
+	stability of formulas.
+
 2016-07-19  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_settings.py: Added global_search_method option to allow
 	for solution of auxiliary subproblems not based on solvers.

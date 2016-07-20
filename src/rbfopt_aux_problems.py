@@ -4,7 +4,7 @@ This module is responsible for constructing and solving all the
 auxiliary problems encountered during the optimization, such as the
 minimization of the surrogate model, of the bumpiness. The module acts
 as an interface between the high-level routines, the low-level PyOmo
-modules, and the sampling schemes.
+modules, and the search algorithms.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
@@ -90,7 +90,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
-    assert((mat is None and settings.algorithm == 'MSRSM' )
+    assert((mat is None and settings.algorithm == 'MSRSM')
            or (isinstance(mat, np.matrix) and mat.shape==(k + p, k + p)))
 
     # Instantiate model
@@ -104,7 +104,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
     if (settings.algorithm == 'Gutmann'):
         if (settings.global_search_method == 'genetic'):
             mu_k_obj = GutmannMukObj(settings, n, k, node_pos, mat)
-            point = ga_optimize(settings, n, k, var_lower, var_upper,
+            point = ga_optimize(settings, n, var_lower, var_upper,
                                 mu_k_obj.bulk_evaluate, integer_vars)
         elif (settings.global_search_method == 'traditional'):
             # Optimize using Pyomo
@@ -145,7 +145,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
     elif (settings.algorithm == 'MSRSM'):
         mmdist_obj = MaximinDistanceObj(settings, n, k, node_pos)
         if (settings.global_search_method == 'genetic'):
-            point = ga_optimize(settings, n, k, var_lower, var_upper,
+            point = ga_optimize(settings, n, var_lower, var_upper,
                                 mmdist_obj.bulk_evaluate, integer_vars)
         elif (settings.global_search_method == 'traditional'):
             num_samples = n * settings.num_samples_aux_problems
@@ -366,7 +366,7 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
         if (settings.global_search_method == 'genetic'):
             h_k_obj = GutmannHkObj(settings, n, k, node_pos, rbf_lambda, 
                                    rbf_h, mat, target_val)
-            point = ga_optimize(settings, n, k, var_lower, var_upper,
+            point = ga_optimize(settings, n, var_lower, var_upper,
                                 h_k_obj.bulk_evaluate, integer_vars)
         elif (settings.global_search_method == 'traditional'):
             # Optimize using Pyomo    
@@ -409,7 +409,7 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
         srms_obj = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda, 
                                  rbf_h, dist_weight)
         if (settings.global_search_method == 'genetic'):
-            point = ga_optimize(settings, n, k, var_lower, var_upper,
+            point = ga_optimize(settings, n, var_lower, var_upper,
                                 srms_obj.bulk_evaluate, integer_vars)
         elif (settings.global_search_method == 'traditional'):
             num_samples = n * settings.num_samples_aux_problems
@@ -708,7 +708,7 @@ def generate_sample_points(settings, n, var_lower, var_upper, num_samples,
 
 # -- end function
 
-def ga_optimize(settings, n, k, var_lower, var_upper, objfun,
+def ga_optimize(settings, n, var_lower, var_upper, objfun,
                 integer_vars):
     """Compute and optimize a fitness function.
 
@@ -723,9 +723,6 @@ def ga_optimize(settings, n, k, var_lower, var_upper, objfun,
 
     n : int
         The dimension of the problem, i.e. size of the space.
-
-    k : int
-        Number of nodes, i.e. interpolation points.
 
     var_lower : List[float]
         Vector of variable lower bounds.
@@ -843,8 +840,8 @@ def ga_mate(father, mother):
 
 # -- end function
 
-def ga_mutate(n, var_lower, var_upper, is_integer, 
-                    individual, max_size_pert):
+def ga_mutate(n, var_lower, var_upper, is_integer, individual, 
+              max_size_pert):
     """Mutate an individual (point) for the genetic algorithm.
 
     The mutation is performed in place.
@@ -873,6 +870,7 @@ def ga_mutate(n, var_lower, var_upper, is_integer,
         i.e. maximum number of coordinates that can change.
 
     """
+    assert(max_size_pert <= n)
     # Randomly mutate some of the coordinates. First determine how
     # many are mutated, then pick them randomly.
     size_pert = np.random.randint(max_size_pert)
@@ -1128,12 +1126,9 @@ class GutmannHkObj:
     def bulk_evaluate(self, points):
         """Evaluate the objective for the Gutmann h_k objective.
 
-        We should maximize (1/(\mu_k(x) [s_k(x) - f^\ast]^2)), but
-        since we want a problem in minimization form, we minimize the
-        reciprocal. That is, we minimize \mu_k(x) [s_k(x) - f^\ast]^2,
-        where s_k is the value of the RBF interpolant, and f^\ast is
-        the target value. So this function computes \mu_k(x) [s_k(x) -
-        f^\ast]^2.
+        Compute -1/(\mu_k(x) [s_k(x) - f^\ast]^2)), where s_k is
+        the value of the RBF interpolant, and f^\ast is the target
+        value. This is because we want to maximize its negative.
 
         Parameters
         ----------
@@ -1176,10 +1171,10 @@ class GutmannHkObj:
         rbf_value = part1 + part2 + part3
         # This is the shift in the computation of \mu_k
         shift = rbf_function(0.0)
-        sign = (-1)**ru.get_degree_polynomial(self.settings)
-        return [(rbf_value[i] - self.target_val)**2 / 
-                (sign * (np.dot(np.dot(u_pi_mat[i, ], self.Amatinv), 
-                                u_pi_mat[i, ]) - shift))
+        sign = (-1)**ru.get_degree_polynomial(self.settings)        
+        return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], self.Amatinv), 
+                                 u_pi_mat[i, ]) - shift)) /
+                (rbf_value[i] - self.target_val)**2
                 for i in range(len(points))]
     # -- end function
 # -- end class GutmannHkObj
@@ -1231,9 +1226,7 @@ class GutmannMukObj:
     def bulk_evaluate(self, points):
         """Evaluate the objective for the Gutmann \mu objective.
 
-        We should maximize 1/\mu_k(x), but since we want a problem in
-        minimization form, we minimize the reciprocal. So this
-        function computes \mu_k(x).
+        Compute -1/\mu_k(x), which we want to minimize.
 
         Parameters
         ----------
@@ -1269,8 +1262,8 @@ class GutmannMukObj:
         # This is the shift in the computation of \mu_k
         shift = rbf_function(0.0)
         sign = (-1)**ru.get_degree_polynomial(self.settings)
-        return [1 / (sign * (np.dot(np.dot(u_pi_mat[i, ], self.Amatinv), 
-                                    u_pi_mat[i, ]) + shift)) 
+        return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], self.Amatinv), 
+                                 u_pi_mat[i, ]) + shift)) 
                 for i in range(len(points))]
     # -- end function
 # -- end class GutmannMukObj

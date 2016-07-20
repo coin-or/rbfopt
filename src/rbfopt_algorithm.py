@@ -1337,7 +1337,9 @@ class OptAlgorithm:
                 # First, try to get the next point through something
                 # similar to a global search, using the MSRSM
                 # algorithm with default settings for speed
-                next_p = pure_global_step(RbfSettings(algorithm = 'MSRSM'), 
+                temp_settings = RbfSettings(algorithm = 'MSRSM',
+                                            global_search_method = 'genetic')
+                next_p = pure_global_step(temp_settings, 
                                           self.n, len(self.node_pos),
                                           self.l_lower, self.l_upper,
                                           self.node_pos, None,
@@ -1543,7 +1545,8 @@ def pure_global_step(settings, n, k, var_lower, var_upper,
     mat : numpy.matrix
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a square numpy.matrix of appropriate dimension.
+        be a square numpy.matrix of appropriate dimension. Can be None
+        when using the MSRSM algorithm.
 
     integer_vars : List[int] or None
         A list containing the indices of the integrality constrained
@@ -1558,7 +1561,8 @@ def pure_global_step(settings, n, k, var_lower, var_upper,
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(node_pos)==k)
-    assert(isinstance(mat, np.matrix))
+    assert((mat is None and settings.algorithm == 'MSRSM') or 
+           isinstance(mat, np.matrix))
     assert(isinstance(settings, RbfSettings))
     # Infstep: explore the parameter space
     return aux.pure_global_search(settings, n, k, var_lower, var_upper, 
