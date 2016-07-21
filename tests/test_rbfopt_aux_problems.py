@@ -97,8 +97,8 @@ class TestAuxProblems(unittest.TestCase):
                 ref = solutions[algorithm]
                 sol = aux.pure_global_search(self.settings, self.n, self.k,
                                              self.var_lower, self.var_upper,
-                                             self.node_pos, self.Amat,
-                                             self.integer_vars)
+                                             self.integer_vars, 
+                                             self.node_pos, self.Amat)
                 for i in range(self.n):
                     tolerance = (self.var_upper[i] - self.var_lower[i])*0.2
                     lb = ref[i] - tolerance
@@ -137,8 +137,8 @@ class TestAuxProblems(unittest.TestCase):
             references = solutions[algorithm]
             sol = aux.minimize_rbf(self.settings, self.n, self.k,
                                    self.var_lower, self.var_upper,
-                                   self.node_pos, self.rbf_lambda,
-                                   self.rbf_h, self.integer_vars)
+                                   self.integer_vars, self.node_pos,
+                                   self.rbf_lambda, self.rbf_h,)
             val = ru.evaluate_rbf(self.settings, sol, self.n, self.k, 
                                   self.node_pos, self.rbf_lambda,
                                   self.rbf_h)
@@ -186,9 +186,9 @@ class TestAuxProblems(unittest.TestCase):
                 ref = solutions[algorithm]
                 sol = aux.global_search(self.settings, self.n, self.k,
                                         self.var_lower, self.var_upper,
-                                        self.node_pos, self.rbf_lambda,
-                                        self.rbf_h, self.Amat, target_val,
-                                        dist_weight, self.integer_vars)
+                                        self.integer_vars, self.node_pos, 
+                                        self.rbf_lambda, self.rbf_h, 
+                                        self.Amat, target_val, dist_weight)
                 for i in range(self.n):
                     tolerance = (self.var_upper[i] - self.var_lower[i])*0.2
                     lb = ref[i] - tolerance
@@ -255,7 +255,7 @@ class TestAuxProblems(unittest.TestCase):
 
         samples = aux.generate_sample_points(self.settings, self.n, 
                                              self.var_lower, self.var_upper,
-                                             123, self.integer_vars)
+                                             self.integer_vars, 123)
         self.assertEqual(len(samples), 123,
                          msg = 'Wrong number of sample points')
         for sample in samples:
@@ -266,12 +266,12 @@ class TestAuxProblems(unittest.TestCase):
                                        0.0, msg = msg)
         # Now test some limit cases
         samples = aux.generate_sample_points(self.settings, 0, [], [], 
-                                             45, [])
+                                             [], 45)
         self.assertListEqual(samples, [[] for i in range(45)],
                              msg = 'Samples are not empty when n = 0')
         samples = aux.generate_sample_points(self.settings, self.n, 
                                              self.var_lower, self.var_upper,
-                                             0, self.integer_vars)
+                                             self.integer_vars, 0)
         self.assertFalse(samples, msg = 'List of samples should be empty')
     # -- end function
 
@@ -282,11 +282,11 @@ class TestAuxProblems(unittest.TestCase):
         var_upper = [1] * 3
         settings = RbfSettings(ga_base_population_size = 100)
         point = aux.ga_optimize(settings, 3, var_lower, var_upper,
-                                quadratic, [])
+                                [], quadratic)
         self.assertLessEqual(quadratic([point])[0], 0.05,
                              msg = 'Could not solve quadratic with GA')
         point = aux.ga_optimize(settings, 3, var_lower, var_upper,
-                                shifted_quadratic, [])
+                                [], shifted_quadratic)
         self.assertLessEqual(shifted_quadratic([point])[0], 0.05,
                              msg = 'Could not solve shifted quadratic with GA')
     # -- end function

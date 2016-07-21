@@ -60,8 +60,8 @@ class TestMultiquadricModels(unittest.TestCase):
         """
         model = d0.create_min_rbf_model(self.settings, self.n, self.k,
                                         self.var_lower, self.var_upper,
-                                        self.node_pos, self.rbf_lambda,
-                                        self.rbf_h, self.integer_vars)
+                                        self.integer_vars, self.node_pos,
+                                        self.rbf_lambda, self.rbf_h)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_max_one_over_mu_model(self):
@@ -72,8 +72,8 @@ class TestMultiquadricModels(unittest.TestCase):
         """
         model = d0.create_max_one_over_mu_model(self.settings, self.n, self.k,
                                                 self.var_lower, self.var_upper,
-                                                self.node_pos, self.Amat,
-                                                self.integer_vars)
+                                                self.integer_vars, 
+                                                self.node_pos, self.Amat)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_max_h_k_model(self):
@@ -84,9 +84,9 @@ class TestMultiquadricModels(unittest.TestCase):
         """
         model = d0.create_max_h_k_model(self.settings, self.n, self.k,
                                         self.var_lower, self.var_upper,
-                                        self.node_pos, self.rbf_lambda,
-                                        self.rbf_h, self.Amat, -1,
-                                        self.integer_vars)
+                                        self.integer_vars, self.node_pos, 
+                                        self.rbf_lambda, self.rbf_h,
+                                        self.Amat, -1)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_min_bump_model(self):
@@ -148,8 +148,8 @@ class TestLinearModels(unittest.TestCase):
         """
         model = d0.create_min_rbf_model(self.settings, self.n, self.k,
                                         self.var_lower, self.var_upper,
-                                        self.node_pos, self.rbf_lambda,
-                                        self.rbf_h, self.integer_vars)
+                                        self.integer_vars, self.node_pos,
+                                        self.rbf_lambda, self.rbf_h)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_max_one_over_mu_model(self):
@@ -160,8 +160,8 @@ class TestLinearModels(unittest.TestCase):
         """
         model = d0.create_max_one_over_mu_model(self.settings, self.n, self.k,
                                                 self.var_lower, self.var_upper,
-                                                self.node_pos, self.Amat,
-                                                self.integer_vars)
+                                                self.integer_vars, 
+                                                self.node_pos, self.Amat)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_max_h_k_model(self):
@@ -172,9 +172,9 @@ class TestLinearModels(unittest.TestCase):
         """
         model = d0.create_max_h_k_model(self.settings, self.n, self.k,
                                         self.var_lower, self.var_upper,
-                                        self.node_pos, self.rbf_lambda,
-                                        self.rbf_h, self.Amat, -1,
-                                        self.integer_vars)
+                                        self.integer_vars, self.node_pos,
+                                        self.rbf_lambda, self.rbf_h, 
+                                        self.Amat, -1)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_min_bump_model(self):

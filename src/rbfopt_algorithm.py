@@ -1744,8 +1744,8 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     return (adjusted, next_p, None)
 # -- end function
 
-def global_step(settings, n, k, var_lower, var_upper, node_pos,
-                integer_vars, rbf_lambda, rbf_h, tfv, Amatinv,
+def global_step(settings, n, k, var_lower, var_upper, integer_vars,
+                node_pos, rbf_lambda, rbf_h, tfv, Amatinv,
                 fmin_index, current_step):
     """Perform global search step.
     
