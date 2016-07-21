@@ -377,10 +377,10 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     var_upper : List[float]
         List of upper bounds of the variables.
 
-    integer_vars : List[int] or None
+    integer_vars : List[int]
         A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
-        be continuous.
+        variables. If empty list, all variables are assumed to be
+        continuous.
 
     Returns
     -------
@@ -415,7 +415,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         elif (settings.init_strategy == 'lhd_corr'):
             nodes = get_lhd_corr_points(var_lower, var_upper)
 
-        if (integer_vars is not None and len(integer_vars) > 0):
+        if (integer_vars):
             for i in range(len(nodes)):
                 for j in integer_vars:
                     nodes[i][j] = round(nodes[i][j])
@@ -436,16 +436,16 @@ def round_integer_vars(point, integer_vars):
     """Round a point to the closest integer.
 
     Round the values of the integer-constrained variables to the
-    closest integer value.
+    closest integer value. The values are rounded in-place.
 
     Parameters
     ----------
     point : List[float]
         The point to be rounded.
-    integer_vars : List[int] or None
-        A list of indices of integer variables, or None.
+    integer_vars : List[int]
+        A list of indices of integer variables.
     """
-    if (integer_vars is not None and integer_vars):
+    if (integer_vars):
         assert(max(integer_vars)<len(point))
         for i in integer_vars:
             point[i] = round(point[i])
@@ -467,12 +467,12 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
     var_upper : List[float]
         List of upper bounds of the variables.
 
-    integer_vars : List[int] or None
+    integer_vars : List[int]
         A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
-        be continuous.
+        variables. If empty list, all variables are assumed to be
+        continuous.
     """
-    if (integer_vars is not None and integer_vars):
+    if (integer_vars):
         assert(len(var_lower)==len(var_upper))
         assert(max(integer_vars)<len(var_lower))
         for i in integer_vars:

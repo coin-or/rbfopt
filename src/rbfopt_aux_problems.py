@@ -26,8 +26,8 @@ import rbfopt_degree1_models
 import rbfopt_degree0_models
 from rbfopt_settings import RbfSettings
 
-def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
-                       mat, integer_vars):
+def pure_global_search(settings, n, k, var_lower, var_upper,
+                       integer_vars, node_pos, mat):
     """Pure global search that disregards objective function.
 
     If using Gutmann's RBF method, Construct a PyOmo model to maximize
@@ -55,6 +55,11 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars : List[int]
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to be
+        continuous.
+
     node_pos : List[List[float]]
         List of coordinates of the nodes
 
@@ -63,11 +68,6 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
         be a square numpy.matrix of appropriate dimension if
         given. Can be None when using the MSRSM algorithm.
-
-    integer_vars : List[int] or None
-        A list containing the indices of the integrality constrained
-        variables. If empty list, all variables are assumed to
-        be continuous.
 
     Returns
     -------
@@ -105,14 +105,14 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
         if (settings.global_search_method == 'genetic'):
             mu_k_obj = GutmannMukObj(settings, n, k, node_pos, mat)
             point = ga_optimize(settings, n, var_lower, var_upper,
-                                mu_k_obj.bulk_evaluate, integer_vars)
+                                 integer_vars, mu_k_obj.bulk_evaluate)
         elif (settings.global_search_method == 'traditional'):
             # Optimize using Pyomo
             instance = model.create_max_one_over_mu_model(settings, n, k,
-                                                          var_lower,
+                                                          var_lower, 
                                                           var_upper,
-                                                          node_pos, mat,
-                                                          integer_vars)
+                                                          integer_vars,
+                                                          node_pos, mat)
 
             # Initialize variables for local search
             initialize_instance_variables(settings, instance)
@@ -146,12 +146,12 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
         mmdist_obj = MaximinDistanceObj(settings, n, k, node_pos)
         if (settings.global_search_method == 'genetic'):
             point = ga_optimize(settings, n, var_lower, var_upper,
-                                mmdist_obj.bulk_evaluate, integer_vars)
+                                integer_vars, mmdist_obj.bulk_evaluate)
         elif (settings.global_search_method == 'traditional'):
             num_samples = n * settings.num_samples_aux_problems
             samples = generate_sample_points(settings, n, var_lower,
-                                             var_upper, num_samples,
-                                             integer_vars)
+                                             var_upper, integer_vars,
+                                             num_samples)
             scores = mmdist_obj.bulk_evaluate(samples)
             point = samples[scores.index(min(scores))]
     else:
@@ -161,8 +161,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper, node_pos,
 
 # -- end function
 
-def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
-                 rbf_lambda, rbf_h, integer_vars):
+def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
+                 node_pos, rbf_lambda, rbf_h):
     """Compute the minimum of the RBF interpolant.
 
     Compute the minimum of the RBF interpolant with a PyOmo model.
@@ -185,6 +185,11 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars: List[int]
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to be
+        continuous.
+
     node_pos : List[List[float]]
         List of coordinates of the nodes.
 
@@ -195,11 +200,6 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
     rbf_h : List[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
-
-    integer_vars: List[int]
-        A list containing the indices of the integrality constrained
-        variables. If empty list, all variables are assumed to
-        be continuous.
 
     Returns
     -------
@@ -234,8 +234,8 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
     instance = model.create_min_rbf_model(settings, n, k, var_lower, 
-                                          var_upper, node_pos, rbf_lambda,
-                                          rbf_h, integer_vars)
+                                          var_upper, integer_vars, 
+                                          node_pos, rbf_lambda, rbf_h)
 
     # Initialize variables for local search
     initialize_instance_variables(settings, instance)
@@ -269,8 +269,8 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, node_pos,
 
 # -- end function
 
-def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda, 
-                  rbf_h, mat, target_val, dist_weight, integer_vars):
+def global_search(settings, n, k, var_lower, var_upper, integer_vars,
+                  node_pos, rbf_lambda, rbf_h, mat, target_val, dist_weight):
     """Global search that tries to balance exploration/exploitation.
 
     If using Gutmann's RBF method, compute the maximum of the h_k
@@ -295,6 +295,11 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
 
     var_upper : List[float]
         Vector of variable upper bounds.
+
+    integer_vars: List[int]
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to be
+        continuous.
 
     node_pos : List[List[float]]
         List of coordinates of the nodes.
@@ -322,11 +327,6 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
         when selecting the next point with a sampling strategy. A
         weight of 1.0 corresponds to using solely distance, 0.0 to
         objective function. Used by Metric SRSM only.
-
-    integer_vars: List[int] or None
-        A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
-        be continuous.
 
     Returns
     -------
@@ -367,14 +367,14 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
             h_k_obj = GutmannHkObj(settings, n, k, node_pos, rbf_lambda, 
                                    rbf_h, mat, target_val)
             point = ga_optimize(settings, n, var_lower, var_upper,
-                                h_k_obj.bulk_evaluate, integer_vars)
+                                integer_vars, h_k_obj.bulk_evaluate)
         elif (settings.global_search_method == 'traditional'):
             # Optimize using Pyomo    
             instance = model.create_max_h_k_model(settings, n, k,
                                                   var_lower, var_upper,
-                                                  node_pos, rbf_lambda,
-                                                  rbf_h, mat, target_val,
-                                                  integer_vars)
+                                                  integer_vars, node_pos, 
+                                                  rbf_lambda, rbf_h, mat, 
+                                                  target_val)
 
             # Initialize variables for local search
             initialize_instance_variables(settings, instance)
@@ -410,12 +410,12 @@ def global_search(settings, n, k, var_lower, var_upper, node_pos, rbf_lambda,
                                  rbf_h, dist_weight)
         if (settings.global_search_method == 'genetic'):
             point = ga_optimize(settings, n, var_lower, var_upper,
-                                srms_obj.bulk_evaluate, integer_vars)
+                                integer_vars, srms_obj.bulk_evaluate)
         elif (settings.global_search_method == 'traditional'):
             num_samples = n * settings.num_samples_aux_problems
             samples = generate_sample_points(settings, n, var_lower,
-                                             var_upper, num_samples, 
-                                             integer_vars)
+                                             var_upper, integer_vars, 
+                                             num_samples)
             scores = srms_obj.bulk_evaluate(samples)
             point = samples[scores.index(min(scores))]
     else:
@@ -656,8 +656,8 @@ def set_nlp_solver_options(solver):
 
 # -- end function
 
-def generate_sample_points(settings, n, var_lower, var_upper, num_samples,
-                           integer_vars = None):
+def generate_sample_points(settings, n, var_lower, var_upper,
+                           integer_vars, num_samples):
     """Generate sample points uniformly at random.
 
     Generate a given number of points uniformly at random in the
@@ -679,13 +679,13 @@ def generate_sample_points(settings, n, var_lower, var_upper, num_samples,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars : List[int]
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to be
+        continuous.
+
     num_samples : int
         Number of samples to generate
-
-    integer_vars : List[int] or None
-        A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
-        be continuous.
 
     Returns
     -------
@@ -708,8 +708,7 @@ def generate_sample_points(settings, n, var_lower, var_upper, num_samples,
 
 # -- end function
 
-def ga_optimize(settings, n, var_lower, var_upper, objfun,
-                integer_vars):
+def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     """Compute and optimize a fitness function.
 
     Use a simple genetic algorithm to quickly find a good solution for
@@ -730,16 +729,16 @@ def ga_optimize(settings, n, var_lower, var_upper, objfun,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars : List[int]
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to be
+        continuous.
+
     objfun : Callable[List[List[float]]]
         The objective function. This must be a callable function that
         can be applied to a list of points, and must return a list
         containing one fitness vale for each point, such that lower
         values are better.
-
-    integer_vars : List[int]
-        A list containing the indices of the integrality constrained
-        variables. If empty list, all variables are assumed to
-        be continuous.
 
     Returns
     -------
@@ -769,8 +768,8 @@ def ga_optimize(settings, n, var_lower, var_upper, objfun,
 
     # Compute initial population
     population = generate_sample_points(settings, n, var_lower,
-                                        var_upper, population_size,
-                                        integer_vars)
+                                        var_upper, integer_vars,
+                                        population_size)
     for gen in range(settings.ga_num_generations):
         # Mutation rate and maximum perturbed coordinates for this
         # generation of individuals
@@ -790,8 +789,8 @@ def ga_optimize(settings, n, var_lower, var_upper, objfun,
         offspring = map(ga_mate, father, mother)
         # New individuals
         new_individuals = generate_sample_points(settings, n, var_lower, 
-                                                 var_upper, num_new,
-                                                 integer_vars)
+                                                 var_upper, integer_vars,
+                                                 num_new)
         # Make a copy of best individual, and mutate it
         best_mutated = [val for val in best_individuals[0]]
         ga_mutate(n, var_lower, var_upper, is_integer, 

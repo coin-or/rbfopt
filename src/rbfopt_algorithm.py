@@ -729,8 +729,8 @@ class OptAlgorithm:
             if (self.current_step == self.inf_step):
                 # Infstep: explore the parameter space
                 next_p = pure_global_step(l_settings, n, k, l_lower,
-                                          l_upper, self.node_pos, 
-                                          Amatinv, integer_vars)
+                                          l_upper, integer_vars,
+                                          self.node_pos, Amatinv)
                 iteration_id = 'InfStep'
 
             elif (self.current_step == self.restoration_step):
@@ -747,8 +747,8 @@ class OptAlgorithm:
                 # Local search
                 (adj, next_p, 
                  ind) = local_step(l_settings, n, k, l_lower, l_upper,
-                                   self.node_pos, rbf_l, rbf_h,
-                                   integer_vars, tfv, fast_node_index,
+                                   integer_vars, self.node_pos, rbf_l, 
+                                   rbf_h, tfv, fast_node_index,
                                    Amat, Amatinv, self.fmin_index,
                                    self.two_phase_optimization,
                                    self.current_mode, self.node_is_fast)
@@ -767,8 +767,8 @@ class OptAlgorithm:
             else:
                 # Global search
                 next_p = global_step(l_settings, n, k, l_lower, l_upper,
-                                     self.node_pos, rbf_l, rbf_h,
-                                     integer_vars, tfv, Amatinv,
+                                     integer_vars, self.node_pos, rbf_l, 
+                                     rbf_h, tfv, Amatinv,
                                      self.fmin_index, self.current_step)
                 iteration_id = 'GlobalStep'
             # -- end if
@@ -1147,8 +1147,8 @@ class OptAlgorithm:
                 # Infstep: explore the parameter space
                 new_res = pool.apply_async(pure_global_step,
                                            (l_settings, n, k, l_lower,
-                                            l_upper, node_pos, Amatinv,
-                                            integer_vars))
+                                            l_upper, integer_vars, 
+                                            node_pos, Amatinv))
                 iteration_id = 'InfStep'
                 res_search.append([new_res, curr_is_fast, iteration_id])
 
@@ -1173,8 +1173,8 @@ class OptAlgorithm:
                 # Local search
                 new_res = pool.apply_async(local_step,
                                            (l_settings, n, k, l_lower, 
-                                            l_upper, node_pos, rbf_l,
-                                            rbf_h, integer_vars, tfv,
+                                            l_upper, integer_vars, 
+                                            node_pos, rbf_l, rbf_h, tfv,
                                             fast_node_index, Amat,
                                             Amatinv, self.fmin_index,
                                             self.two_phase_optimization,
@@ -1186,8 +1186,8 @@ class OptAlgorithm:
                 # Global search
                 new_res = pool.apply_async(global_step,
                                            (l_settings, n, k, l_lower, 
-                                            l_upper, node_pos, rbf_l,
-                                            rbf_h, integer_vars, tfv, 
+                                            l_upper, integer_vars, 
+                                            node_pos, rbf_l, rbf_h, tfv, 
                                             Amatinv, self.fmin_index, 
                                             self.current_step))
                 iteration_id = 'GlobalStep'
@@ -1342,8 +1342,8 @@ class OptAlgorithm:
                 next_p = pure_global_step(temp_settings, 
                                           self.n, len(self.node_pos),
                                           self.l_lower, self.l_upper,
-                                          self.node_pos, None,
-                                          self.integer_vars)
+                                          self.integer_vars,
+                                          self.node_pos, None)
             else:
                 # If that does not work (unlikely), generate a random point
                 next_p = [random.uniform(self.var_lower[i], 
@@ -1397,9 +1397,8 @@ class OptAlgorithm:
         next_p = pure_global_step(RbfSettings(algorithm = 'MSRSM'),
                                   self.n, len(self.node_pos) +
                                   len(temp_node_pos), self.l_lower,
-                                  self.l_upper, self.node_pos +
-                                  temp_node_pos, None,
-                                  self.integer_vars)
+                                  self.l_upper, self.integer_vars,
+                                  self.node_pos + temp_node_pos, None)
         # Loop through all temporary nodes, and try to restore the
         # matrix by substituting the above point.
         i = len(temp_node_pos) - 1
@@ -1513,8 +1512,8 @@ class OptAlgorithm:
     # -- end function
 # -- end class
 
-def pure_global_step(settings, n, k, var_lower, var_upper,
-                     node_pos, mat, integer_vars):
+def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
+                     node_pos, mat):
     """Perform the pure global search step.
     
     Parameters
@@ -1539,6 +1538,11 @@ def pure_global_step(settings, n, k, var_lower, var_upper,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars : List[int]
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to be
+        continuous.
+
     node_pos : List[List[float]]
         List of coordinates of the nodes
 
@@ -1547,11 +1551,6 @@ def pure_global_step(settings, n, k, var_lower, var_upper,
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
         be a square numpy.matrix of appropriate dimension. Can be None
         when using the MSRSM algorithm.
-
-    integer_vars : List[int] or None
-        A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
-        be continuous.
 
     Returns
     -------
@@ -1566,11 +1565,11 @@ def pure_global_step(settings, n, k, var_lower, var_upper,
     assert(isinstance(settings, RbfSettings))
     # Infstep: explore the parameter space
     return aux.pure_global_search(settings, n, k, var_lower, var_upper, 
-                                  node_pos, mat, integer_vars)
+                                  integer_vars, node_pos, mat)
 # -- end function
 
-def local_step(settings, n, k, var_lower, var_upper, node_pos,
-               rbf_lambda, rbf_h, integer_vars, tfv, fast_node_index,
+def local_step(settings, n, k, var_lower, var_upper, integer_vars, 
+               node_pos, rbf_lambda, rbf_h, tfv, fast_node_index,
                Amat, Amatinv, fmin_index, two_phase_optimization, 
                current_mode, node_is_fast):
     """Perform local search step, possibly adjusted.
@@ -1600,6 +1599,11 @@ def local_step(settings, n, k, var_lower, var_upper, node_pos,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars: List[int]
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to be
+        continuous.
+
     node_pos : List[List[float]]
         List of coordinates of the nodes.
 
@@ -1610,11 +1614,6 @@ def local_step(settings, n, k, var_lower, var_upper, node_pos,
     rbf_h : List[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
-
-    integer_vars: List[int] or None
-        A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
-        be continuous.
 
     tfv : (List[float], float, float, List[(float, float)])
         Transformed function values: scaled node values, scaled
@@ -1671,7 +1670,7 @@ def local_step(settings, n, k, var_lower, var_upper, node_pos,
     scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
     # Local search: compute the minimum of the RBF.
     min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper,
-                               node_pos, rbf_lambda, rbf_h, integer_vars)
+                               integer_vars, node_pos, rbf_lambda, rbf_h)
     if (min_rbf is not None):
         min_rbf_val = ru.evaluate_rbf(settings, min_rbf, n, k, 
                                       node_pos, rbf_lambda, rbf_h)
@@ -1704,11 +1703,10 @@ def local_step(settings, n, k, var_lower, var_upper, node_pos,
                       for i in range(n)]
         ru.round_integer_bounds(local_varl, local_varu, 
                                 integer_vars)
-        next_p  = aux.global_search(settings, n, k, 
-                                    local_varl, local_varu, 
-                                    node_pos, rbf_lambda, 
-                                    rbf_h, Amatinv, target_val,
-                                    dist_weight, integer_vars)
+        next_p = aux.global_search(settings, n, k, local_varl,
+                                   local_varu, integer_vars,
+                                   node_pos, rbf_lambda, rbf_h,
+                                   Amatinv, target_val, dist_weight)
         adjusted = True
         
     # If previous points were evaluated in low quality and we are
@@ -1747,7 +1745,7 @@ def local_step(settings, n, k, var_lower, var_upper, node_pos,
 # -- end function
 
 def global_step(settings, n, k, var_lower, var_upper, node_pos,
-                rbf_lambda, rbf_h, integer_vars, tfv, Amatinv,
+                integer_vars, rbf_lambda, rbf_h, tfv, Amatinv,
                 fmin_index, current_step):
     """Perform global search step.
     
@@ -1771,6 +1769,11 @@ def global_step(settings, n, k, var_lower, var_upper, node_pos,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars: List[int]
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to be
+        continuous.
+
     node_pos : List[List[float]]
         List of coordinates of the nodes.
 
@@ -1781,11 +1784,6 @@ def global_step(settings, n, k, var_lower, var_upper, node_pos,
     rbf_h : List[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
-
-    integer_vars: List[int] or None
-        A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
-        be continuous.
 
     tfv : (List[float], float, float, List[(float, float)])
         Transformed function values: scaled node values, scaled
@@ -1826,7 +1824,7 @@ def global_step(settings, n, k, var_lower, var_upper, node_pos,
         # If we use Gutmann's algorithm, we need the minimum of the
         # RBF interpolant to choose the target value.
         min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper, 
-                                   node_pos, rbf_lambda, rbf_h, integer_vars)
+                                   integer_vars, node_pos, rbf_lambda, rbf_h)
         if (min_rbf is not None):
             min_rbf_val = ru.evaluate_rbf(settings, min_rbf, n, k,
                                           node_pos, rbf_lambda, rbf_h)
@@ -1885,8 +1883,8 @@ def global_step(settings, n, k, var_lower, var_upper, node_pos,
         local_varu = var_upper
 
     return aux.global_search(settings, n, k, local_varl, local_varu,
-                             node_pos, rbf_lambda, rbf_h, Amatinv,
-                             target_val, dist_weight, integer_vars)
+                             integer_vars, node_pos, rbf_lambda,
+                             rbf_h, Amatinv, target_val, dist_weight)
 # -- end function
 
 def objfun(data):

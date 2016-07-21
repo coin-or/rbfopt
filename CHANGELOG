@@ -1,4 +1,8 @@
 2016-07-20  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Removed the possibility of setting integer_vars to None. It now
+	has to be empty if there are no integer variables.
+	The argument integer_vars now always appears immediately after
+	var_upper.
 	* rbfopt_algorithm.py (__init__): Resolved a bug in handling fixed
 	variables with integer variables.
 	* rbfopt_aux_algorithm.py (GutmannHkObj): Improved numerical
@@ -21,8 +25,8 @@
 	* rbfopt_config.py: Added MINLP_SOLVER_PATH and NLP_SOLVER_PATH
 	options.
 	* rbfopt_aux_problems.py: Now use PATH option.
-	* rbfopt_algorithm.py: Using binary mode to load/save state to fix
-	issues on Windows.
+	* rbfopt_algorithm.py: Using binary mode to load/save state files
+	to fix issues on Windows.
 
 2016-05-05  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_settings.py: Added save_state_interval and

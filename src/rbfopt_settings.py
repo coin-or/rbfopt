@@ -430,9 +430,9 @@ class RbfSettings:
         var_upper : List[float]
             Vector of variable upper bounds.
 
-        integer_vars : List[int] or None
+        integer_vars : List[int]
             A list containing the indices of the integrality
-            constrained variables. If None or empty list, all
+            constrained variables. If empty list, all
             variables are assumed to be continuous.
 
         Returns
@@ -442,8 +442,7 @@ class RbfSettings:
         """
         assert(dimension==len(var_lower))
         assert(dimension==len(var_upper))
-        assert((integer_vars is None) or (len(integer_vars) == 0) or
-               (max(integer_vars) < dimension))
+        assert((not integer_vars) or (max(integer_vars) < dimension))
 
         l_settings = copy.deepcopy(self)
 
@@ -457,7 +456,7 @@ class RbfSettings:
             l_settings.dynamism_clipping = 'median'
                 
         if (l_settings.domain_scaling == 'auto'):
-            if (integer_vars is not None):
+            if (integer_vars):
                 l_settings.domain_scaling = 'off'
             else:
                 # Compute the length of the domain of each variable

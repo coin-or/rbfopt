@@ -19,8 +19,8 @@ import numpy as np
 import rbfopt_config as config
 from rbfopt_settings import RbfSettings
 
-def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos,
-                         rbf_lambda, rbf_h, integer_vars):
+def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
+                         integer_vars, node_pos, rbf_lambda, rbf_h):
     """Create the concrete model to minimize the RBF.
 
     Create the concrete model to minimize the RBF.
@@ -43,6 +43,9 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars : List[int]
+        List of indices of integer variables.
+
     node_pos : List[List[float]]
         List of coordinates of the nodes.
 
@@ -53,9 +56,6 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos,
     rbf_h : List[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
-
-    integer_vars : List[int]
-        List of indices of integer variables.
 
     Returns
     -------
@@ -136,7 +136,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper, node_pos,
 # -- end function
 
 def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper, 
-                                 node_pos, mat, integer_vars):
+                                 integer_vars, node_pos, mat):
     """Create the concrete model to maximize 1/\mu.
 
     Create the concrete model to maximize :math: `1/\mu`, also known
@@ -163,6 +163,9 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars : List[int]
+        List of indices of integer variables.
+
     node_pos : List[List[float]]
         List of coordinates of the nodes.
 
@@ -170,9 +173,6 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
         be a numpy.matrix of dimension ((k+1) x (k+1))
-
-    integer_vars : List[int]
-        List of indices of integer variables.
 
     Returns
     -------
@@ -268,9 +268,8 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     return model
 # -- end function
 
-def create_max_h_k_model(settings, n, k, var_lower, var_upper,
-                         node_pos, rbf_lambda, rbf_h, mat, target_val,
-                         integer_vars):
+def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
+                         node_pos, rbf_lambda, rbf_h, mat, target_val):
     """Create the abstract model to maximize h_k.
 
     Create the abstract model to maximize h_k, also known as the
@@ -294,6 +293,9 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper,
     var_upper : List[float]
         Vector of variable upper bounds.
 
+    integer_vars : List[int]
+        List of indices of integer variables.
+
     node_pos : List[List[float]]
         List of coordinates of the nodes.
 
@@ -313,9 +315,6 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper,
     target_val : float
         Value f* that we want to find in the unknown objective
         function.
-
-    integer_vars : List[int]
-        List of indices of integer variables.
 
     Returns
     -------
