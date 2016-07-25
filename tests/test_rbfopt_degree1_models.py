@@ -109,6 +109,32 @@ class TestCubicModels(unittest.TestCase):
                                          fast_node_index, fast_node_err_bounds)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
+    def test_create_maximin_dist_model(self):
+        """Test the create_maximin_dist_model function.
+
+        This test simply checks whether the function returns a valid
+        pyomo.ConcreteModel object.
+        """
+        model = d1.create_maximin_dist_model(self.settings, self.n, self.k,
+                                             self.var_lower, self.var_upper, 
+                                             self.integer_vars, self.node_pos)
+        self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+
+    def test_create_min_msrsm_model(self):
+        """Test the create_min_msrsm_model function.
+
+        This test simply checks whether the function returns a valid
+        pyomo.ConcreteModel object.
+        """
+        model = d1.create_min_msrsm_model(self.settings, self.n, self.k,
+                                          self.var_lower, self.var_upper,
+                                          self.integer_vars, self.node_pos,
+                                          self.rbf_lambda, self.rbf_h, 
+                                          0.5, 0.0, 1.0,
+                                          min(self.node_val),
+                                          max(self.node_val))
+        self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+
 # -- end class
 
 class TestThinPlateSplineModels(unittest.TestCase):
@@ -200,6 +226,33 @@ class TestThinPlateSplineModels(unittest.TestCase):
                                          Phimat, Pmat, self.node_val,
                                          fast_node_index, fast_node_err_bounds)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+
+    def test_create_maximin_dist_model(self):
+        """Test the create_maximin_dist_model function.
+
+        This test simply checks whether the function returns a valid
+        pyomo.ConcreteModel object.
+        """
+        model = d1.create_maximin_dist_model(self.settings, self.n, self.k,
+                                             self.var_lower, self.var_upper, 
+                                             self.integer_vars, self.node_pos)
+        self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+
+    def test_create_min_msrsm_model(self):
+        """Test the create_min_msrsm_model function.
+
+        This test simply checks whether the function returns a valid
+        pyomo.ConcreteModel object.
+        """
+        model = d1.create_min_msrsm_model(self.settings, self.n, self.k,
+                                          self.var_lower, self.var_upper,
+                                          self.integer_vars, self.node_pos,
+                                          self.rbf_lambda, self.rbf_h, 
+                                          0.5, 0.0, 1.0,
+                                          min(self.node_val),
+                                          max(self.node_val))
+        self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+
 
 # -- end class
 

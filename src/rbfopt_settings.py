@@ -181,10 +181,11 @@ class RbfSettings:
     global_search_method : string
         The methodology to be used in the solution of global search
         problems, i.e. the infstep and the global step. The options
-        are 'traditional' and 'genetic'. If 'traditional', Gutmann
-        optimizes using solver, while MSRSM uses random sampling. If
-        'genetic', a heuristic based on a genetic algorithm is
-        used. Default 'genetic'.
+        are'genetic', 'sampling' and 'solver'. If 'genetic', a
+        heuristic based on a genetic algorithm is used. If 'sampling',
+        random sampling is used. If 'solver', the available solvers
+        are used to try to solve mathematical programming
+        models. Default 'genetic'.
 
     ga_base_population_size : int
         Minimum population size for the genetic algorithm used to
@@ -202,6 +203,13 @@ class RbfSettings:
         Multiplier for the dimension of the problem to determine the
         number of samples used by the Metric SRSM traditional
         algorithm at every iteration. Default 1000.
+
+    modified_msrsm_score : bool
+        Use the modified MSRSM score function in which the objective
+        function value contribution always has a weight of 1, instead
+        of 1 - distance_weight. This setting is more aggressive in
+        improving the objective function value, compared to the
+        original MSRSM score function. Default True.
 
     save_state_interval : int 
         Number of iterations after which the state of the algorithm
@@ -256,7 +264,7 @@ class RbfSettings:
     _allowed_dynamism_clipping = {'off', 'median', 'clip_at_dyn', 'auto'}
     _allowed_model_selection_solver = {'clp', 'cplex', 'numpy'}
     _allowed_algorithm = {'Gutmann', 'MSRSM'}
-    _allowed_global_search_method = {'traditional', 'genetic'}
+    _allowed_global_search_method = {'genetic', 'sampling', 'solver'}
 
     def __init__(self,
                  rbf = 'thin_plate_spline',
@@ -296,6 +304,7 @@ class RbfSettings:
                  ga_base_population_size = 200,
                  ga_num_generations = 20,
                  num_samples_aux_problems = 1000,
+                 modified_msrsm_score = True,
                  print_solver_output = False,
                  save_state_interval = 100000,
                  save_state_file = 'optalgorithm_state.dat',
@@ -339,6 +348,7 @@ class RbfSettings:
         self.ga_base_population_size = ga_base_population_size
         self.ga_num_generations = ga_num_generations
         self.num_samples_aux_problems = num_samples_aux_problems
+        self.modified_msrsm_score = modified_msrsm_score
         self.print_solver_output = print_solver_output
         self.save_state_interval = save_state_interval
         self.save_state_file = save_state_file

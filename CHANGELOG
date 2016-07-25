@@ -1,3 +1,13 @@
+2016-07-25  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 2.0 released.
+	* rbfopt_aux_problems.py (global_search, pure_global_search):
+	Restructured to allow for 'genetic', 'sampling' and 'solver'
+	solution methods..
+	* rbfopt_aux_problem.py (MetricSRSMObj): The option
+	modified_msrsm_score now determines the weight for the objective
+	function component of the score: the classical MSRSM is obtained
+	setting it to False, the default is True.
+
 2016-07-20  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Removed the possibility of setting integer_vars to None. It now
 	has to be empty if there are no integer variables.

@@ -61,7 +61,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         continuous.
 
     node_pos : List[List[float]]
-        List of coordinates of the nodes
+        List of coordinates of the nodes.
 
     mat : numpy.matrix or None
         The matrix necessary for the computation. This is the inverse
@@ -78,7 +78,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
     Raises
     ------
     ValueError
-        If the type of radial basis function is not supported.
+        If some parameters are not supported.
     RuntimeError
         If the solver cannot be found.
 
@@ -101,61 +101,70 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
-    if (settings.algorithm == 'Gutmann'):
-        if (settings.global_search_method == 'genetic'):
-            mu_k_obj = GutmannMukObj(settings, n, k, node_pos, mat)
-            point = ga_optimize(settings, n, var_lower, var_upper,
-                                 integer_vars, mu_k_obj.bulk_evaluate)
-        elif (settings.global_search_method == 'traditional'):
-            # Optimize using Pyomo
+    if (settings.global_search_method == 'genetic'):
+        # Use a genetic algorithm to optimize
+        if (settings.algorithm == 'Gutmann'):
+            fitness = GutmannMukObj(settings, n, k, node_pos, mat)
+        elif (settings.algorithm == 'MSRSM'):
+            fitness = MaximinDistanceObj(settings, n, k, node_pos)
+        point = ga_optimize(settings, n, var_lower, var_upper,
+                            integer_vars, fitness.bulk_evaluate)
+    elif (settings.global_search_method == 'sampling'):
+        # Sample random points, and rank according to fitness
+        if (settings.algorithm == 'Gutmann'):
+            fitness = GutmannMukObj(settings, n, k, node_pos, mat)
+        elif (settings.algorithm == 'MSRSM'):
+            fitness = MaximinDistanceObj(settings, n, k, node_pos)
+        num_samples = n * settings.num_samples_aux_problems
+        samples = generate_sample_points(settings, n, var_lower, var_upper,
+                                         integer_vars, num_samples)
+        scores = fitness.bulk_evaluate(samples)
+        point = samples[scores.index(min(scores))]
+    elif (settings.global_search_method == 'solver'):
+        # Optimize using Pyomo    
+        if (settings.algorithm == 'Gutmann'):
             instance = model.create_max_one_over_mu_model(settings, n, k,
                                                           var_lower, 
                                                           var_upper,
                                                           integer_vars,
                                                           node_pos, mat)
-
             # Initialize variables for local search
             initialize_instance_variables(settings, instance)
+        elif (settings.algorithm == 'MSRSM'):
+            instance = model.create_maximin_dist_model(settings, n, k, 
+                                                       var_lower, var_upper,
+                                                       integer_vars, node_pos)
+            # Initialize variables for local search
+            initialize_instance_variables(settings, instance, False)
 
-            # Instantiate optimizer
-            opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
-                                          executable = 
-                                          config.MINLP_SOLVER_PATH,
-                                          solver_io='nl')
-            if opt is None:
-                raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
-                                   ' not found')
-            set_minlp_solver_options(opt)
+        # Instantiate optimizer
+        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
+                                      executable = 
+                                      config.MINLP_SOLVER_PATH,
+                                      solver_io='nl')
+        if opt is None:
+            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
+                               ' not found')
+        set_minlp_solver_options(opt)
 
-            # Solve and load results
-            try:
-                results = opt.solve(instance, keepfiles = False, 
-                                    tee = settings.print_solver_output)
-                if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
-                    (results.solver.termination_condition == 
-                     pyomo.opt.TerminationCondition.optimal)):
-                    # this is feasible and optimal
-                    instance.solutions.load_from(results)
-                    point = [instance.x[i].value for i in instance.N]
-                    ru.round_integer_vars(point, integer_vars)
-                else:
-                    point = None
-            except:
+        # Solve and load results
+        try:
+            results = opt.solve(instance, keepfiles = False, 
+                                tee = settings.print_solver_output)
+            if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
+                (results.solver.termination_condition == 
+                 pyomo.opt.TerminationCondition.optimal)):
+                # this is feasible and optimal
+                instance.solutions.load_from(results)
+                point = [instance.x[i].value for i in instance.N]
+                ru.round_integer_vars(point, integer_vars)
+            else:
                 point = None
-    elif (settings.algorithm == 'MSRSM'):
-        mmdist_obj = MaximinDistanceObj(settings, n, k, node_pos)
-        if (settings.global_search_method == 'genetic'):
-            point = ga_optimize(settings, n, var_lower, var_upper,
-                                integer_vars, mmdist_obj.bulk_evaluate)
-        elif (settings.global_search_method == 'traditional'):
-            num_samples = n * settings.num_samples_aux_problems
-            samples = generate_sample_points(settings, n, var_lower,
-                                             var_upper, integer_vars,
-                                             num_samples)
-            scores = mmdist_obj.bulk_evaluate(samples)
-            point = samples[scores.index(min(scores))]
+        except:
+            point = None     
     else:
-        raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
+        raise ValueError('Global search method ' + settings.algorithm + 
+                         ' not supported')
 
     return point
 
@@ -210,7 +219,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     Raises
     ------
     ValueError
-        If the type of radial basis function is not supported.
+        If some parameters are not supported.
     RuntimeError
         If the solver cannot be found.
     """    
@@ -270,7 +279,8 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
 # -- end function
 
 def global_search(settings, n, k, var_lower, var_upper, integer_vars,
-                  node_pos, rbf_lambda, rbf_h, mat, target_val, dist_weight):
+                  node_pos, rbf_lambda, rbf_h, mat, target_val, 
+                  dist_weight, fmin, fmax):
     """Global search that tries to balance exploration/exploitation.
 
     If using Gutmann's RBF method, compute the maximum of the h_k
@@ -328,16 +338,22 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         weight of 1.0 corresponds to using solely distance, 0.0 to
         objective function. Used by Metric SRSM only.
 
+    fmin : float
+        Minimum value among the interpolation nodes.
+
+    fmax : float
+        Maximum value among the interpolation nodes.
+
     Returns
     -------
     List[float]
-        A maximizer. It is difficult to do global optimization so
-        typically this method returns a local maximum.
+        A local optimum. It is difficult to do global optimization so
+        typically this method returns a local optimum.
 
     Raises
     ------
     ValueError
-        If the type of radial basis function is not supported.
+        If some parameters are not supported.
     RuntimeError
         If the solver cannot be found.
 
@@ -346,6 +362,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
+    assert(0 <= dist_weight <= 1)
+    assert(fmin <= fmax)
     assert(isinstance(settings, RbfSettings))
 
     # Determine the size of the P matrix
@@ -362,70 +380,90 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
-    if (settings.algorithm == 'Gutmann'):
-        if (settings.global_search_method == 'genetic'):
-            h_k_obj = GutmannHkObj(settings, n, k, node_pos, rbf_lambda, 
+    if (settings.global_search_method == 'genetic'):
+        # Use a genetic algorithm to optimize
+        if (settings.algorithm == 'Gutmann'):
+            fitness = GutmannHkObj(settings, n, k, node_pos, rbf_lambda, 
                                    rbf_h, mat, target_val)
-            point = ga_optimize(settings, n, var_lower, var_upper,
-                                integer_vars, h_k_obj.bulk_evaluate)
-        elif (settings.global_search_method == 'traditional'):
-            # Optimize using Pyomo    
+        elif (settings.algorithm == 'MSRSM'):
+            fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda, 
+                                    rbf_h, dist_weight)
+        point = ga_optimize(settings, n, var_lower, var_upper,
+                            integer_vars, fitness.bulk_evaluate)
+    elif (settings.global_search_method == 'sampling'):
+        # Sample random points, and rank according to fitness
+        if (settings.algorithm == 'Gutmann'):
+            fitness = GutmannHkObj(settings, n, k, node_pos, rbf_lambda, 
+                                   rbf_h, mat, target_val)
+        elif (settings.algorithm == 'MSRSM'):
+            fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda, 
+                                    rbf_h, dist_weight)
+        num_samples = n * settings.num_samples_aux_problems
+        samples = generate_sample_points(settings, n, var_lower, var_upper,
+                                         integer_vars, num_samples)
+        scores = fitness.bulk_evaluate(samples)
+        point = samples[scores.index(min(scores))]
+    elif (settings.global_search_method == 'solver'):
+        # Optimize using Pyomo    
+        if (settings.algorithm == 'Gutmann'):
             instance = model.create_max_h_k_model(settings, n, k,
                                                   var_lower, var_upper,
                                                   integer_vars, node_pos, 
                                                   rbf_lambda, rbf_h, mat, 
                                                   target_val)
-
-            # Initialize variables for local search
             initialize_instance_variables(settings, instance)
             initialize_h_k_aux_variables(settings, instance)
+        elif (settings.algorithm == 'MSRSM'):
+            # Compute minimum and maximum distances between
+            # points. This computation could be avoided if
+            # OptAlgorithm keeps track of them, but in the grand
+            # scheme of things the computation is rarely performed and
+            # is not as expensive as the subsequent optimization.
+            point_mat = np.array(node_pos)
+            dist_mat = ss.distance.cdist(node_pos, node_pos)
+            dist_min = np.min(dist_mat[np.triu_indices(k, 1)])
+            dist_max = np.max(dist_mat[np.triu_indices(k, 1)])
+            instance = model.create_min_msrsm_model(settings, n, k,
+                                                    var_lower, var_upper,
+                                                    integer_vars, node_pos,
+                                                    rbf_lambda, rbf_h,
+                                                    dist_weight, dist_min,
+                                                    dist_max, fmin, fmax)
+            initialize_instance_variables(settings, instance)
+            initialize_msrsm_aux_variables(settings, instance)
 
-            # Instantiate optimizer
-            opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
-                                          executable = 
-                                          config.MINLP_SOLVER_PATH,
-                                          solver_io='nl')
-            if opt is None:
-                raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
-                                   ' not found')
-            set_minlp_solver_options(opt)
+        # Instantiate optimizer
+        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
+                                      executable = config.MINLP_SOLVER_PATH,
+                                      solver_io='nl')
+        if opt is None:
+            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
+                               ' not found')
+        set_minlp_solver_options(opt)
 
-            # Solve and load results
-            try:
-                results = opt.solve(instance, keepfiles = False,
-                                    tee = settings.print_solver_output)
-                if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
-                    (results.solver.termination_condition == 
-                     pyomo.opt.TerminationCondition.optimal)):
-                    # this is feasible and optimal
-                    instance.solutions.load_from(results)
-                    point = [instance.x[i].value for i in instance.N]
-                    ru.round_integer_vars(point, integer_vars)
-                else:
-                    point = None
-            except:
+        # Solve and load results
+        try:
+            results = opt.solve(instance, keepfiles = False,
+                                tee = settings.print_solver_output)
+            if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
+                (results.solver.termination_condition == 
+                 pyomo.opt.TerminationCondition.optimal)):
+                # this is feasible and optimal
+                instance.solutions.load_from(results)
+                point = [instance.x[i].value for i in instance.N]
+                ru.round_integer_vars(point, integer_vars)
+            else:
                 point = None
-    elif (settings.algorithm == 'MSRSM'):
-        srms_obj = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda, 
-                                 rbf_h, dist_weight)
-        if (settings.global_search_method == 'genetic'):
-            point = ga_optimize(settings, n, var_lower, var_upper,
-                                integer_vars, srms_obj.bulk_evaluate)
-        elif (settings.global_search_method == 'traditional'):
-            num_samples = n * settings.num_samples_aux_problems
-            samples = generate_sample_points(settings, n, var_lower,
-                                             var_upper, integer_vars, 
-                                             num_samples)
-            scores = srms_obj.bulk_evaluate(samples)
-            point = samples[scores.index(min(scores))]
+        except:
+            point = None
     else:
-        raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
-
+        raise ValueError('Global search method ' + settings.algorithm + 
+                         ' not supported')
     return point
 
 # -- end function
 
-def initialize_instance_variables(settings, instance):
+def initialize_instance_variables(settings, instance, init_u_pi = True):
     """Initialize the variables of a problem instance.
 
     Initialize the x variables of a problem instance, and set the
@@ -439,6 +477,9 @@ def initialize_instance_variables(settings, instance):
 
     instance : pyomo.ConcreteModel
         A concrete instance of mathematical optimization model.
+
+    init_u_pi : bool
+        Whether or not the u_pi variables should be initialized.
     """
     assert(isinstance(settings, RbfSettings))
     
@@ -449,18 +490,19 @@ def initialize_instance_variables(settings, instance):
     for i in instance.N:
         instance.x[i] = np.random.uniform(instance.var_lower[i], 
                                           instance.var_upper[i])
-    for j in instance.K:
-        instance.u_pi[j] = rbf(math.sqrt(math.fsum((instance.x[i].value - 
-                                                     instance.node[j, i])**2 
-                                                    for i in instance.N)))
-    if (ru.get_degree_polynomial(settings) == 1):
-        for j in instance.N:
-            instance.u_pi[instance.k + j] = instance.x[j].value
-        instance.u_pi[instance.k + instance.n] = 1.0
-    elif (ru.get_degree_polynomial(settings) == 0):
-        # We use "+ 0" here to convert the symbolic parameter
-        # instance.k into a number that can be used for indexing.
-        instance.u_pi[instance.k + 0] = 1.0
+    if (init_u_pi):
+        for j in instance.K:
+            instance.u_pi[j] = rbf(math.sqrt(math.fsum((instance.x[i].value - 
+                                                        instance.node[j, i])**2
+                                                       for i in instance.N)))
+        if (ru.get_degree_polynomial(settings) == 1):
+            for j in instance.N:
+                instance.u_pi[instance.k + j] = instance.x[j].value
+                instance.u_pi[instance.k + instance.n] = 1.0
+        elif (ru.get_degree_polynomial(settings) == 0):
+            # We use "+ 0" here to convert the symbolic parameter
+            # instance.k into a number that can be used for indexing.
+            instance.u_pi[instance.k + 0] = 1.0
 
 # -- end function
 
@@ -483,12 +525,36 @@ def initialize_h_k_aux_variables(settings, instance):
 
     instance.rbfval = math.fsum(instance.lambda_h[i] * instance.u_pi[i].value
                                 for i in instance.Q)
-
     instance.mu_k_inv = ((-1)**ru.get_degree_polynomial(settings) *
                          math.fsum(instance.Ainv[i,j] * instance.u_pi[i].value
                                    * instance.u_pi[j].value
                                    for i in instance.Q for j in instance.Q) + 
                          instance.phi_0)
+
+# -- end function
+
+def initialize_msrsm_aux_variables(settings, instance):
+    """Initialize auxiliary variables for the MSRSM model.
+    
+    Initialize the rbfval and mindist variables of a problem
+    instance, using the values for for x and u_pi already given. This
+    helps the local search by starting at a feasible point.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    instance : pyomo.ConcreteModel
+        A concrete instance of mathematical optimization model.
+    """
+    assert(isinstance(settings, RbfSettings))
+
+    instance.rbfval = math.fsum(instance.lambda_h[i] * instance.u_pi[i].value
+                                for i in instance.Q)
+    dist = [sum((instance.x[j].value - instance.node[i, j])**2 
+                for j in instance.N) for i in instance.K]
+    instance.mindistsq = min(min(dist), config.DISTANCE_SHIFT)
 
 # -- end function
 
@@ -552,7 +618,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     Raises
     ------
     ValueError
-        If the type of radial basis function is not supported.
+        If some parameters are not supported.
     RuntimeError
         If the solver cannot be found.
     """    
@@ -939,6 +1005,8 @@ class MetricSRSMObj:
         self.rbf_lambda = rbf_lambda
         self.rbf_h = rbf_h
         self.dist_weight = dist_weight
+        self.obj_weight = (1.0 if settings.modified_msrsm_score
+                           else (1 - dist_weight))
     # -- end function
     
     def bulk_evaluate(self, points):
@@ -998,7 +1066,8 @@ class MetricSRSMObj:
             return float('inf')
         dist_score = (self.max_dist - distance)/self.dist_denom
         obj_score = (objfun - self.min_obj)/self.obj_denom
-        return obj_score + self.dist_weight * dist_score
+        return (self.obj_weight * obj_score + 
+                self.dist_weight * dist_score)
     # -- end function
 # -- end class MetricSRSMObj
 

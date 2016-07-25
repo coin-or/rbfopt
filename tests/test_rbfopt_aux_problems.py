@@ -188,7 +188,8 @@ class TestAuxProblems(unittest.TestCase):
                                         self.var_lower, self.var_upper,
                                         self.integer_vars, self.node_pos, 
                                         self.rbf_lambda, self.rbf_h, 
-                                        self.Amat, target_val, dist_weight)
+                                        self.Amat, target_val, dist_weight,
+                                        min(self.node_val), max(self.node_val))
                 for i in range(self.n):
                     tolerance = (self.var_upper[i] - self.var_lower[i])*0.2
                     lb = ref[i] - tolerance

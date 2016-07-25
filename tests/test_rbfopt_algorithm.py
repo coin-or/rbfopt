@@ -53,7 +53,7 @@ class TestGutmann(unittest.TestCase):
     # -- end function
 
     def test_gutmann_prob03(self):
-        """Check solution of prob03 with Gutmann's method, traditional."""
+        """Check solution of prob03 with Gutmann's method, solver."""
         bb = ti.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
@@ -62,7 +62,7 @@ class TestGutmann(unittest.TestCase):
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
                                    rbf = 'cubic',
-                                   global_search_method = 'traditional',
+                                   global_search_method = 'solver',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
@@ -80,7 +80,7 @@ class TestGutmann(unittest.TestCase):
     def test_gutmann_ex8_1_4_log(self):
         """Check solution of ex8_1_4 with Gutmann, log scaling, infstep.
 
-        Traditional global search.
+        Sampling-based global search.
 
         """
         bb = ti.TestBlackBox('ex8_1_4')
@@ -91,7 +91,7 @@ class TestGutmann(unittest.TestCase):
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
                                    rbf = 'multiquadric',
-                                   global_search_method = 'traditional',
+                                   global_search_method = 'sampling',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
@@ -143,7 +143,7 @@ class TestGutmann(unittest.TestCase):
             print('Solving hartman6 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
-                                   global_search_method = 'genetic',
+                                   global_search_method = 'solver',
                                    target_objval = optimum,
                                    eps_opt = 0.0,
                                    max_clock_time = 2.0,
@@ -164,7 +164,7 @@ class TestGutmannParallel(unittest.TestCase):
     eps_opt = 0.05        
 
     def test_gutmann_parallel_ex8_1_4(self):
-        """Check solution of ex8_1_4 with Gutmann's method, traditional."""
+        """Check solution of ex8_1_4 with Gutmann's method, solver."""
         bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
@@ -172,12 +172,12 @@ class TestGutmannParallel(unittest.TestCase):
             print('Solving goldsteinprice with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
-                                   global_search_method = 'traditional',
+                                   global_search_method = 'solver',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
                                    max_evaluations = 300,
-                                   num_cpus = 4,
+                                   num_cpus = 2,
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
@@ -189,7 +189,7 @@ class TestGutmannParallel(unittest.TestCase):
     # -- end function
 
     def test_gutmann_parallel_prob03(self):
-        """Check solution of prob03 with Gutmann's method, genetic."""
+        """Check solution of prob03 with Gutmann's method, sampling."""
         bb = ti.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
@@ -197,7 +197,7 @@ class TestGutmannParallel(unittest.TestCase):
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
-                                   global_search_method = 'genetic',
+                                   global_search_method = 'sampling',
                                    rbf = 'cubic',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -245,7 +245,7 @@ class TestGutmannParallel(unittest.TestCase):
     # -- end function
 
     def test_gutmann_parallel_st_miqp3_noisy(self):
-        """Check solution of noisy st_miqp3 with Gutmann, traditional."""
+        """Check solution of noisy st_miqp3 with Gutmann, solver."""
         bb = ti.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
@@ -253,7 +253,7 @@ class TestGutmannParallel(unittest.TestCase):
             print('Solving st_miqp3 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
-                                   global_search_method = 'traditional',
+                                   global_search_method = 'solver',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
@@ -280,7 +280,7 @@ class TestGutmannParallel(unittest.TestCase):
             print('Solving hartman6 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'Gutmann', 
-                                   global_search_method = 'traditional',
+                                   global_search_method = 'sampling',
                                    num_cpus = 2,
                                    target_objval = optimum,
                                    eps_opt = 0.0,
@@ -302,7 +302,7 @@ class TestMSRSM(unittest.TestCase):
     eps_opt = 0.05
 
     def test_msrsm_ex8_1_4(self):
-        """Check solution of ex8_1_4 with the MSRSM algorithm, traditional."""
+        """Check solution of ex8_1_4 with the MSRSM algorithm, sampling."""
         bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
@@ -310,7 +310,7 @@ class TestMSRSM(unittest.TestCase):
             print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
-                                   global_search_method = 'traditional',
+                                   global_search_method = 'sampling',
                                    rbf = 'linear',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -353,7 +353,7 @@ class TestMSRSM(unittest.TestCase):
     def test_msrsm_prob03_no_local_search(self):
         """Check solution of prob03 with MSRSM and no local search.
 
-        Traditional method.
+        Solver solution of global search problems.
 
         """
         bb = ti.TestBlackBox('prob03')
@@ -363,7 +363,7 @@ class TestMSRSM(unittest.TestCase):
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(rbf = 'cubic',
-                                   global_search_method = 'traditional',
+                                   global_search_method = 'solver',
                                    algorithm = 'MSRSM', 
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -415,6 +415,7 @@ class TestMSRSM(unittest.TestCase):
             print('Solving hartman6 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
+                                   global_search_method = 'solver',
                                    target_objval = optimum,
                                    eps_opt = 0.0,
                                    max_clock_time = 2.0,
@@ -435,7 +436,7 @@ class TestMSRSMParallel(unittest.TestCase):
     eps_opt = 0.05
 
     def test_msrsm_parallel_ex8_1_4(self):
-        """Check solution of ex8_1_4 with the MSRSM algorithm, genetic."""
+        """Check solution of ex8_1_4 with the MSRSM algorithm, sampling."""
         bb = ti.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
@@ -443,13 +444,13 @@ class TestMSRSMParallel(unittest.TestCase):
             print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
-                                   global_search_method = 'genetic',
+                                   global_search_method = 'sampling',
                                    rbf = 'linear',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
                                    max_evaluations = 300,
-                                   num_cpus = 4,
+                                   num_cpus = 2,
                                    rand_seed = seed)
             alg = ra.OptAlgorithm(settings, bb)
             res = alg.optimize()
@@ -461,7 +462,7 @@ class TestMSRSMParallel(unittest.TestCase):
     # -- end function
 
     def test_msrsm_parallel_prob03(self):
-        """Check solution of prob03 with the MSRSM algorithm, traditional."""
+        """Check solution of prob03 with the MSRSM algorithm, genetic."""
         bb = ti.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
@@ -469,7 +470,7 @@ class TestMSRSMParallel(unittest.TestCase):
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
-                                   global_search_method = 'traditional',
+                                   global_search_method = 'genetic',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
@@ -488,12 +489,12 @@ class TestMSRSMParallel(unittest.TestCase):
     def test_msrsm_parallel_st_miqp3_no_local_search(self):
         """Check solution of st_miqp3 with MSRSM and no local search.
 
-        Genetic algorithm."""
+        Solver solution of global search problems."""
         bb = ti.TestBlackBox('st_miqp3')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving nvs06 with random seed ' +
+            print('Solving st_miqp3 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(rbf = 'cubic',
                                    global_search_method = 'genetic',
@@ -515,7 +516,7 @@ class TestMSRSMParallel(unittest.TestCase):
     # -- end function
 
     def test_msrsm_parallel_prob03_noisy(self):
-        """Check solution of noisy prob03 with MSRSM, traditional."""
+        """Check solution of noisy prob03 with MSRSM, sampling."""
         bb = ti.TestNoisyBlackBox('prob03', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
@@ -523,7 +524,7 @@ class TestMSRSMParallel(unittest.TestCase):
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM', 
-                                   global_search_method = 'traditional',
+                                   global_search_method = 'sampling',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
@@ -550,6 +551,7 @@ class TestMSRSMParallel(unittest.TestCase):
             print('Solving hartman6 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfSettings(algorithm = 'MSRSM',
+                                   global_search_method = 'genetic',
                                    num_cpus = 2,
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,

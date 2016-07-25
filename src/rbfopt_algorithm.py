@@ -1706,7 +1706,8 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
         next_p = aux.global_search(settings, n, k, local_varl,
                                    local_varu, integer_vars,
                                    node_pos, rbf_lambda, rbf_h,
-                                   Amatinv, target_val, dist_weight)
+                                   Amatinv, target_val, dist_weight,
+                                   scaled_fmin, scaled_fmax)
         adjusted = True
         
     # If previous points were evaluated in low quality and we are
@@ -1884,7 +1885,8 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
 
     return aux.global_search(settings, n, k, local_varl, local_varu,
                              integer_vars, node_pos, rbf_lambda,
-                             rbf_h, Amatinv, target_val, dist_weight)
+                             rbf_h, Amatinv, target_val, dist_weight,
+                             scaled_fmin, scaled_fmax)
 # -- end function
 
 def objfun(data):

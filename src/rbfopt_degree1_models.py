@@ -271,9 +271,9 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
 
 def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
                          node_pos, rbf_lambda, rbf_h, mat, target_val):
-    """Create the abstract model to maximize h_k.
+    """Create the concrete model to maximize h_k.
 
-    Create the abstract model to maximize h_k, also known as the
+    Create the concrete model to maximize h_k, also known as the
     Global Search Step of the RBF method.
 
     Parameters
@@ -551,6 +551,260 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
 
 # -- end function
 
+def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
+                              integer_vars, node_pos):
+    """Create the concrete model to maximize the minimum distance.
+
+    Create the concrete model to maximize the minimum distance to the
+    interpolation nodes, which is the infstep of the MSRSM method.
+
+    Parameters
+    ----------
+
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        The dimension of the problem, i.e. size of the space.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    var_lower : List[float]
+        Vector of variable lower bounds.
+
+    var_upper : List[float]
+        Vector of variable upper bounds.
+
+    integer_vars : List[int]
+        List of indices of integer variables.
+
+    node_pos : List[List[float]]
+        List of coordinates of the nodes.
+
+    Returns
+    -------
+    pyomo.ConcreteModel
+        The concrete model describing the problem.
+
+    """
+    assert(len(var_lower)==n)
+    assert(len(var_upper)==n)
+    assert(len(node_pos)==k)
+    assert(isinstance(settings, RbfSettings))
+
+    model = ConcreteModel()
+
+    # Dimension of the space
+    model.n = Param(initialize=n)
+    model.N = RangeSet(0, model.n - 1)
+        
+    # Number of interpolation nodes
+    model.k = Param(initialize=k)
+    model.K = RangeSet(0, model.k - 1)
+
+    # Coordinates of the nodes
+    node_param = {}
+    for i in range(k):
+        for j in range(n):
+            node_param[i, j] = float(node_pos[i][j])
+    model.node = Param(model.K, model.N, initialize=node_param)
+
+    # Variable bounds
+    var_lower_param = {}
+    var_upper_param = {}
+    for i in range(n):
+        var_lower_param[i] = float(var_lower[i])
+        var_upper_param[i] = float(var_upper[i])
+    model.var_lower = Param(model.N, initialize=var_lower_param)
+    model.var_upper = Param(model.N, initialize=var_upper_param)
+
+    # Variable: the point in the space
+    model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
+
+    # Auxiliary variable: value of the inverse of \mu_k at a given point
+    model.mindistsq = Var(domain=NonNegativeReals)
+
+    # Objective function.
+    model.OBJ = Objective(expr=(model.mindistsq), sense=maximize)
+    model.MdistdefConstraint = Constraint(model.K,
+                                          rule=_mdistdef_constraint_rule)
+
+    # Add integer variables if necessary
+    if (len(integer_vars) > 0):
+        add_integrality_constraints(model, integer_vars)
+
+    return model
+
+# -- end function
+
+def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
+                           integer_vars, node_pos, rbf_lambda, rbf_h, 
+                           dist_weight, dist_min, dist_max, fmin, fmax):
+    """Create the concrete model to optimize the MSRSM objective.
+
+    Create the concreate model to minimize a weighted combination of
+    the value of the RBF interpolant and the (negative of the)
+    distance from the closes interpolation node. This is the Global
+    Search Step of the MSRSM method.
+
+    Parameters
+    ----------
+
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        The dimension of the problem, i.e. size of the space.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    var_lower : List[float]
+        Vector of variable lower bounds.
+
+    var_upper : List[float]
+        Vector of variable upper bounds.
+
+    integer_vars : List[int]
+        List of indices of integer variables.
+
+    node_pos : List[List[float]]
+        List of coordinates of the nodes.
+
+    rbf_lambda : List[float]
+        The lambda coefficients of the RBF interpolant, corresponding
+        to the radial basis functions. List of dimension k.
+
+    rbf_h : List[float]
+        The h coefficients of the RBF interpolant, corresponding to
+        the polynomial. List of dimension n+1.
+
+    dist_weight : float
+        The weight paramater for distance and RBF interpolant
+        value. Must be between 0 and 1. A weight of 1.0 corresponds to
+        using solely distance, 0.0 to objective function.
+
+    dist_min : float
+        The minimum distance between two interpolation nodes.
+
+    dist_max : float
+        The maximum distance between two interpolation nodes.
+
+    fmin : float
+        The minimum value of an interpolation node.
+
+    fmax : float
+        The maximum value of an interpolation node.
+
+    Returns
+    -------
+    pyomo.ConcreteModel
+        The concrete model describing the problem.
+
+    """
+    assert(len(var_lower)==n)
+    assert(len(var_upper)==n)
+    assert(len(rbf_lambda)==k)
+    assert(len(rbf_h)==(n+1))
+    assert(len(node_pos)==k)
+    assert(isinstance(settings, RbfSettings))
+    assert(ru.get_degree_polynomial(settings)==1)
+    assert(0 <= dist_weight <= 1)
+    assert(dist_max >= dist_min >= 0)
+
+    model = ConcreteModel()
+
+    # Dimension of the space
+    model.n = Param(initialize=n)
+    model.N = RangeSet(0, model.n - 1)
+        
+    # Number of interpolation nodes
+    model.k = Param(initialize=k)
+    model.K = RangeSet(0, model.k - 1)
+
+    # Dimension of u_pi
+    model.q = Param(initialize=(n+k+1))
+    model.Q = RangeSet(0, model.q - 1)
+    model.Qlast = RangeSet(model.q - 1, model.q - 1)
+
+    # Coefficients of the RBF
+    lambda_h_param = {}
+    for i in range(k):
+        lambda_h_param[i] = float(rbf_lambda[i])
+    for i in range(n+1):
+        lambda_h_param[k+i] = float(rbf_h[i])
+    model.lambda_h = Param(model.Q, initialize=lambda_h_param)
+
+    # Coordinates of the nodes
+    node_param = {}
+    for i in range(k):
+        for j in range(n):
+            node_param[i, j] = float(node_pos[i][j])
+    model.node = Param(model.K, model.N, initialize=node_param)
+
+    # Variable bounds
+    var_lower_param = {}
+    var_upper_param = {}
+    for i in range(n):
+        var_lower_param[i] = float(var_lower[i])
+        var_upper_param[i] = float(var_upper[i])
+    model.var_lower = Param(model.N, initialize=var_lower_param)
+    model.var_upper = Param(model.N, initialize=var_upper_param)
+
+    # Minimum and maximum distance
+    model.dist_min = Param(initialize=dist_min)
+    model.dist_max = Param(initialize=dist_max)
+    # Minimum and maximum of function values interpolation nodes
+    model.fmin = Param(initialize=fmin)
+    model.fmax = Param(initialize=fmax)
+    # Weight of the distance and objective criteria
+    model.dist_weight = Param(initialize=dist_weight)
+    model.obj_weight = Param(initialize=(1.0 if settings.modified_msrsm_score
+                                         else 1 - dist_weight))
+
+    # Value of phi at zero, necessary for shift
+    if (settings.rbf == 'cubic' or settings.rbf == 'thin_plate_spline'):
+        model.phi_0 = Param(initialize=0.0)
+
+    # Variable: the point in the space
+    model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
+
+    # Auxiliary variables: the vectors (u, \pi),
+    # see equations (6) and (7) in the paper by Costa and Nannicini
+    model.u_pi = Var(model.Q, domain=Reals)
+
+    # Auxiliary variable: value of the rbf at a given point
+    model.rbfval = Var(domain=Reals)
+
+    # Auxiliary variable: value of the inverse of \mu_k at a given point
+    model.mindistsq = Var(domain=NonNegativeReals)
+
+    # Objective function.
+    model.OBJ = Objective(rule=_min_msrsm_obj_expression, sense=minimize)
+
+    # Constraints. See definitions below.
+    if (settings.rbf == 'cubic'):        
+        model.UdefConstraint = Constraint(model.K, 
+                                          rule=_udef_cubic_constraint_rule)
+    elif (settings.rbf == 'thin_plate_spline'):
+        model.UdefConstraint = Constraint(model.K, 
+                                          rule=_udef_thinplate_constraint_rule)
+    model.PidefConstraint = Constraint(model.N, rule=_pidef_constraint_rule)
+    model.NonhomoConstraint = Constraint(model.Qlast, 
+                                         rule=_nonhomo_constraint_rule)
+    model.RbfdefConstraint = Constraint(rule=_rbfdef_constraint_rule)
+    model.MdistdefConstraint = Constraint(model.K,
+                                          rule=_mdistdef_constraint_rule)
+
+    # Add integer variables if necessary
+    if (len(integer_vars) > 0):
+        add_integrality_constraints(model, integer_vars)
+
+    return model
+
+# -- end function
+
 def add_integrality_constraints(model, integer_vars):
     """Add integrality constraints to the model.
 
@@ -650,6 +904,12 @@ def _intr_constraint_rule(model, i):
 def _unis_constraint_rule(model, i):
     return (sum(model.Pm[j, i]*model.rbf_lambda[j] for j in model.K) == 0.0)
 
+# Constraints: definition of the minimum distance constraint.
+# for i in K: mindistsq <= dist(x, x^i)^2
+def _mdistdef_constraint_rule(model, i):
+    return (model.mindistsq <= config.DISTANCE_SHIFT + 
+            sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+
 # Objective function for the "minimize rbf" problem. The expression is:
 # min sum_{j in K} lambda_j d_j^3 + sum_{j in N} h_j x_j + h_{n+1}
 # Because of the definition of u_pi, we can just write:
@@ -674,6 +934,15 @@ def _max_h_k_obj_expression(model):
 def _min_bump_obj_expression(model):
     return (sum(model.Phi[i,j] * model.rbf_lambda[i] * model.rbf_lambda[j]
                 for i in model.K for j in model.K))
+
+# Objective function for the "minimize MSRSM obj" problem. The expression is:
+# dist_weight * (dist_max - \min_k distance(x, x^k)) / (dist_max - dist_min)
+# + (obj_weight) * (s_k(x) - fmin) / (fmax - fmin)
+def _min_msrsm_obj_expression(model):
+    return (model.dist_weight * (model.dist_max - sqrt(model.mindistsq)) /
+            (model.dist_max - model.dist_min) +
+            model.obj_weight * (model.rbfval - model.fmin) / 
+            (model.fmax - model.fmin))
 
 # Function to return bounds on the slack variables
 def _slack_bounds(model, i):
