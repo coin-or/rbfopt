@@ -18,13 +18,34 @@ import rbfopt_aux_problems as aux
 import rbfopt_utils as ru
 from rbfopt_settings import RbfSettings
 
+def quadratic(points):
+    """Quadratic function for optimization.
+
+    For each point in the given list, compute the sum of the squares
+    of all coordinates.
+
+    """
+    return [sum(val*val for val in point) for point in points]
+# -- end function
+
+def shifted_quadratic(points):
+    """Quadratic function for optimization.
+
+    For each point in the given list, compute the sum of the squares
+    of all coordinates shifted to the left by 1.
+
+    """
+    return [sum((val-1)*(val-1) for val in point) for point in points]
+# -- end function
+
 class TestAuxProblems(unittest.TestCase):
     """Test the successful solution of auxiliary problems."""
 
     def setUp(self):
         """Generate data to simulate an optimization problem."""
         self.settings = RbfSettings(rbf = 'cubic',
-                                    num_samples_aux_problems = 10000)
+                                    num_samples_aux_problems = 10000,
+                                    ga_base_population_size = 1000)
         self.n = 3
         self.k = 5
         self.var_lower = [i for i in range(self.n)]
@@ -70,58 +91,75 @@ class TestAuxProblems(unittest.TestCase):
         solutions = {'Gutmann' : [8.279843262880693, 8.0, 10.768370103772106],
                      'MSRSM' : [4.7403574071279078, 11, 2.3070673078496355]}
         for algorithm in RbfSettings._allowed_algorithm:
-            self.settings.algorithm = algorithm
-            ref = solutions[algorithm]
-            sol = aux.pure_global_search(self.settings, self.n, self.k,
-                                         self.var_lower, self.var_upper,
-                                         self.node_pos, self.Amat,
-                                         self.integer_vars)
-            for i in range(self.n):
-                tolerance = (self.var_upper[i] - self.var_lower[i])*0.2
-                lb = ref[i] - tolerance
-                ub = ref[i] + tolerance
-                msg_lb = ('Lb not satisfied on var {:d}: '.format(i) +
-                          'lb {:f} solution {:f}'.format(lb, sol[i]))
-                msg_ub = ('Ub not satisfied on var {:d}: '.format(i) +
-                          'ub {:f} solution {:f}'.format(ub, sol[i]))
-                self.assertLessEqual(lb, sol[i], msg = msg_lb)
-                self.assertLessEqual(sol[i], ub, msg = msg_ub)
-            for i in self.integer_vars:
-                msg = 'Variable {:d} not integer in solution'.format(i)
-                self.assertAlmostEqual(abs(sol[i] - round(sol[i])), 0.0,
-                                       msg = msg)
+            for method in RbfSettings._allowed_global_search_method:
+                self.settings.algorithm = algorithm
+                self.settings.global_search_method = method
+                ref = solutions[algorithm]
+                sol = aux.pure_global_search(self.settings, self.n, self.k,
+                                             self.var_lower, self.var_upper,
+                                             self.integer_vars, 
+                                             self.node_pos, self.Amat)
+                for i in range(self.n):
+                    tolerance = (self.var_upper[i] - self.var_lower[i])*0.2
+                    lb = ref[i] - tolerance
+                    ub = ref[i] + tolerance
+                    msg_lb = ('Lb not satisfied on var {:d}: '.format(i) +
+                              'lb {:f} solution {:f} '.format(lb, sol[i]) +
+                              'alg {:s} '.format(algorithm) +
+                              'method {:s}'.format(method))
+                    msg_ub = ('Ub not satisfied on var {:d}: '.format(i) +
+                              'ub {:f} solution {:f} '.format(ub, sol[i]) +
+                              'alg {:s} '.format(algorithm) +
+                              'method {:s}'.format(method))
+                    self.assertLessEqual(lb, sol[i], msg = msg_lb)
+                    self.assertLessEqual(sol[i], ub, msg = msg_ub)
+                for i in self.integer_vars:
+                    msg = ('Variable {:d} not integer in solution'.format(i)
+                           + ' alg {:s} '.format(algorithm) +
+                           'method {:s}'.format(method))
+                    self.assertAlmostEqual(abs(sol[i] - round(sol[i])), 0.0,
+                                           msg = msg)
     # -- end function
 
     def test_minimize_rbf(self):
         """Check solution of RBF minimization problem.
 
         This function verifies that the solution of the RBF
-        minimization problem on a small test istance is close to a
-        pre-computed solution, for all algorithms. There is a unique
-        global minimum for this function, hence the tolerance is
-        low. It also checks that integer variables are integer valued.
+        minimization problem on a small test istance is close to one
+        of two pre-computed solution, for all algorithms. It also
+        checks that integer variables are integer valued.
+
         """
-        solutions = {'Gutmann' : [0.0, 1.0, 2.0],
-                     'MSRSM' : [0.0, 1.0, 2.0]}
+        solutions = {'Gutmann' : [[0.0, 1.0, 2.0], [10.0, 1.0, 2.0]],
+                     'MSRSM' : [[0.0, 1.0, 2.0], [10.0, 1.0, 2.0]]}
         for algorithm in RbfSettings._allowed_algorithm:
             self.settings.algorithm = algorithm
-            ref = solutions[algorithm]
+            references = solutions[algorithm]
             sol = aux.minimize_rbf(self.settings, self.n, self.k,
                                    self.var_lower, self.var_upper,
-                                   self.node_pos, self.rbf_lambda,
-                                   self.rbf_h, self.integer_vars)
-            for i in range(self.n):
-                tolerance = 1.0e-3
-                lb = ref[i] - tolerance
-                ub = ref[i] + tolerance
-                msg_lb = ('Lb not satisfied on var {:d}: '.format(i) +
-                          'lb {:f} solution {:f}'.format(lb, sol[i]))
-                msg_ub = ('Ub not satisfied on var {:d}: '.format(i) +
-                          'ub {:f} solution {:f}'.format(ub, sol[i]))
-                self.assertLessEqual(lb, sol[i], msg = msg_lb)
-                self.assertLessEqual(sol[i], ub, msg = msg_ub)
+                                   self.integer_vars, self.node_pos,
+                                   self.rbf_lambda, self.rbf_h,)
+            val = ru.evaluate_rbf(self.settings, sol, self.n, self.k, 
+                                  self.node_pos, self.rbf_lambda,
+                                  self.rbf_h)
+            found_solution = False
+            for ref in references:
+                satisfied = True
+                for i in range(self.n):
+                    tolerance = 1.0e-3
+                    lb = ref[i] - tolerance
+                    ub = ref[i] + tolerance
+                    if (lb > sol[i] or ub < sol[i]):
+                        satisfied = False
+                if satisfied:
+                    found_solution = True
+            self.assertTrue(found_solution, 
+                            msg = 'The minimize_rbf solution' +
+                            ' with algorithm {:s}'.format(algorithm) +
+                            ' does not match any known local optimum')
             for i in self.integer_vars:
-                msg = 'Variable {:d} not integer in solution'.format(i)
+                msg = ('Variable {:d} not integer in solution'.format(i)
+                       + ' alg {:s} '.format(algorithm))
                 self.assertAlmostEqual(abs(sol[i] - round(sol[i])), 0.0,
                                        msg = msg)
     # -- end function
@@ -142,27 +180,36 @@ class TestAuxProblems(unittest.TestCase):
         target_val = -0.1
         dist_weight = 0.5
         for algorithm in RbfSettings._allowed_algorithm:
-            self.settings.algorithm = algorithm
-            ref = solutions[algorithm]
-            sol = aux.global_search(self.settings, self.n, self.k,
-                                    self.var_lower, self.var_upper,
-                                    self.node_pos, self.rbf_lambda,
-                                    self.rbf_h, self.Amat, target_val,
-                                    dist_weight, self.integer_vars)
-            for i in range(self.n):
-                tolerance = (self.var_upper[i] - self.var_lower[i])*0.2
-                lb = ref[i] - tolerance
-                ub = ref[i] + tolerance
-                msg_lb = ('Lb not satisfied on var {:d}: '.format(i) +
-                          'lb {:f} solution {:f}'.format(lb, sol[i]))
-                msg_ub = ('Ub not satisfied on var {:d}: '.format(i) +
-                          'ub {:f} solution {:f}'.format(ub, sol[i]))
-                self.assertLessEqual(lb, sol[i], msg = msg_lb)
-                self.assertLessEqual(sol[i], ub, msg = msg_ub)
-            for i in self.integer_vars:
-                msg = 'Variable {:d} not integer in solution'.format(i)
-                self.assertAlmostEqual(abs(sol[i] - round(sol[i])), 0.0,
-                                       msg = msg)
+            for method in RbfSettings._allowed_global_search_method:
+                self.settings.algorithm = algorithm
+                self.settings.global_search_method = method
+                ref = solutions[algorithm]
+                sol = aux.global_search(self.settings, self.n, self.k,
+                                        self.var_lower, self.var_upper,
+                                        self.integer_vars, self.node_pos, 
+                                        self.rbf_lambda, self.rbf_h, 
+                                        self.Amat, target_val, dist_weight,
+                                        min(self.node_val), max(self.node_val))
+                for i in range(self.n):
+                    tolerance = (self.var_upper[i] - self.var_lower[i])*0.2
+                    lb = ref[i] - tolerance
+                    ub = ref[i] + tolerance
+                    msg_lb = ('Lb not satisfied on var {:d}: '.format(i) +
+                              'lb {:f} solution {:f} '.format(lb, sol[i]) +
+                              'alg {:s} '.format(algorithm) +
+                              'method {:s} '.format(method)) 
+                    msg_ub = ('Ub not satisfied on var {:d}: '.format(i) +
+                              'ub {:f} solution {:f} '.format(ub, sol[i]) +
+                              'alg {:s} '.format(algorithm) +
+                              'method {:s} '.format(method))
+                    self.assertLessEqual(lb, sol[i], msg = msg_lb)
+                    self.assertLessEqual(sol[i], ub, msg = msg_ub)
+                for i in self.integer_vars:
+                    msg = ('Variable {:d} not integer in solution'.format(i)
+                           + ' alg {:s} '.format(algorithm) +
+                           'method {:s}'.format(method))
+                    self.assertAlmostEqual(abs(sol[i] - round(sol[i])), 0.0,
+                                           msg = msg)
     # -- end function
 
     def test_get_noisy_rbf_coefficients(self):
@@ -209,9 +256,8 @@ class TestAuxProblems(unittest.TestCase):
 
         samples = aux.generate_sample_points(self.settings, self.n, 
                                              self.var_lower, self.var_upper,
-                                             self.integer_vars)
-        self.assertEqual(len(samples), 
-                         self.settings.num_samples_aux_problems * self.n,
+                                             self.integer_vars, 123)
+        self.assertEqual(len(samples), 123,
                          msg = 'Wrong number of sample points')
         for sample in samples:
             self.assertEqual(len(sample), self.n, msg = 'Wrong point length')
@@ -220,49 +266,33 @@ class TestAuxProblems(unittest.TestCase):
                 self.assertAlmostEqual(abs(sample[i] - round(sample[i])),
                                        0.0, msg = msg)
         # Now test some limit cases
-        samples = aux.generate_sample_points(self.settings, 0, [], [], [])
-        self.assertListEqual(samples, [] * 
-                             self.settings.num_samples_aux_problems * self.n,
+        samples = aux.generate_sample_points(self.settings, 0, [], [], 
+                                             [], 45)
+        self.assertListEqual(samples, [[] for i in range(45)],
                              msg = 'Samples are not empty when n = 0')
-        settings = RbfSettings(num_samples_aux_problems = 0)
-        samples = aux.generate_sample_points(settings, self.n, 
+        samples = aux.generate_sample_points(self.settings, self.n, 
                                              self.var_lower, self.var_upper,
-                                             self.integer_vars)
+                                             self.integer_vars, 0)
         self.assertFalse(samples, msg = 'List of samples should be empty')
     # -- end function
 
-# - end class
-
-class TestMetricSRSMObj(unittest.TestCase):
-    """Test the methods of MetricSRSMObj."""
-    def test_metric_srsm_obj(self):
-        """Test limit cases for class methods (including constructor)."""
-        settings = RbfSettings()
-        # One-element lists
-        obj = aux.MetricSRSMObj(settings, [1.0], [1.0], 0.5)
-        self.assertEqual(obj.evaluate(1.0, 1.0), 0.0,
-                         msg = 'Failed on single-element list')
-        self.assertGreater(obj.obj_denom, 0.0, msg = 'obj_denom is zero')
-        self.assertGreater(obj.dist_denom, 0.0, msg = 'dist_denom is zero')
-        # All-zero lists
-        obj = aux.MetricSRSMObj(settings, [1.0]*20, [1.0]*20, 0.5)
-        self.assertGreater(obj.obj_denom, 0.0, msg = 'obj_denom is zero')
-        self.assertGreater(obj.dist_denom, 0.0, msg = 'dist_denom is zero')
-        self.assertEqual(obj.evaluate(1.0, 1.0), 0.0,
-                         msg = 'Failed on all-equal lists')
-        self.assertEqual(obj.evaluate(0.0, 0.0), float('+inf'),
-                         msg = 'Failed when dist = 0.0')
-        # One list is zero
-        obj = aux.MetricSRSMObj(settings, [i + 1 for i in range(20)], 
-                                [0]*20, 0.5)
-        self.assertGreater(obj.obj_denom, 0.0, msg = 'obj_denom is zero')
-        self.assertGreater(obj.dist_denom, 0.0, msg = 'dist_denom is zero')
-        self.assertEqual(obj.evaluate(20.0, 0.0), 0.0,
-                         msg = 'Failed on best point')
-        self.assertEqual(obj.evaluate(1.0, 0.0), 0.5,
-                         msg = 'Failed on worst point')
+    def test_ga_optimize(self):
+        """Verify that the genetic algorithm can solve simple problems.
+        """
+        var_lower = [-1] * 3
+        var_upper = [1] * 3
+        settings = RbfSettings(ga_base_population_size = 100)
+        point = aux.ga_optimize(settings, 3, var_lower, var_upper,
+                                [], quadratic)
+        self.assertLessEqual(quadratic([point])[0], 0.05,
+                             msg = 'Could not solve quadratic with GA')
+        point = aux.ga_optimize(settings, 3, var_lower, var_upper,
+                                [], shifted_quadratic)
+        self.assertLessEqual(shifted_quadratic([point])[0], 0.05,
+                             msg = 'Could not solve shifted quadratic with GA')
     # -- end function
-# -- end class
+
+# - end class
 
 if (__name__ == '__main__'):
     unittest.main()

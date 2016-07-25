@@ -4,6 +4,7 @@ This module contains the settings of the main optimization algorithm.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2015.
+(C) Copyright International Business Machines Corporation 2016.
 Research partially supported by SUTD-MIT International Design Center.
 """
 
@@ -48,6 +49,15 @@ class RbfSettings:
     max_clock_time : float
         Maximum wall clock time in seconds. Default 1.0e30.
 
+    num_cpus : int
+        Number of CPUs used. Default 1.
+
+    parallel_wakeup_time : float
+        Time (in seconds) after which the main optimization engine
+        checks the arrival of results from workers busy with function
+        evaluations or other computations. This parameter is only used
+        by the parallel optimizer. Default 0.1.
+
     target_objval : float
         The objective function value we want to reach, i.e. the value
         of the unknown optimum. It can be set to an acceptable value,
@@ -84,7 +94,8 @@ class RbfSettings:
 
     max_consecutive_local_searches : int
         Maximum number of consecutive local searches during the
-        optimization phase. Default 1.
+        optimization phase. This parameter is ignored by the parallel
+        optimizer. Default 1.
 
     init_strategy : str
         Strategy to select initial points. Choice of 'all_corners',
@@ -159,7 +170,7 @@ class RbfSettings:
     algorithm : string
         Optimization algorithm used. Choice of 'Gutmann' and 'MSRSM',
         see References Gutmann (2001) and Regis and Shoemaker
-        (2007). Default 'Gutmann'.
+        (2007). Default 'MSRSM'.
 
     targetval_clipping : bool
         Clip target value selection based on periodically eliminating
@@ -167,10 +178,49 @@ class RbfSettings:
         (2001) and later Regis and Shoemaker (2007). Used by Gutmann
         RBF method only. Default True.
 
+    global_search_method : string
+        The methodology to be used in the solution of global search
+        problems, i.e. the infstep and the global step. The options
+        are'genetic', 'sampling' and 'solver'. If 'genetic', a
+        heuristic based on a genetic algorithm is used. If 'sampling',
+        random sampling is used. If 'solver', the available solvers
+        are used to try to solve mathematical programming
+        models. Default 'genetic'.
+
+    ga_base_population_size : int
+        Minimum population size for the genetic algorithm used to
+        optimize the global search step or infstep, when the genetic
+        global search method is chosen. The final population is
+        computed as the minimum population + n/5, where n is the
+        number of decision variables. Default 200.
+
+    ga_num_generations : int
+        Number of generations for the genetic algorithm used to
+        optimize the global search step or infstep, when the genetic
+        global search method is chosen. Default 20.
+
     num_samples_aux_problems : int
         Multiplier for the dimension of the problem to determine the
-        number of samples used by the Metric SRSM algorithm at every
-        iteration. Default 1000.
+        number of samples used by the Metric SRSM traditional
+        algorithm at every iteration. Default 1000.
+
+    modified_msrsm_score : bool
+        Use the modified MSRSM score function in which the objective
+        function value contribution always has a weight of 1, instead
+        of 1 - distance_weight. This setting is more aggressive in
+        improving the objective function value, compared to the
+        original MSRSM score function. Default True.
+
+    save_state_interval : int 
+        Number of iterations after which the state of the algorithm
+        should be dumped to file. The algorithm can be resumed from a
+        saved state. It can be useful in case something goes
+        wrong. Default 100000.
+
+    save_state_file : string
+        Name of the file in which the state of the algorithm will be
+        saved at regular intervals, see save_state_interval. Default
+        'optalgorithm_state.dat'.
     
     print_solver_output : bool
         Print the output of the solvers to screen? Note that this
@@ -178,7 +228,9 @@ class RbfSettings:
         stdout. Default False.
 
     rand_seed : int
-        Seed for the random number generator. Default 937627691.
+        Seed for the random number generator. The maximum number
+        supported by numpy on all platforms is 2^32. Default
+        937627691.
 
     Attributes
     ----------
@@ -197,6 +249,9 @@ class RbfSettings:
         Allowed model selection method.
     _allowed_algorithm : Dict[str]
         Allowed algorithms.
+    _allowed_global_search_method : Dict[str]
+        Allowed global search methods.
+
     """
 
     # Allowed values for multiple choice options
@@ -209,6 +264,7 @@ class RbfSettings:
     _allowed_dynamism_clipping = {'off', 'median', 'clip_at_dyn', 'auto'}
     _allowed_model_selection_solver = {'clp', 'cplex', 'numpy'}
     _allowed_algorithm = {'Gutmann', 'MSRSM'}
+    _allowed_global_search_method = {'genetic', 'sampling', 'solver'}
 
     def __init__(self,
                  rbf = 'thin_plate_spline',
@@ -216,6 +272,8 @@ class RbfSettings:
                  max_evaluations = 250,
                  max_fast_evaluations = 150,
                  max_clock_time = 1.0e30,
+                 num_cpus = 1,
+                 parallel_wakeup_time = 0.1,
                  target_objval = -1.0e10,
                  eps_opt = 1.0e-2,
                  eps_zero = 1.0e-15,
@@ -240,10 +298,16 @@ class RbfSettings:
                  max_fast_restarts = 2,
                  max_fast_iterations = 100,
                  model_selection_solver = 'numpy',
-                 algorithm = 'Gutmann',
+                 algorithm = 'MSRSM',
                  targetval_clipping = True,
-                 num_samples_aux_problems = 1000,                 
+                 global_search_method = 'genetic',
+                 ga_base_population_size = 200,
+                 ga_num_generations = 20,
+                 num_samples_aux_problems = 1000,
+                 modified_msrsm_score = True,
                  print_solver_output = False,
+                 save_state_interval = 100000,
+                 save_state_file = 'optalgorithm_state.dat',
                  rand_seed = 937627691):
         """Class constructor with default values. 
         """
@@ -252,6 +316,8 @@ class RbfSettings:
         self.max_evaluations = max_evaluations
         self.max_fast_evaluations = max_fast_evaluations
         self.max_clock_time = max_clock_time
+        self.num_cpus = num_cpus
+        self.parallel_wakeup_time = parallel_wakeup_time
         self.target_objval = target_objval
         self.eps_opt = eps_opt
         self.eps_zero = eps_zero
@@ -278,8 +344,14 @@ class RbfSettings:
         self.model_selection_solver = model_selection_solver
         self.algorithm = algorithm
         self.targetval_clipping = targetval_clipping
+        self.global_search_method = global_search_method
+        self.ga_base_population_size = ga_base_population_size
+        self.ga_num_generations = ga_num_generations
         self.num_samples_aux_problems = num_samples_aux_problems
+        self.modified_msrsm_score = modified_msrsm_score
         self.print_solver_output = print_solver_output
+        self.save_state_interval = save_state_interval
+        self.save_state_file = save_state_file
         self.rand_seed = rand_seed
 
         if (self.rbf not in RbfSettings._allowed_rbf):
@@ -307,6 +379,11 @@ class RbfSettings:
         if (self.algorithm not in RbfSettings._allowed_algorithm):
             raise ValueError('settings.algorithm = ' + 
                              str(self.algorithm) + ' not supported')
+        if (self.global_search_method not in 
+            RbfSettings._allowed_global_search_method):
+            raise ValueError('settings.global_search_method = ' + 
+                             str(self.global_search_method) + 
+                             ' not supported')
     # -- end function
 
     @classmethod
@@ -363,9 +440,9 @@ class RbfSettings:
         var_upper : List[float]
             Vector of variable upper bounds.
 
-        integer_vars : List[int] or None
+        integer_vars : List[int]
             A list containing the indices of the integrality
-            constrained variables. If None or empty list, all
+            constrained variables. If empty list, all
             variables are assumed to be continuous.
 
         Returns
@@ -375,8 +452,7 @@ class RbfSettings:
         """
         assert(dimension==len(var_lower))
         assert(dimension==len(var_upper))
-        assert((integer_vars is None) or (len(integer_vars) == 0) or
-               (max(integer_vars) < dimension))
+        assert((not integer_vars) or (max(integer_vars) < dimension))
 
         l_settings = copy.deepcopy(self)
 
@@ -390,7 +466,7 @@ class RbfSettings:
             l_settings.dynamism_clipping = 'median'
                 
         if (l_settings.domain_scaling == 'auto'):
-            if (integer_vars is not None):
+            if (integer_vars):
                 l_settings.domain_scaling = 'off'
             else:
                 # Compute the length of the domain of each variable

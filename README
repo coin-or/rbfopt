@@ -3,7 +3,7 @@
 #             Singapore University of Technology and Design
 #             International Business Machines Corporation
 #             nannicini@sutd.edu.sg, nannicini@us.ibm.com
-#  Last edit: 02/28/16
+#  Last edit: 03/16/16
 #
 #  (C) Copyright Singapore University of Technology and Design 2015.
 #  (C) Copyright International Business Machines Corporation 2016.
@@ -28,8 +28,12 @@ requirements.txt:
 
 Contents of the src/ directory:
 
-black_box.py:
-	The file implementing the user-defined black-box function.
+rbfopt_black_box.py:
+	Description of an abstract black-box function.
+rbfopt_black_box_example.py:
+	Example of an implementation of a simple black-box function.
+rbfopt_algorithm.py:
+        Main optimization algorithm, both serial and parallel.
 rbfopt_aux_problems.py:
 	Interface for the auxiliary problems solved during
 	the optimization process.
@@ -43,8 +47,6 @@ rbfopt_degreeX_models.py:
 	functions with minimum required polynomial degree X.
 rbfopt_model_selection.py:
 	Routines for automatic model selection.
-rbfopt.py:
-	Main module for the end-user of this library.
 rbfopt_settings.py:
 	Global and algorithmic settings.
 rbfopt_utils.py:
@@ -58,16 +60,14 @@ rbfopt_test_interface.py:
 	optimization test set. 
 test_functions.py:
 	Global optimization test functions.
+test_rbfopt_algorithm.py:
+	Testing module for rbfopt_algorithm.py.
 test_rbfopt_aux_problems.py:
 	Testing module for rbfopt_aux_problems.py.
-test_rbfopt_degree0_models.py:
-	Testing module for rbfopt_degree0_models.py.
-test_rbfopt_degree1_models.py:
-	Testing module for rbfopt_degree1_models.py.
+test_rbfopt_degreeX_models.py:
+	Testing module for rbfopt_degreeX_models.py.
 test_rbfopt_env.py:
 	Environment variables for testing environment.
-test_rbfopt.py:
-	Testing module for rbfopt.py.
 test_rbfopt_settings.py:
 	Testing module for rbfopt_settings.py.
 test_rbfopt_utils.py
@@ -84,17 +84,17 @@ make.bat:
 *.rst:
 	ReStructured Text files for the documentation.
 
+
 #--------------------------------------------------------------------------
 # Installation requirements
 #--------------------------------------------------------------------------
 
 This package requires the following software:
 
-Python 2.7.* (recommended Python 2.7.6)
+Python 2.7.* (latest 2.7.* release recommended)
 NumPy version >= 1.8.1
 SciPy version >= 0.13.3
-Pyomo version 4.1.10509
-pyDOE version >= 0.3.5
+Pyomo version 4.3.11388
 
 The software has been tested with the versions indicated above. It may
 work with earlier version and should work with subsequent version, if
@@ -103,7 +103,8 @@ they are backward compatible.
 Note that Python 3.* is not compatible with Python 2.7. While our
 library is Python 3 compliant and consistently uses "from __future__
 import [...]", the code has not been tested on Python 3 yet. We
-recommend using Python 2.7.
+recommend using Python 2.7. If for some reason you require Python 3,
+it should be very easy to port the code.
 
 The easiest way to install all the dependencies is via the Python
 module manager pip, using the command:
@@ -117,7 +118,6 @@ correctly. If your want to install them one at a time, you can try:
 pip install numpy
 pip install scipy
 pip install pyomo
-pip install pyDOE
 
 To build the documentation, you also need numpydoc:
 
@@ -162,20 +162,20 @@ The two packages above are optional.
 
 
 #--------------------------------------------------------------------------
-# Installation instructions
+# Installation instructions and getting started
 #--------------------------------------------------------------------------
 
-1) Install the required packages NumPy, SciPy, Pyomo, pyDOE as
+1) Install the required packages NumPy, SciPy, Pyomo, as
    indicated above. If you use pip, you can verify that they are
    present with the commands:
 
    pip show numpy
    pip show scipy
    pip show pyomo
-   pip show pyDOE
 
 2) Edit rbfopt_config.py to point to the correct location for the NLP
-   and MINLP solvers.
+   and MINLP solvers, using the MINLP_SOLVER_PATH and NLP_SOLVER PATH 
+   variables.
 
 3) Enjoy!
 
@@ -192,28 +192,58 @@ The two packages above are optional.
 
 5) Unit tests for the library can be executed by running:
    python2.7 -m unittest discover -s tests/
-   from the current (main) directory.
+   from the current (main) directory. This may take some time. If some
+   of the tests fail, the library may or may not work correctly. Some
+   of the test failures are relatively harmless. You are advised to
+   contact the mailing list (see below) if you are unsure about some
+   test failure.
 
-5) To run the library on a user-defined black-box function, modify the
-   file src/black_box.py accordingly, and run:
-   python2.7 src/rbfopt_cl_interface.py
+5) To run the library on a user-defined black-box function, have a
+   look at the example in src/rbfopt_black_box_example.py. You can
+   implement a similar class (derived from rbfopt_black_box.BlackBox),
+   say in a file called my_black_box.py, and the alorithm can be
+   executed on it by running:
+
+   python2.7 src/rbfopt_cl_interface.py -m my_black_box.py
 
    See:
    python2.7 src/rbfopt_cl_interface.py --help
    for more details on command-line options.
 
-   By redefining the attributes and methods of the class BlackBox of
-   black_box.py, you can define your own black-box function.
+   (If no module is specified with the -m option, the algorithm will
+   be applied to rbfopt_black_box_example.py.)
 
 6) To take advantage of faster model selection procedures, you must
    have either IBM-ILOG Cplex or COIN-OR Clp available on your
-   machine. By default, the model selection procedure uses
-   Numpy. Using Cplex (via its Python library) or Clp (via CyLP) can
-   increase its speed dramatically. If one of these packages is
-   installed and available via the corresponding "import" Python
-   command (i.e. "import cplex" and "import cylp.cy"), you can select
-   the corresponding value for the option model_selection_solver.
+   machine. By default, the model selection procedure uses Numpy and
+   it can be slow on large problems. Using Cplex (via its Python
+   library) or Clp (via CyLP) can increase its speed dramatically. If
+   one of these packages is installed and available via the
+   corresponding "import" Python command (i.e. "import cplex" and
+   "import cylp.cy"), you can select the corresponding value for the
+   option model_selection_solver.
 
+
+#--------------------------------------------------------------------------
+# Parallel optimization
+#--------------------------------------------------------------------------
+
+RBFOpt supports asynchronous parallel optimization using Python's
+multiprocessing library. This mode is enabled whenever the parameter
+num_cpus is set to a value greater than 1. Black-box function
+evaluations as well as some of the heaviest computatations carried out
+by the algorithm will then be executed in parallel. Since the parallel
+computations are asynchronous, determinism cannot be guaranteed: in
+other words, if you execute the parallel optimizer twice in a row, you
+may (and often will) get different results, even if you provide the
+same random seed. This is because the order in which the computations
+will be completed may change, and this may impact the course of the
+algorithm.
+
+The default parameters of the algorithm are optimized for the serial
+optimization mode. Recommended parameters for the parallel
+optimization will be detailed in the future. For now, feel free to ask
+on the mailing list.
 
 #--------------------------------------------------------------------------
 # Documentation
@@ -241,6 +271,21 @@ version) can be built using the command:
 make latexpdf
 
 An online version of the documentation for the latest master branch of
-the code is available on ReadTheDocs:
+the code, and for the latest stable release, are available on
+ReadTheDocs at the following URLs:
 
 http://rbfopt.readthedocs.org/en/latest/
+http://rbfopt.readthedocs.org/en/stable/
+
+
+#--------------------------------------------------------------------------
+# Support
+#--------------------------------------------------------------------------
+
+The best place to ask question is the mailing list:
+
+rbfopt@list.coin-or.org
+
+You can subscribe at:
+
+http://list.coin-or.org/mailman/listinfo/rbfopt

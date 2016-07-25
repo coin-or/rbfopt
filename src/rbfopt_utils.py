@@ -15,13 +15,11 @@ from __future__ import absolute_import
 
 import sys
 import math
-import random
 import itertools
 import numpy as np
 import scipy.spatial as ss
 import rbfopt_config as config
 import rbfopt_aux_problems as aux
-import pyDOE
 from rbfopt_settings import RbfSettings
 
 
@@ -34,7 +32,7 @@ def get_rbf_function(settings):
     Parameters
     ----------
     
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     
     Returns
@@ -85,7 +83,7 @@ def get_degree_polynomial(settings):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     Returns
@@ -111,7 +109,7 @@ def get_size_P_matrix(settings, n):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -142,6 +140,7 @@ def get_all_corners(var_lower, var_upper):
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
 
@@ -179,6 +178,7 @@ def get_lower_corners(var_lower, var_upper):
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
 
@@ -212,6 +212,7 @@ def get_random_corners(var_lower, var_upper):
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
 
@@ -225,7 +226,7 @@ def get_random_corners(var_lower, var_upper):
     n = len(var_lower)
     node_pos = list()
     while (len(node_pos) < n+1):
-        point = [var_lower[i] if (random.random() <= 0.5) else var_upper[i]
+        point = [var_lower[i] if (np.random.rand() <= 0.5) else var_upper[i]
                  for i in range(n)]
         if (not node_pos or get_min_distance(point, node_pos) > 0):
             node_pos.append(point)
@@ -234,20 +235,56 @@ def get_random_corners(var_lower, var_upper):
     
 # -- end function
 
-def get_lhd_maximin_points(var_lower, var_upper):
+def get_uniform_lhs(n, num_samples):
+    """Generate random Latin Hypercube samples.
+
+    Generate points using Latin Hypercube sampling from the uniform
+    distribution in the unit hypercube.
+
+    Parameters
+    ----------
+    n : int
+        Dimension of the space, i.e. number of variables.
+
+    num_samples : num_samples
+        Number of samples to be generated.
+
+    Returns
+    -------
+    List[List[float]]
+        A list of n-dimensional points in the unit hypercube.
+    """
+    assert(n >= 0)
+    assert(num_samples >= 0)
+    # Generate integer LH in [0, num_samples]
+    perm = [np.random.permutation(num_samples) for i in range(n)]
+    int_lh = [[val[j] for val in perm] for j in range(num_samples)]
+    # Map integer LH back to unit hypercube, and perturb points so that
+    # they are uniformly distributed in the corresponding intervals
+    lhs = [[np.random.uniform(i/num_samples, (i + 1)/num_samples)
+            for i in point] for point in int_lh]
+    return lhs
+
+# -- end function
+
+def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     """Compute a latin hypercube design with maximin distance.
 
     Compute a list of (n+1) points in the given box, where n is the
     dimension of the space. The selected points are picked according
     to a random latin hypercube design with maximin distance
-    criterion. This function relies on the library pyDOE.
+    criterion. 
 
     Parameters
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
+
+    num_trials : int
+        Maximum number of generated LHs to choose from.
 
     Returns
     -------
@@ -261,15 +298,23 @@ def get_lhd_maximin_points(var_lower, var_upper):
         # For unidimensional problems, simply take the two endpoints
         # of the interval as starting points
         return [var_lower, var_upper]
-    # Otherwise, generate the LHD
-    lhd = pyDOE.lhs(n, n+1, 'maximin')
+    # Otherwise, generate a bunch of Latin Hypercubes, and rank them
+    lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
+    # Indices of upper triangular matrix (without the diagonal)
+    indices = np.triu_indices(n + 1, 1)
+    # Compute distance matrix of points to themselves, get upper
+    # triangular part of the matrix, and get minimum
+    dist_values = [np.amin(ss.distance.cdist(mat, mat)[indices])
+                   for mat in lhs]
+    lhd = lhs[dist_values.index(max(dist_values))]
     node_pos = [[var_lower[i] + (var_upper[i] - var_lower[i])*lhd_point[i] 
                  for i in range(n)] for lhd_point in lhd]
     return node_pos
 
 # -- end function
 
-def get_lhd_corr_points(var_lower, var_upper):
+def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
+
     """Compute a latin hypercube design with min correlation.
 
     Compute a list of (n+1) points in the given box, where n is the
@@ -281,8 +326,12 @@ def get_lhd_corr_points(var_lower, var_upper):
     ----------
     var_lower : List[float]
         List of lower bounds of the variables.
+
     var_upper : List[float]
         List of upper bounds of the variables.
+
+    num_trials : int
+        Maximum number of generated LHs to choose from.
 
     Returns
     -------
@@ -296,8 +345,15 @@ def get_lhd_corr_points(var_lower, var_upper):
         # For unidimensional problems, simply take the two endpoints
         # of the interval as starting points
         return [var_lower, var_upper]
-    # Otherwise, generate the LHD
-    lhd = pyDOE.lhs(n, n+1, 'corr')
+    # Otherwise, generate a bunch of Latin Hypercubes, and rank them
+    lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
+    # Indices of upper triangular matrix (without the diagonal)
+    indices = np.triu_indices(n, 1)
+    # Compute correlation matrix of points to themselves, get upper
+    # triangular part of the matrix, and get minimum
+    corr_values = [abs(np.amax(np.corrcoef(mat, rowvar = 0)[indices]))
+                   for mat in lhs]
+    lhd = lhs[corr_values.index(min(corr_values))]
     node_pos = [[var_lower[i] + (var_upper[i] - var_lower[i])*lhd_point[i] 
                  for i in range(n)] for lhd_point in lhd]
     return node_pos
@@ -312,7 +368,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     var_lower : List[float]
@@ -321,10 +377,10 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     var_upper : List[float]
         List of upper bounds of the variables.
 
-    integer_vars : List[int] or None
+    integer_vars : List[int]
         A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
-        be continuous.
+        variables. If empty list, all variables are assumed to be
+        continuous.
 
     Returns
     -------
@@ -359,7 +415,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         elif (settings.init_strategy == 'lhd_corr'):
             nodes = get_lhd_corr_points(var_lower, var_upper)
 
-        if (integer_vars is not None and len(integer_vars) > 0):
+        if (integer_vars):
             for i in range(len(nodes)):
                 for j in integer_vars:
                     nodes[i][j] = round(nodes[i][j])
@@ -380,16 +436,16 @@ def round_integer_vars(point, integer_vars):
     """Round a point to the closest integer.
 
     Round the values of the integer-constrained variables to the
-    closest integer value.
+    closest integer value. The values are rounded in-place.
 
     Parameters
     ----------
     point : List[float]
         The point to be rounded.
-    integer_vars : List[int] or None
-        A list of indices of integer variables, or None.
+    integer_vars : List[int]
+        A list of indices of integer variables.
     """
-    if (integer_vars is not None and integer_vars):
+    if (integer_vars):
         assert(max(integer_vars)<len(point))
         for i in integer_vars:
             point[i] = round(point[i])
@@ -411,12 +467,12 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
     var_upper : List[float]
         List of upper bounds of the variables.
 
-    integer_vars : List[int] or None
+    integer_vars : List[int]
         A list containing the indices of the integrality constrained
-        variables. If None or empty list, all variables are assumed to
-        be continuous.
+        variables. If empty list, all variables are assumed to be
+        continuous.
     """
-    if (integer_vars is not None and integer_vars):
+    if (integer_vars):
         assert(len(var_lower)==len(var_upper))
         assert(max(integer_vars)<len(var_lower))
         for i in integer_vars:
@@ -572,7 +628,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
     
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings.
+    settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
     n : int
@@ -633,7 +689,7 @@ def get_matrix_inverse(settings, Amat):
     
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     Amat : numpy.matrix
         The matrix to invert.
@@ -677,7 +733,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings.
+    settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
     n : int
@@ -725,7 +781,7 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings.
+    settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
     point : List[float]
@@ -773,19 +829,19 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
 # -- end function
 
 def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
-                      compute_min_dist = False):
+                      return_distances = 'no'):
     """Evaluate the RBF interpolant at all points in a given list.
 
     Evaluate the RBF interpolant at all points in a given list. This
     version uses numpy and should be faster than individually
     evaluating the RBF at each single point, provided that the list of
-    points is large enough. It also computes the minimum distance of
-    each point from the interpolation nodes, if requested (since this
-    comes almost for free).
+    points is large enough. It also computes the distance or the
+    minimum distance of each point from the interpolation nodes, if
+    requested, since this comes almost for free.
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings.
+    settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
     points : List[List[float]]
@@ -809,9 +865,10 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
         The h coefficients of the RBF interpolant, corresponding to he
         polynomial. List of dimension given by get_size_P_matrix().
 
-    compute_min_dist : bool
-        Compute and return minimum distance of points to the
-        interpolation nodes.
+    return_distances : string
+        If 'no', do nothing. If 'min', return the minimum distance of
+        each point to interpolation nodes. If 'all', return the full
+        distance matrix to the interpolation nodes.
 
     Returns
     -------
@@ -819,6 +876,7 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
         Value of the RBF interpolant at each point; if
         compute_min_dist is True, additionally returns the minimum
         distance of each point from the interpolation nodes.
+
     """
     assert(points)
     assert(len(rbf_lambda)==k)
@@ -845,9 +903,11 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     else:
         part2 = np.zeros(len(point_mat))
     part3 = rbf_h[-1] if (p > 0) else 0.0
-    if (compute_min_dist):
+    if (return_distances == 'min'):
         return ((part1 + part2 + part3).tolist(), 
                 (np.amin(dist_mat, 1)).tolist())
+    elif (return_distances == 'all'):
+        return ((part1 + part2 + part3).tolist(), dist_mat)
     else:
         return (part1 + part2 + part3).tolist()
 
@@ -863,7 +923,7 @@ def get_fast_error_bounds(settings, value):
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     value : float
         The value for which the error interval should be computed.
@@ -882,6 +942,29 @@ def get_fast_error_bounds(settings, value):
 
 # -- end function
 
+def compute_gap(settings, fmin, is_best_fast):
+    """Compute the optimality gap w.r.t. the target value.
+
+    Returns
+    -------
+    float
+        The current optimality gap, i.e. relative distance from target
+        value.
+    """
+    assert(isinstance(settings, RbfSettings))    
+    # Denominator of errormin
+    gap_den = (abs(settings.target_objval) 
+               if (abs(settings.target_objval) >= settings.eps_zero)
+               else 1.0)
+    # Shift due to fast function evaluation
+    gap_shift = (get_fast_error_bounds(settings, fmin)[1]
+                 if is_best_fast else 0.0)
+    # Compute current minimum distance from the optimum
+    gap = ((fmin + gap_shift - settings.target_objval) /
+           gap_den)
+    return gap
+# -- end function
+
 def transform_function_values(settings, node_val, fmin, fmax,
                               fast_node_index = list()):
     """Rescale function values.
@@ -893,7 +976,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
     Parameters
     ----------
 
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
        Global and algorithmic settings.
 
     node_val : List[float]
@@ -984,7 +1067,7 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     var_lower : List[float]
@@ -1041,7 +1124,7 @@ def transform_domain_bounds(settings, var_lower, var_upper):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     var_lower : List[float]
         List of lower bounds of the variables.
@@ -1116,7 +1199,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
     n : int
         Dimension of the problem, i.e. the space where the point lives.
@@ -1163,7 +1246,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1250,7 +1333,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1316,5 +1399,71 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
                           for h in range(k+1) for j in range(k+1))
 
     return bumpiness
-
 # -- end function
+
+def results_ready(results):
+    """Check if some asynchronous results completed.
+    
+    Given a list containing results of asynchronous computations
+    dispatched to a worker pool, verify if some of them are ready for
+    processing.
+
+    Parameters
+    ----------
+    results : List[(multiprocessing.pool.AsyncResult, any)]
+        A list of tasks, where each task is a list and the first
+        element is the output of a call to apply_async. The other
+        elements of the list will never be scanned by this function,
+        and they could be anything.
+
+    Returns
+    -------
+    bool
+        True if at least one result has completed.
+    """
+    for res in results:
+        if res[0].ready():
+            return True
+    return False
+# -- end if
+
+def get_ready_indices(results):
+    """Get indices of results of async computations that are ready.
+    
+    Given a list containing results of asynchronous computations
+    dispatched to a worker pool, obtain the index of computations that
+    have concluded.
+
+    Parameters
+    ----------
+    results : List[(multiprocessing.pool.AsyncResult, any)]
+        A list of tasks, where each task is a list and the first
+        element is the output of a call to apply_async. The other
+        elements of the list will never be scanned by this function,
+        and they could be anything.
+
+    Returns
+    -------
+    List[int]
+        List of indices of computations that completed, from the
+        largest to the smallest.
+
+    """
+    ready = list()
+    for i in reversed(range(len(results))):
+        if results[i][0].ready():
+            ready.append(i)
+    return ready
+# -- end if
+
+def init_rand_seed(seed):
+    """Initialize the random seed.
+
+    Parameters
+    ----------
+    seed : any
+        A hashable object that can be used to initialize numpy's
+        internal random number generator.
+    """
+    np.random.seed(seed)
+# -- end if

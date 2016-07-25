@@ -11,9 +11,10 @@ Contents:
 .. toctree::
    :maxdepth: 4
 
-   black_box
-   rbfopt
+   rbfopt_algorithm
    rbfopt_aux_problems
+   rbfopt_black_box
+   rbfopt_black_box_example
    rbfopt_cl_interface
    rbfopt_config
    rbfopt_degree0_models

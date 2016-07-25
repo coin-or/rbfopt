@@ -39,7 +39,7 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -115,7 +115,7 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -175,8 +175,9 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
         loo_error += abs(predicted_val - rm_node_val)
 
         # Update the node left out
-        cv_node_pos[i], rm_node_pos = rm_node_pos, cv_node_pos[i]
-        cv_node_val[i], rm_node_val = rm_node_val, cv_node_val[i]
+        if (i < k - 1):
+            cv_node_pos[i], rm_node_pos = rm_node_pos, cv_node_pos[i]
+            cv_node_val[i], rm_node_val = rm_node_val, cv_node_val[i]
 
     return loo_error/num_iterations
 
@@ -195,7 +196,7 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -338,7 +339,7 @@ def get_model_quality_estimate_clp(settings, n, k, node_pos, node_val,
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int
@@ -487,7 +488,7 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
 
     Parameters
     ----------
-    settings : rbfopt_settings.RbfSettings
+    settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
     n : int

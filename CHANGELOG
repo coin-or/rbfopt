@@ -1,3 +1,77 @@
+2016-07-25  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 2.0 released.
+	* rbfopt_aux_problems.py (global_search, pure_global_search):
+	Restructured to allow for 'genetic', 'sampling' and 'solver'
+	solution methods..
+	* rbfopt_aux_problem.py (MetricSRSMObj): The option
+	modified_msrsm_score now determines the weight for the objective
+	function component of the score: the classical MSRSM is obtained
+	setting it to False, the default is True.
+
+2016-07-20  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Removed the possibility of setting integer_vars to None. It now
+	has to be empty if there are no integer variables.
+	The argument integer_vars now always appears immediately after
+	var_upper.
+	* rbfopt_algorithm.py (__init__): Resolved a bug in handling fixed
+	variables with integer variables.
+	* rbfopt_aux_algorithm.py (GutmannHkObj): Improved numerical
+	stability of formulas.
+
+2016-07-19  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_settings.py: Added global_search_method option to allow
+	for solution of auxiliary subproblems not based on solvers.
+	* rbfopt_aux_problems.py (ga_optimize, ga_mate, ga_mutate): New
+	functions for genetic algorithm, which can be used instead of the
+	solvers.
+	* rbfopt_aux_problems.py (MetricSRSMObj): Reworked for faster
+	computation.
+	* rbfopt_aux_problem.py (MaximinDistanceObj, GutmannHkObj)
+	(GutmannMukObj): New classes to allow solution of auxiliary
+	problems via genetic algorithms.
+
+2016-07-14  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Updated dependency to Pyomo 4.3.11388.
+	* rbfopt_config.py: Added MINLP_SOLVER_PATH and NLP_SOLVER_PATH
+	options.
+	* rbfopt_aux_problems.py: Now use PATH option.
+	* rbfopt_algorithm.py: Using binary mode to load/save state files
+	to fix issues on Windows.
+
+2016-05-05  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_settings.py: Added save_state_interval and
+	save_state_file settings.
+	* rbfopt_algorithm.py (optimize_serial, optimize_parallel):
+	Supports periodic state save according to the two options above.
+
+2016-04-20  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (__init__, optimize): Fixed variables no
+	longer cause numerical issues and are correctly handled.
+
+2016-03-17  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (update_log): Log file format change to fit
+	within 80 characters, and print elapsed time.
+	
+2016-03-16  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (OptAlgorithm.optimize_parallel): Added
+	parallel version of the optimization engine.
+	* rbfopt_algorithm.py (OptAlgorithm.optimize_serial): Code for the
+	serial (standard) optimizer was moved here.
+	* rbfopt_algorithm.py (optimize): Now simply redirects to either
+	the serial or parallel version.
+	* rbfopt_black_box.py (BlackBox): Added abstract class to define a
+	black box optimization problem.
+	* rbfopt_black_box_example.py (BlackBox): Added an example of an
+	implementation of the BlackBox abstract class.
+	* rbfopt_utils.py: Added several utility functions for parallel
+	optimization.
+	* README: Documentation updated to discuss the parallel optimizer.
+	
+2016-03-07  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (OptAlgorithm): Added class for optimization
+	algorithm. Allows saving/loading algorithm state.
+	* rbfopt.py (rbf_optimize): Now simply redirects to OptAlgorithm.
+	
 2016-02-28  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* test_rbfopt.py: Moved to tests/rbfopt_test_interface.py.
 	* tests/: Added unit tests for all modules to documentation.
