@@ -192,7 +192,7 @@ class RbfSettings:
         optimize the global search step or infstep, when the genetic
         global search method is chosen. The final population is
         computed as the minimum population + n/5, where n is the
-        number of decision variables. Default 200.
+        number of decision variables. Default 400.
 
     ga_num_generations : int
         Number of generations for the genetic algorithm used to
@@ -301,7 +301,7 @@ class RbfSettings:
                  algorithm = 'MSRSM',
                  targetval_clipping = True,
                  global_search_method = 'genetic',
-                 ga_base_population_size = 200,
+                 ga_base_population_size = 400,
                  ga_num_generations = 20,
                  num_samples_aux_problems = 1000,
                  modified_msrsm_score = True,

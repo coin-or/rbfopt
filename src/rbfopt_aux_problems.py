@@ -824,7 +824,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
 
     # Derived parameters. Since the best individual will always remain
     # and mutate, there is a -1 in the count for new individuals.
-    num_surviving = population_size//3
+    num_surviving = population_size//4
     num_new = population_size - 2*num_surviving - 1
 
     # Generate boolean vector of integer variables for convenience
@@ -846,7 +846,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
         # Compute fitness score to determine remaining individuals
         fitness_val = objfun(population)
         rank = sorted([(fitness_val[i], i) for i in range(population_size)])
-        best_individuals = [population[i[1]] for i in rank[:num_surviving]]
+        best_individuals = [population[r[1]] for r in rank[:num_surviving]]
         # Crossover: select how mating is done, then create offspring
         father = [best_individuals[i] 
                   for i in np.random.permutation(num_surviving)]
