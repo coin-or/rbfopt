@@ -752,6 +752,11 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     model.var_lower = Param(model.N, initialize=var_lower_param)
     model.var_upper = Param(model.N, initialize=var_upper_param)
 
+    # Adjust parameters to avoid zero denominators in expressions
+    if (fmax <= fmin + settings.eps_zero):
+        fmax = fmin + 1
+    if (dist_max <= dist_min + settings.eps_zero):
+        dist_min = dist_max - 1
     # Minimum and maximum distance
     model.dist_min = Param(initialize=dist_min)
     model.dist_max = Param(initialize=dist_max)

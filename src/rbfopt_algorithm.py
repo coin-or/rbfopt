@@ -1346,8 +1346,8 @@ class OptAlgorithm:
                                           self.node_pos, None)
             else:
                 # If that does not work (unlikely), generate a random point
-                next_p = [random.uniform(self.var_lower[i], 
-                                         self.var_upper[i])
+                next_p = [np.random.uniform(self.var_lower[i], 
+                                            self.var_upper[i])
                           for i in range(self.n)]
             ru.round_integer_vars(next_p, self.integer_vars)
             if (ru.get_min_distance(next_p, self.node_pos) >
