@@ -19,11 +19,14 @@ import itertools
 import numpy as np
 import scipy.spatial as ss
 import rbfopt_config as config
-import rbfopt_aux_problems as aux
 from rbfopt_settings import RbfSettings
 
+cimport numpy as np
+from libc.math cimport log, sqrt
 
-def get_rbf_function(settings):
+DTYPE = np.float64
+
+cpdef get_rbf_function(settings):
     """Return a radial basis function.
 
     Return the radial basis function appropriate function as indicated
@@ -51,27 +54,27 @@ def get_rbf_function(settings):
         return _multiquadric
 
 # -- List of radial basis functions
-def _cubic(r):
+cpdef double _cubic(double r):
     """Cubic RBF: :math: `f(x) = x^3`"""
     assert(r >= 0)
     return r*r*r
 
-def _thin_plate_spline(r):
+cpdef double _thin_plate_spline(double r):
     """Thin plate spline RBF: :math: `f(x) = x^2 \log x`"""
     assert(r >= 0)
     if (r == 0.0):
         return 0.0
-    return math.log(r)*r*r
+    return log(r)*r*r
 
-def _linear(r):
+cpdef double _linear(double r):
     """Linear RBF: :math: `f(x) = x`"""
     assert(r >= 0)
     return r
 
-def _multiquadric(r):
+cpdef double _multiquadric(double r):
     """Multiquadric RBF: :math: `f(x) = \sqrt{x^2 + \gamma^2}`"""
     assert(r >= 0)
-    return math.sqrt(r*r + config.GAMMA*config.GAMMA)
+    return sqrt(r*r + config.GAMMA*config.GAMMA)
 # -- end list of radial basis functions
 
 def get_degree_polynomial(settings):
@@ -650,7 +653,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
     assert(len(node_pos)==k)
     assert(isinstance(settings, RbfSettings))
 
-    ##### OLD VERSION #####
+    #### OLD VERSION ####
     # rbf = get_rbf_function(settings)
     # p = get_size_P_matrix(settings, n)
     # # Create matrix P.
@@ -667,9 +670,11 @@ def get_rbf_matrix(settings, n, k, node_pos):
     # else:
     #     raise ValueError('Rbf "' + settings.rbf + '" not implemented yet')
     #
+    #
     # # Now create matrix Phi. Phi is ((k) x (k))
     # Phi = [ [rbf(distance(p1, p2)) for p2 in node_pos]
     #         for p1 in node_pos ]
+    #
     # # Put together to obtain [Phi P; P^T 0].
     # A = ([ Phi[i] + P[i] for i in range(k) ] +
     #      [ PTr[i] + [0 for j in range(p)] for i in range(p)])
@@ -696,7 +701,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
     Phi = Phi.reshape(-1)
     for i, v in enumerate(Phi):
         Phi[i] = rbf(v)
-    Phi = Phi.reshape(np.shape(node_pos_arr)[0], -1)
+    Phi = Phi.reshape(np.shape(node_pos_arr)[0],-1)
 
     # Put together to obtain [Phi P; P^T 0].
     A = np.vstack((np.hstack((Phi, P)), np.hstack((PTr, np.zeros((p, p))))))
@@ -1263,172 +1268,6 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
 
 # -- end function
 
-def get_min_bump_node(settings, n, k, Amat, node_val,
-                      fast_node_index, fast_node_err_bounds, 
-                      target_val):
-    """Compute the bumpiness obtained by moving an interpolation point.
-
-    Compute the bumpiness of the interpolant obtained by moving a
-    single node (the one that yields minimum bumpiness, which is
-    determined by this function) within target_val plus or minus
-    error, to target_val.
-
-    Parameters
-    ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
-        Global and algorithmic settings.
-
-    n : int
-        Dimension of the problem, i.e. the space where the point lives.
-
-    k : int
-        Number of nodes, i.e. interpolation points.
-
-    Amat : numpy.matrix
-        The matrix A = [Phi P; P^T 0] of equation (3) in the paper by
-        Costa and Nannicini.
-
-    node_val : List[float]
-        List of values of the function at the nodes.
-
-    fast_node_index : List[int]
-        List of indices of nodes whose function value should be
-        considered variable withing the allowed range.
-    
-    fast_node_err_bounds : List[int]
-        Allowed deviation from node values for nodes affected by
-        error. This is a list of tuples (lower, upper) of the same
-        length as fast_node_index.
-
-    target_val : float
-        Target function value at which we want to move the node.
-
-    Returns
-    -------
-    (int, float)
-        The index of the node and corresponding bumpiness value
-        indicating the sought node in the list node_pos.
-    """
-    assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(isinstance(Amat, np.matrix))
-    assert(len(fast_node_index)==len(fast_node_err_bounds))
-
-    # Extract the matrices Phi and P from
-    Phimat = Amat[:k, :k]
-    Pmat = Amat[:k, k:]
-    
-    min_bump_index, min_bump = None, float('Inf')
-    for (pos, i) in enumerate(fast_node_index):
-        # Check if we are within the allowed range
-        if (node_val[i] + fast_node_err_bounds[pos][0] <= target_val and
-            node_val[i] + fast_node_err_bounds[pos][1] >= target_val):
-            # If so, compute bumpiness. Save original data.
-            orig_node_val = node_val[i]
-            orig_node_err_bounds = fast_node_err_bounds[pos]
-            # Fix this node at the target value.
-            node_val[i] = target_val
-            fast_node_err_bounds[pos] = (0.0, 0.0)
-            # Compute RBF interpolant.
-            # Get coefficients for the exact RBF first
-            (rbf_l, rbf_h) = get_rbf_coefficients(settings, n, k, 
-                                                  Amat, node_val)
-            # And now the noisy version
-            (rbf_l,
-             rbf_h) = aux.get_noisy_rbf_coefficients(settings, n, k, Phimat,
-                                                     Pmat, node_val,
-                                                     fast_node_index,
-                                                     fast_node_err_bounds,
-                                                     rbf_l, rbf_h)
-            # Restore original values
-            node_val[i] = orig_node_val
-            fast_node_err_bounds[pos] = orig_node_err_bounds
-            # Compute bumpiness using the formula \lambda^T \Phi \lambda
-            bump = math.fsum(rbf_l[h]*Phimat[h,j]*rbf_l[j]
-                             for h in range(k) for j in range(k))
-            if (bump < min_bump):
-                min_bump_index, min_bump = i, bump
-
-    return (min_bump_index, min_bump)
-
-# -- end function
-
-def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
-                      fast_node_index, fast_node_err_bounds, target_val):
-    """Compute the bumpiness with a new interpolation point.
-
-    Computes the bumpiness of the interpolant obtained by setting a
-    new node in a specified location, at value target_val.
-
-    Parameters
-    ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
-        Global and algorithmic settings.
-
-    n : int
-        Dimension of the problem, i.e. the space where the point lives.
-
-    k : int
-        Number of nodes, i.e. interpolation points.
-
-    node_pos : List[List[float]]
-        Location of current interpolation nodes.
-
-    node_val : List[float]
-        List of values of the function at the nodes.
-
-    new_node : List[float]
-        Location of new interpolation node.
-
-    fast_node_index : List[int]
-        List of indices of nodes whose function value should be
-        considered variable withing the allowed range.
-    
-    fast_node_err_bounds : List[int]
-        Allowed deviation from node values for nodes affected by
-        error. This is a list of tuples (lower, upper) of the same
-        length as fast_node_index.
-
-    target_val : float
-        Target function value at which we want to move the node.
-    
-    Returns
-    -------
-    float
-        The bumpiness of the interpolant having a new node at the
-        specified location, with value target_val.
-    """
-    assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(len(node_pos)==k)
-    assert(len(fast_node_index)==len(fast_node_err_bounds))
-    assert(new_node is not None)
-
-    # Add the new node to existing ones
-    n_node_pos = node_pos + [new_node]
-    n_node_val = node_val + [target_val]
-
-    # Compute the matrices necessary for the algorithm
-    Amat = get_rbf_matrix(settings, n, k + 1, n_node_pos)
-
-    # Get coefficients for the exact RBF
-    (rbf_l, rbf_h) = get_rbf_coefficients(settings, n, k + 1, Amat,
-                                          n_node_val)
-
-    # Get RBF coefficients for noisy interpolant
-    (rbf_l, rbf_h) = aux.get_noisy_rbf_coefficients(settings, n, k + 1, 
-                                                    Amat[:(k+1), :(k+1)],
-                                                    Amat[:(k+1), (k+1):],
-                                                    n_node_val,
-                                                    fast_node_index,
-                                                    fast_node_err_bounds,
-                                                    rbf_l, rbf_h)
-
-    bumpiness = math.fsum(rbf_l[h]*Amat[h,j]*rbf_l[j]
-                          for h in range(k+1) for j in range(k+1))
-
-    return bumpiness
-# -- end function
 
 def results_ready(results):
     """Check if some asynchronous results completed.

@@ -14,7 +14,11 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyomo.environ import *
-import rbfopt_utils as ru
+try:
+    import cython_rbfopt.rbfopt_utils as ru
+    print('Imported Cython version of rbfopt_utils')
+except ImportError:
+    import rbfopt_utils as ru
 import numpy as np
 import rbfopt_config as config
 from rbfopt_settings import RbfSettings

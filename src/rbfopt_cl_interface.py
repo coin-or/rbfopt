@@ -147,7 +147,7 @@ def rbfopt_cl_interface(args, black_box):
         alg.save_to_file(args['dump_state'])
         print('Dumped state to file {:s}'.format(args['dump_state']),
               file = output_stream)
-    output_stream.close()
+    #output_stream.close()
 
 # -- end function
 

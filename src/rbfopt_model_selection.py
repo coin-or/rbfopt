@@ -27,7 +27,11 @@ try:
 except ImportError:
     clp_available = False
 import rbfopt_config as config
-import rbfopt_utils as ru
+try:
+    import cython_rbfopt.rbfopt_utils as ru
+    print('Imported Cython version of rbfopt_utils')
+except ImportError:
+    import rbfopt_utils as ru
 from rbfopt_settings import RbfSettings
 
 def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
