@@ -22,8 +22,16 @@ import os
 import pickle
 import numpy as np
 from multiprocessing import Pool
-import rbfopt_utils as ru
-import rbfopt_aux_problems as aux
+try:
+    import cython_rbfopt.rbfopt_utils as ru
+    print('Imported Cython version of rbfopt_utils')
+except ImportError:
+    import rbfopt_utils as ru
+try:
+    import cython_rbfopt.rbfopt_aux_problems as aux
+    print('Imported Cython version of rbfopt_aux_problems')
+except ImportError:
+    import rbfopt_aux_problems as aux
 import rbfopt_model_selection as ms
 import rbfopt_config as config
 from rbfopt_black_box import BlackBox
