@@ -1,3 +1,13 @@
+2016-10-02  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_cl_interface.py (register_options): Options are now
+	grouped into Algorithmic settings and Execution settings.
+	* rbfopt_cl_interface.py (rbfopt_cl_interface): Added option to
+	read initialization points from file.
+	* rbfopt_algorithm.py (restart): Now adds user-provided points to
+	the initial sample. It is no longer possible to provide a full
+	initial sample to the algorithm, and employ user-provided points
+	instead of the generated sample.
+	
 2016-07-25  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 2.0 released.
 	* rbfopt_aux_problems.py (global_search, pure_global_search):
