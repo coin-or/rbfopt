@@ -22,7 +22,7 @@ import rbfopt_config as config
 from rbfopt_settings import RbfSettings
 
 cimport numpy as np
-from libc.math cimport log, sqrt
+from libc.math cimport log, sqrt, floor, ceil
 
 DTYPE = np.float64
 
@@ -153,17 +153,21 @@ def get_all_corners(var_lower, var_upper):
         All the corner points.
     """
     assert(len(var_lower)==len(var_upper))
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
 
-    node_pos = list()
+    n = len(var_lower)
+    node_pos = np.empty([2 ** n, n], DTYPE)
+    i = 0
     # Generate all corners
     for corner in itertools.product('lu', repeat=len(var_lower)):
-        point = list()
-        for (i, bound) in enumerate(corner):
-            if (bound == 'l'):
-                point.append(var_lower[i])
+        for (j, bound) in enumerate(corner):
+            if bound == 'l':
+                node_pos[i, j] = var_lower[j]
+                i += 1
             else:
-                point.append(var_upper[i])
-        node_pos.append(point)
+                node_pos[i, j] = var_upper[j]
+                i += 1
 
     return node_pos
 
@@ -191,14 +195,16 @@ def get_lower_corners(var_lower, var_upper):
         The lower corner points.
     """
     assert(len(var_lower)==len(var_upper))
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+
+    n = len(var_lower)
 
     # Make sure we copy the lists instead of copying just a reference
-    node_pos = [ list(var_lower) ]
+    node_pos = np.tile(var_lower, (n + 1, 1))
     # Generate adjacent corners
-    for i in range(len(var_lower)):
-        corner = list(var_lower)
-        corner[i] = var_upper[i]
-        node_pos.append(corner)
+    for i in range(n):
+        node_pos[i + 1, i] = var_upper[i]
 
     return node_pos
 
@@ -225,6 +231,8 @@ def get_random_corners(var_lower, var_upper):
         A list of random corner points.
     """
     assert(len(var_lower)==len(var_upper))
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
 
     n = len(var_lower)
     node_pos = list()
@@ -234,7 +242,7 @@ def get_random_corners(var_lower, var_upper):
         if (not node_pos or get_min_distance(point, node_pos) > 0):
             node_pos.append(point)
 
-    return node_pos
+    return np.array(node_pos, DTYPE)
     
 # -- end function
 
@@ -260,12 +268,12 @@ def get_uniform_lhs(n, num_samples):
     assert(n >= 0)
     assert(num_samples >= 0)
     # Generate integer LH in [0, num_samples]
-    perm = [np.random.permutation(num_samples) for i in range(n)]
-    int_lh = [[val[j] for val in perm] for j in range(num_samples)]
+    int_lh = np.array([np.random.permutation(num_samples) for i in range(n)])
+    int_lh = int_lh.T
     # Map integer LH back to unit hypercube, and perturb points so that
     # they are uniformly distributed in the corresponding intervals
-    lhs = [[np.random.uniform(i/num_samples, (i + 1)/num_samples)
-            for i in point] for point in int_lh]
+    lhs = np.array([[np.random.uniform(i/num_samples, (i + 1)/num_samples)
+            for i in point] for point in int_lh])
     return lhs
 
 # -- end function
@@ -295,12 +303,14 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
         List of points in the latin hypercube design.
     """
     assert(len(var_lower)==len(var_upper))
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
 
     n = len(var_lower)
     if (n == 1):
         # For unidimensional problems, simply take the two endpoints
         # of the interval as starting points
-        return [var_lower, var_upper]
+        return np.array([var_lower, var_upper])
     # Otherwise, generate a bunch of Latin Hypercubes, and rank them
     lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
     # Indices of upper triangular matrix (without the diagonal)
@@ -310,8 +320,8 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     dist_values = [np.amin(ss.distance.cdist(mat, mat)[indices])
                    for mat in lhs]
     lhd = lhs[dist_values.index(max(dist_values))]
-    node_pos = [[var_lower[i] + (var_upper[i] - var_lower[i])*lhd_point[i] 
-                 for i in range(n)] for lhd_point in lhd]
+    node_pos = lhd * (var_upper-var_lower) + var_lower
+
     return node_pos
 
 # -- end function
@@ -342,12 +352,14 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
         List of points in the latin hypercube design.
     """
     assert(len(var_lower)==len(var_upper))
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
 
     n = len(var_lower)
     if (n == 1):
         # For unidimensional problems, simply take the two endpoints
         # of the interval as starting points
-        return [var_lower, var_upper]
+        return np.array([var_lower, var_upper])
     # Otherwise, generate a bunch of Latin Hypercubes, and rank them
     lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
     # Indices of upper triangular matrix (without the diagonal)
@@ -357,8 +369,8 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
     corr_values = [abs(np.amax(np.corrcoef(mat, rowvar = 0)[indices]))
                    for mat in lhs]
     lhd = lhs[corr_values.index(min(corr_values))]
-    node_pos = [[var_lower[i] + (var_upper[i] - var_lower[i])*lhd_point[i] 
-                 for i in range(n)] for lhd_point in lhd]
+    node_pos = lhd * (var_upper-var_lower) + var_lower
+
     return node_pos
 
 # -- end function
@@ -400,6 +412,9 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     """
     assert(len(var_lower)==len(var_upper))
     assert(isinstance(settings, RbfSettings))
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
 
     # We must make sure points are linearly independent; if they are
     # not, we perform a given number of iterations
@@ -419,12 +434,10 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
             nodes = get_lhd_corr_points(var_lower, var_upper)
 
         if (integer_vars):
-            for i in range(len(nodes)):
-                for j in integer_vars:
-                    nodes[i][j] = round(nodes[i][j])
+                for i in integer_vars:
+                    np.around(nodes[:,i],out=nodes[:,i])
 
-        Amat = np.row_stack(nodes)
-        U, s, V = np.linalg.svd(Amat)
+        U, s, V = np.linalg.svd(nodes)
         if (min(s) > settings.eps_zero):
             dependent = False
 
@@ -448,8 +461,10 @@ def round_integer_vars(point, integer_vars):
     integer_vars : List[int]
         A list of indices of integer variables.
     """
+    assert (isinstance(point, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
     if (integer_vars):
-        assert(max(integer_vars)<len(point))
+        assert(np.amax(integer_vars)<len(point))
         for i in integer_vars:
             point[i] = round(point[i])
 
@@ -475,12 +490,15 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
         variables. If empty list, all variables are assumed to be
         continuous.
     """
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
     if (integer_vars):
         assert(len(var_lower)==len(var_upper))
         assert(max(integer_vars)<len(var_lower))
         for i in integer_vars:
-            var_lower[i] = math.floor(var_lower[i])
-            var_upper[i] = math.ceil(var_upper[i])
+            var_lower[i] = floor(var_lower[i])
+            var_upper[i] = ceil(var_upper[i])
             if (var_upper[i] < var_lower[i]):
                 # Swap the two bounds
                 var_lower[i], var_upper[i] = var_upper[i], var_lower[i]
@@ -503,7 +521,7 @@ def norm(p):
         The norm of the point.
     """
     norm = math.fsum(val*val for val in p)
-    return math.sqrt(norm)
+    return sqrt(norm)
 
 # -- end function
 
