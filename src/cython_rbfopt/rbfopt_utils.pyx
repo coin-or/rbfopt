@@ -610,7 +610,7 @@ def bulk_get_min_distance(points, other_points):
     --------
     get_min_distance()
     """
-    assert(points)
+    assert(points.any())
     assert(other_points)
     assert(len(points[0]) == len(other_points[0]))
 
@@ -912,7 +912,7 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
         distance of each point from the interpolation nodes.
 
     """
-    assert(points)
+    assert(points.any())
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
     assert(isinstance(settings, RbfSettings))

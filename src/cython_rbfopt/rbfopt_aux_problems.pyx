@@ -88,6 +88,10 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
     assert(len(node_pos)==k)
     assert(isinstance(settings, RbfSettings))
 
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
+
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
     assert((mat is None and settings.algorithm == 'MSRSM')
@@ -230,6 +234,13 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(node_pos)==k)
     assert(isinstance(settings, RbfSettings))
 
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
+    var_lower = var_lower.tolist()
+    var_upper = var_upper.tolist()
+    integer_vars = integer_vars.tolist()
+
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
     assert(len(rbf_h)==(p))
@@ -366,6 +377,10 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     assert(fmin <= fmax)
     assert(isinstance(settings, RbfSettings))
 
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
+
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
     assert((mat is None and settings.algorithm == 'MSRSM' )
@@ -459,6 +474,9 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     else:
         raise ValueError('Global search method ' + settings.algorithm + 
                          ' not supported')
+    if point is not None:
+        point = np.array(point)
+
     return point
 
 # -- end function
@@ -758,9 +776,18 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     List[List[float]]
         A list of sample points.
     """
+
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(isinstance(settings, RbfSettings))
+
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
+    var_lower = var_lower.tolist()
+    var_upper = var_upper.tolist()
+    integer_vars = integer_vars.tolist()
+
     values_by_var = list()
     for i in range(n):
         low = var_lower[i]
@@ -768,9 +795,11 @@ def generate_sample_points(settings, n, var_lower, var_upper,
         if (integer_vars is None or i not in integer_vars):
             values_by_var.append(np.random.uniform(low, up, (1, num_samples)))
         else:
-            values_by_var.append(np.random.randint(low, up + 1, 
+            values_by_var.append(np.random.randint(low, up + 1,
                                                    (1, num_samples)))
-    return ([[v[0, i] for v in values_by_var] for i in range(num_samples)])
+    return np.array([[v[0, i] for v in values_by_var] for i in range(num_samples)])
+
+
 
 # -- end function
 
@@ -814,7 +843,11 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     """
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
-    assert(isinstance(settings, RbfSettings))            
+    assert(isinstance(settings, RbfSettings))
+
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
     
     # Define parameters here, for now. Will move them to
     # rbfopt_settings later if it seems that the user should be able
@@ -828,9 +861,9 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     num_new = population_size - 2*num_surviving - 1
 
     # Generate boolean vector of integer variables for convenience
-    is_integer = [False] * n
-    for i in integer_vars:
-        is_integer[i] = True
+    is_integer = np.empty(n, dtype=bool)
+    if len(integer_vars) > 0:
+        is_integer[integer_vars] = True
 
     # Compute initial population
     population = generate_sample_points(settings, n, var_lower,
@@ -845,20 +878,18 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
         max_size_pert = min(n, max(2, int(n * curr_mutation_rate)))
         # Compute fitness score to determine remaining individuals
         fitness_val = objfun(population)
-        rank = sorted([(fitness_val[i], i) for i in range(population_size)])
-        best_individuals = [population[r[1]] for r in rank[:num_surviving]]
+        rank = np.argsort(fitness_val)
+        best_individuals = population[rank[:num_surviving]]
         # Crossover: select how mating is done, then create offspring
-        father = [best_individuals[i] 
-                  for i in np.random.permutation(num_surviving)]
-        mother = [best_individuals[i] 
-                  for i in np.random.permutation(num_surviving)]
+        father = np.random.permutation(best_individuals)
+        mother = np.random.permutation(best_individuals)
         offspring = map(ga_mate, father, mother)
         # New individuals
         new_individuals = generate_sample_points(settings, n, var_lower, 
                                                  var_upper, integer_vars,
                                                  num_new)
         # Make a copy of best individual, and mutate it
-        best_mutated = [val for val in best_individuals[0]]
+        best_mutated = best_individuals[0,:].copy()
         ga_mutate(n, var_lower, var_upper, is_integer, 
                   best_mutated, max_size_pert)
         # Mutate surviving (except best) if necessary
@@ -867,15 +898,14 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
                 ga_mutate(n, var_lower, var_upper, is_integer, 
                           point, max_size_pert)
         # Generate new population
-        population = (best_individuals + offspring + new_individuals + 
-                      [best_mutated])
+        population = np.vstack((best_individuals, offspring, new_individuals,
+                                best_mutated))
     # Determine ranking of last generation.
     # Compute fitness score to determine remaining individuals
     fitness_val = objfun(population)
-    rank = sorted([(fitness_val[i], i) for i in range(population_size)])
-    best_individuals = [population[i[1]] for i in rank[:num_surviving]]
+    rank = np.argsort(fitness_val)
     # Return best individual
-    return population[rank[0][1]]
+    return population[rank[0]]
 
 # -- end function
 
@@ -899,9 +929,21 @@ def ga_mate(father, mother):
         The offspring. Same size as mother and father.
     """
     assert(len(father) == len(mother))
-    prob = np.random.uniform(size = len(father))
-    return [(father[i] if prob[i] < 0.5 else mother[i])
-            for i in range(len(father))]
+
+    # OLD VERSION
+    # prob = np.random.uniform(size = len(father))
+    # return [(father[i] if prob[i] < 0.5 else mother[i])
+    #         for i in range(len(father))]
+
+    n = len(father)
+    offspring = np.empty(n, np.float64)
+    prob = np.random.uniform(size=n)
+    for i in range(n):
+        if prob[i] < 0.5:
+            offspring[i] = father[i]
+        else:
+            offspring[i] = mother[i]
+    return offspring
 
 # -- end function
 
@@ -936,6 +978,10 @@ def ga_mutate(n, var_lower, var_upper, is_integer, individual,
 
     """
     assert(max_size_pert <= n)
+
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+
     # Randomly mutate some of the coordinates. First determine how
     # many are mutated, then pick them randomly.
     size_pert = np.random.randint(max_size_pert)
@@ -1239,8 +1285,8 @@ class GutmannHkObj:
         rbf_value = part1 + part2 + part3
         # This is the shift in the computation of \mu_k
         shift = rbf_function(0.0)
-        sign = (-1)**ru.get_degree_polynomial(self.settings)        
-        return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], self.Amatinv), 
+        sign = (-1)**ru.get_degree_polynomial(self.settings)
+        return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], np.array(self.Amatinv)),
                                  u_pi_mat[i, ]) - shift)) /
                 (rbf_value[i] - self.target_val)**2
                 for i in range(len(points))]
@@ -1330,7 +1376,7 @@ class GutmannMukObj:
         # This is the shift in the computation of \mu_k
         shift = rbf_function(0.0)
         sign = (-1)**ru.get_degree_polynomial(self.settings)
-        return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], self.Amatinv), 
+        return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], np.array(self.Amatinv)),
                                  u_pi_mat[i, ]) + shift)) 
                 for i in range(len(points))]
     # -- end function

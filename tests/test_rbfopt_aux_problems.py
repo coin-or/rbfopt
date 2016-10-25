@@ -14,8 +14,16 @@ from __future__ import absolute_import
 import unittest
 import numpy as np
 import test_rbfopt_env
-import rbfopt_aux_problems as aux
-import rbfopt_utils as ru
+try:
+    import cython_rbfopt.rbfopt_utils as ru
+    print('Imported Cython version of rbfopt_utils')
+except ImportError:
+    import rbfopt_utils as ru
+try:
+    import cython_rbfopt.rbfopt_aux_problems as aux
+    print('Imported Cython version of rbfopt_aux_problems')
+except ImportError:
+    import rbfopt_aux_problems as aux
 from rbfopt_settings import RbfSettings
 
 def quadratic(points):
@@ -25,7 +33,7 @@ def quadratic(points):
     of all coordinates.
 
     """
-    return [sum(val*val for val in point) for point in points]
+    return np.array([sum(val*val for val in point) for point in points])
 # -- end function
 
 def shifted_quadratic(points):
@@ -35,7 +43,7 @@ def shifted_quadratic(points):
     of all coordinates shifted to the left by 1.
 
     """
-    return [sum((val-1)*(val-1) for val in point) for point in points]
+    return np.array([sum((val-1)*(val-1) for val in point) for point in points])
 # -- end function
 
 class TestAuxProblems(unittest.TestCase):
@@ -48,8 +56,8 @@ class TestAuxProblems(unittest.TestCase):
                                     ga_base_population_size = 1000)
         self.n = 3
         self.k = 5
-        self.var_lower = [i for i in range(self.n)]
-        self.var_upper = [i + 10 for i in range(self.n)]
+        self.var_lower = np.array([i for i in range(self.n)])
+        self.var_upper = np.array([i + 10 for i in range(self.n)])
         self.node_pos = [self.var_lower, self.var_upper,
                          [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]]
         self.node_val = [2*i for i in range(self.k)]
@@ -74,7 +82,7 @@ class TestAuxProblems(unittest.TestCase):
                            -1.0962407017011667e-18]
         self.rbf_h = [-0.10953754862932995, 0.6323031632900591,
                       0.5216788297837124, 9.935450288253636]
-        self.integer_vars = [1]
+        self.integer_vars = np.array([1])
     # -- end function
 
     def test_pure_global_search(self):
@@ -266,9 +274,9 @@ class TestAuxProblems(unittest.TestCase):
                 self.assertAlmostEqual(abs(sample[i] - round(sample[i])),
                                        0.0, msg = msg)
         # Now test some limit cases
-        samples = aux.generate_sample_points(self.settings, 0, [], [], 
-                                             [], 45)
-        self.assertListEqual(samples, [[] for i in range(45)],
+        samples = aux.generate_sample_points(self.settings, 0, np.array([]), np.array([]),
+                                             np.array([]), 45)
+        self.assertListEqual(samples.tolist(), [[] for i in range(45)],
                              msg = 'Samples are not empty when n = 0')
         samples = aux.generate_sample_points(self.settings, self.n, 
                                              self.var_lower, self.var_upper,
@@ -279,15 +287,16 @@ class TestAuxProblems(unittest.TestCase):
     def test_ga_optimize(self):
         """Verify that the genetic algorithm can solve simple problems.
         """
-        var_lower = [-1] * 3
-        var_upper = [1] * 3
+        var_lower = np.array([-1] * 3)
+        var_upper = np.array([1] * 3)
+        integer_vars = np.array([])
         settings = RbfSettings(ga_base_population_size = 100)
         point = aux.ga_optimize(settings, 3, var_lower, var_upper,
-                                [], quadratic)
+                                integer_vars, quadratic)
         self.assertLessEqual(quadratic([point])[0], 0.05,
                              msg = 'Could not solve quadratic with GA')
         point = aux.ga_optimize(settings, 3, var_lower, var_upper,
-                                [], shifted_quadratic)
+                                integer_vars, shifted_quadratic)
         self.assertLessEqual(shifted_quadratic([point])[0], 0.05,
                              msg = 'Could not solve shifted quadratic with GA')
     # -- end function
