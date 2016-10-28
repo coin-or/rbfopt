@@ -164,10 +164,9 @@ def get_all_corners(var_lower, var_upper):
         for (j, bound) in enumerate(corner):
             if bound == 'l':
                 node_pos[i, j] = var_lower[j]
-                i += 1
             else:
                 node_pos[i, j] = var_upper[j]
-                i += 1
+        i += 1
 
     return node_pos
 
@@ -239,7 +238,7 @@ def get_random_corners(var_lower, var_upper):
     while (len(node_pos) < n+1):
         point = [var_lower[i] if (np.random.rand() <= 0.5) else var_upper[i]
                  for i in range(n)]
-        if (not node_pos or get_min_distance(point, node_pos) > 0):
+        if (not node_pos or get_min_distance(np.array(point), np.array(node_pos)) > 0):
             node_pos.append(point)
 
     return np.array(node_pos, DTYPE)
@@ -268,12 +267,12 @@ def get_uniform_lhs(n, num_samples):
     assert(n >= 0)
     assert(num_samples >= 0)
     # Generate integer LH in [0, num_samples]
-    int_lh = np.array([np.random.permutation(num_samples) for i in range(n)])
+    int_lh = np.array([np.random.permutation(num_samples) for i in range(n)], DTYPE)
     int_lh = int_lh.T
     # Map integer LH back to unit hypercube, and perturb points so that
     # they are uniformly distributed in the corresponding intervals
     lhs = np.array([[np.random.uniform(i/num_samples, (i + 1)/num_samples)
-            for i in point] for point in int_lh])
+            for i in point] for point in int_lh], DTYPE)
     return lhs
 
 # -- end function
@@ -310,7 +309,7 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     if (n == 1):
         # For unidimensional problems, simply take the two endpoints
         # of the interval as starting points
-        return np.array([var_lower, var_upper])
+        return np.vstack((var_lower, var_upper))
     # Otherwise, generate a bunch of Latin Hypercubes, and rank them
     lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
     # Indices of upper triangular matrix (without the diagonal)
@@ -359,7 +358,7 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
     if (n == 1):
         # For unidimensional problems, simply take the two endpoints
         # of the interval as starting points
-        return np.array([var_lower, var_upper])
+        return np.vstack((var_lower, var_upper))
     # Otherwise, generate a bunch of Latin Hypercubes, and rank them
     lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
     # Indices of upper triangular matrix (without the diagonal)
@@ -433,7 +432,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         elif (settings.init_strategy == 'lhd_corr'):
             nodes = get_lhd_corr_points(var_lower, var_upper)
 
-        if (integer_vars):
+        if (integer_vars.any()):
                 for i in integer_vars:
                     np.around(nodes[:,i],out=nodes[:,i])
 
@@ -463,7 +462,7 @@ def round_integer_vars(point, integer_vars):
     """
     assert (isinstance(point, np.ndarray))
     assert (isinstance(integer_vars, np.ndarray))
-    if (integer_vars):
+    if (integer_vars.any()):
         assert(np.amax(integer_vars)<len(point))
         for i in integer_vars:
             point[i] = round(point[i])
@@ -493,7 +492,7 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
     assert (isinstance(var_lower, np.ndarray))
     assert (isinstance(var_upper, np.ndarray))
     assert (isinstance(integer_vars, np.ndarray))
-    if (integer_vars):
+    if (integer_vars.any()):
         assert(len(var_lower)==len(var_upper))
         assert(max(integer_vars)<len(var_lower))
         for i in integer_vars:
@@ -520,8 +519,9 @@ def norm(p):
     float
         The norm of the point.
     """
-    norm = math.fsum(val*val for val in p)
-    return sqrt(norm)
+    assert(isinstance(p, np.ndarray))
+
+    return sqrt(np.dot(p, p))
 
 # -- end function
 
@@ -542,9 +542,11 @@ def distance(p1, p2):
     float
         Euclidean distance.
     """
+    assert (isinstance(p1, np.ndarray))
+    assert (isinstance(p2, np.ndarray))
     assert(len(p1) == len(p2))
-    dist = math.fsum((p1[i]-p2[i])*(p1[i]-p2[i]) for i in range(len(p1)))
-    return math.sqrt(dist)
+
+    return sqrt(np.dot(p1 - p2, p1 - p2))
 
 # -- end function
 
@@ -567,8 +569,10 @@ def get_min_distance(point, other_points):
     float
         Minimum distance between point and the other_points.
     """
-    assert(point is not None and point)
-    assert(other_points is not None and other_points)
+    assert (isinstance(point, np.ndarray))
+    assert (isinstance(other_points, np.ndarray))
+    assert(point is not None and point.any())
+    assert(other_points is not None and other_points.any())
 
     distances = map(lambda x : distance(x, point), other_points)
     return min(distances)
@@ -595,10 +599,12 @@ def get_min_distance_index(point, other_points):
         The index of the point in other_points that achieved minimum
         distance from point.
     """
-    assert(point is not None and point)
-    assert(other_points is not None and other_points)
+    assert (isinstance(point, np.ndarray))
+    assert (isinstance(other_points, np.ndarray))
+    assert(point is not None and point.any())
+    assert(other_points is not None and other_points.any())
 
-    distances = map(lambda x : distance(x, point), other_points)
+    distances = map(lambda x : distance(np.array(x), np.array(point)), other_points)
     return distances.index(min(distances))
 
 # -- end function
@@ -628,16 +634,15 @@ def bulk_get_min_distance(points, other_points):
     --------
     get_min_distance()
     """
+    assert(isinstance(points, np.ndarray))
+    assert(isinstance(other_points, np.ndarray))
     assert(points.any())
-    assert(other_points)
+    assert(other_points.any())
     assert(len(points[0]) == len(other_points[0]))
 
-    # Convert to numpy
-    point_mat = np.array(points)
-    other_points_mat = np.array(other_points)
     # Create distance matrix
-    dist_mat = ss.distance.cdist(point_mat, other_points_mat)
-    return (np.amin(dist_mat, 1)).tolist()
+    dist = ss.distance.cdist(points, other_points)
+    return np.amin(dist, 1)
 
 # -- end function
         
@@ -697,7 +702,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
     # A = ([ Phi[i] + P[i] for i in range(k) ] +
     #      [ PTr[i] + [0 for j in range(p)] for i in range(p)])
 
-    node_pos_arr = np.array(node_pos)
+    node_pos_arr = np.array(node_pos, DTYPE)
 
     rbf = get_rbf_function(settings)
     p = get_size_P_matrix(settings, n)
@@ -930,6 +935,8 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
         distance of each point from the interpolation nodes.
 
     """
+    assert (isinstance(points, np.ndarray))
+    assert (isinstance(node_pos, np.ndarray))
     assert(points.any())
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
@@ -941,27 +948,23 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     # Formula:
     # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
 
-    # Convert to numpy
-    point_mat = np.array(points)
-    node_mat = np.array(node_pos)
     # Create distance matrix
-    dist_mat = ss.distance.cdist(point_mat, node_mat)
+    dist_mat = ss.distance.cdist(points, node_pos)
     # Evaluate radial basis function on each distance
     rbf_vec = map(rbf_function, dist_mat.ravel())
-    rbf_vec_mat = np.reshape(np.array(rbf_vec), (len(point_mat), -1))
+    rbf_vec_mat = np.reshape(np.array(rbf_vec, DTYPE), (len(points), -1))
     part1 = np.dot(rbf_vec_mat, rbf_lambda)
     if (get_degree_polynomial(settings) == 1):
-        part2 = np.dot(point_mat, rbf_h[:-1])
+        part2 = np.dot(points, rbf_h[:-1])
     else:
-        part2 = np.zeros(len(point_mat))
+        part2 = np.zeros(len(points))
     part3 = rbf_h[-1] if (p > 0) else 0.0
     if (return_distances == 'min'):
-        return ((part1 + part2 + part3).tolist(), 
-                (np.amin(dist_mat, 1)).tolist())
+        return ((part1 + part2 + part3), (np.amin(dist_mat, 1)))
     elif (return_distances == 'all'):
-        return ((part1 + part2 + part3).tolist(), dist_mat)
+        return ((part1 + part2 + part3), dist_mat)
     else:
-        return (part1 + part2 + part3).tolist()
+        return (part1 + part2 + part3)
 
 # -- end function
 
@@ -1057,6 +1060,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
     ValueError
         If the function scaling strategy requested is not implemented.
     """
+    assert(isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
     # Check dynamism: if too high, replace large function values with
     # the median or clip at maximum dynamism
@@ -1066,7 +1070,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
          (abs(fmin) <= settings.eps_zero and
           abs(fmax) > settings.dynamism_threshold))):
         if (settings.dynamism_clipping == 'median'):
-            sorted_values = sorted(node_val)
+            sorted_values = np.sort(node_val)
             median = sorted_values[len(sorted_values)//2]
             clip_val = [min(val, median) for val in node_val]
             fmax = median
@@ -1145,23 +1149,25 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
     ValueError
         If the requested rescaling strategy is not implemented.
     """
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(point, np.ndarray))
     assert(isinstance(settings, RbfSettings))
     assert(len(var_lower)==len(var_upper))
     assert(len(var_lower)==len(point))
 
     if (settings.domain_scaling == 'off'):
         # Make a copy because the caller may assume so
-        return [val for val in point]
+        return point.copy()
     elif (settings.domain_scaling == 'affine'):
         # Make an affine transformation to the unit hypercube
         if (reverse):
-            return [point[i]*(var_upper[i] - var_lower[i]) + var_lower[i]
-                    for i in range(len(point))]
+            return point * (var_upper - var_lower) + var_lower
         else:
-            return [(point[i] - var_lower[i]) /
+            return np.array([(point[i] - var_lower[i]) /
                     ((var_upper[i] - var_lower[i]) 
                      if (var_upper[i] > var_lower[i]) else 1.0)
-                    for i in range(len(point))]
+                    for i in range(len(point))], DTYPE)
     else:
         raise ValueError('Domain scaling "' + settings.domain_scaling + 
                          '" not implemented')
@@ -1193,15 +1199,17 @@ def transform_domain_bounds(settings, var_lower, var_upper):
     ValueError
         If the requested rescaling strategy is not implemented.
     """
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
     assert(isinstance(settings, RbfSettings))
     assert(len(var_lower)==len(var_upper))
 
     if (settings.domain_scaling == 'off'):
         # Make a copy because the caller may assume so
-        return ([val for val in var_lower], [val for val in var_upper])
+        return (var_lower.copy(), var_upper.copy())
     elif (settings.domain_scaling == 'affine'):
         # Make an affine transformation to the unit hypercube
-        return ([0 for val in var_lower], [1 for val in var_upper])
+        return (np.zeros(len(var_lower)), np.ones(len(var_upper)))
     else:
         raise ValueError('Domain scaling "' + settings.domain_scaling + 
                          '" not implemented')
@@ -1272,6 +1280,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
     --------
     get_sigma_n
     """
+    assert (isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
     assert(k == len(node_val))
     assert(k >= 1)
@@ -1279,7 +1288,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
     num_initial_points = (2**n if settings.init_strategy == 'all_corners'
                            else n + 1)
     assert(k >= num_initial_points)
-    sorted_node_val = sorted(node_val)
+    sorted_node_val = np.sort(node_val)
     s_n = get_sigma_n(k, current_step, settings.num_global_searches,
                       num_initial_points)
     return sorted_node_val[s_n]
