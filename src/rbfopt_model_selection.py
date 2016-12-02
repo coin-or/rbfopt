@@ -15,6 +15,7 @@ from __future__ import division
 from __future__ import absolute_import
 
 import numpy as np
+import sys
 try:
     import cplex as cpx
     cpx_available = True
@@ -28,8 +29,10 @@ except ImportError:
     clp_available = False
 import rbfopt_config as config
 try:
+    was_there = ('cython_rbfopt.rbfopt_utils' in sys.modules.keys())
     import cython_rbfopt.rbfopt_utils as ru
-    print('Imported Cython version of rbfopt_utils')
+    if not was_there:
+        print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 from rbfopt_settings import RbfSettings

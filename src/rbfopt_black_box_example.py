@@ -17,6 +17,8 @@ Research partially supported by SUTD-MIT International Design Center.
 """
 
 import rbfopt_black_box as bb
+import numpy as np
+
 
 class BlackBox(bb.BlackBox):
     """Example of a black-box function that can be optimized. 
@@ -32,13 +34,13 @@ class BlackBox(bb.BlackBox):
     dimension : int
         Dimension of the problem.
         
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Lower bounds of the decision variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Upper bounds of the decision variables.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list of indices of the variables that must assume integer
         values.
 
@@ -57,7 +59,7 @@ class BlackBox(bb.BlackBox):
     :class:`rbfopt_black_box.BlackBox`
     """
 
-    def __init__(self, exponent = 1):
+    def __init__(self, exponent=1):
         """Constructor.
         """
         assert(exponent >= 0)
@@ -66,10 +68,10 @@ class BlackBox(bb.BlackBox):
         # Set required data
         self.dimension = 3
 
-        self.var_lower = [0, 0, 0]
-        self.var_upper = [10, 10, 10]
+        self.var_lower = np.array([0, 0, 0], np.float_)
+        self.var_upper = np.array([10, 10, 10], np.float_)
 
-        self.integer_vars = [0, 1]
+        self.integer_vars = np.array([0, 1], np.int_)
     # -- end function
 
     def get_dimension(self):
@@ -88,7 +90,7 @@ class BlackBox(bb.BlackBox):
 
         Returns
         -------
-        List[float]
+        1D numpy.ndarray[float]
             Lower bounds of the decision variables.
         """
         return self.var_lower
@@ -99,7 +101,7 @@ class BlackBox(bb.BlackBox):
 
         Returns
         -------
-        List[float]
+        1D numpy.ndarray[float]
             Upper bounds of the decision variables.
         """
         return self.var_upper
@@ -110,7 +112,7 @@ class BlackBox(bb.BlackBox):
         
         Returns
         -------
-        List[int]
+        1D numpy.ndarray[int]
             A list of indices of the variables that must assume
             integer values. Can be empty.
         """
@@ -123,7 +125,7 @@ class BlackBox(bb.BlackBox):
         
         Parameters
         ----------
-        x : List[float]
+        x : 1D numpy.ndarray[float]
             Value of the decision variables.
 
         Returns
@@ -145,7 +147,7 @@ class BlackBox(bb.BlackBox):
 
         Parameters
         ----------
-        x : List[float]
+        x : 1D numpy.ndarray[float]
             Value of the decision variables.
 
         Returns

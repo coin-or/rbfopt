@@ -14,9 +14,12 @@ from __future__ import division
 from __future__ import absolute_import
 
 from pyomo.environ import *
+import sys
 try:
+    was_there = ('cython_rbfopt.rbfopt_utils' in sys.modules.keys())
     import cython_rbfopt.rbfopt_utils as ru
-    print('Imported Cython version of rbfopt_utils')
+    if not was_there:
+        print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 import numpy as np

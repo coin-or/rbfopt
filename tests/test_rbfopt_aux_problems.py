@@ -58,9 +58,9 @@ class TestAuxProblems(unittest.TestCase):
         self.k = 5
         self.var_lower = np.array([i for i in range(self.n)])
         self.var_upper = np.array([i + 10 for i in range(self.n)])
-        self.node_pos = [self.var_lower, self.var_upper,
-                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]]
-        self.node_val = [2*i for i in range(self.k)]
+        self.node_pos = np.array([self.var_lower, self.var_upper,
+                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
+        self.node_val = np.array([2*i for i in range(self.k)])
         Amat = [[0.0, 5196.152422706633, 5.196152422706631,
                  1714.338065908822, 2143.593744305343, 0.0, 1.0, 2.0, 1.0],
                 [5196.152422706633, 0.0, 3787.995116153135, 324.6869498824983,
@@ -77,11 +77,11 @@ class TestAuxProblems(unittest.TestCase):
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
         self.Amat = np.matrix(Amat)
         self.Amatinv = self.Amat.getI()
-        self.rbf_lambda = [-0.02031417613815348, -0.0022571306820170587, 
+        self.rbf_lambda = np.array([-0.02031417613815348, -0.0022571306820170587,
                            0.02257130682017054, 6.74116235140294e-18,
-                           -1.0962407017011667e-18]
-        self.rbf_h = [-0.10953754862932995, 0.6323031632900591,
-                      0.5216788297837124, 9.935450288253636]
+                           -1.0962407017011667e-18])
+        self.rbf_h = np.array([-0.10953754862932995, 0.6323031632900591,
+                      0.5216788297837124, 9.935450288253636])
         self.integer_vars = np.array([1])
     # -- end function
 
@@ -229,7 +229,7 @@ class TestAuxProblems(unittest.TestCase):
         conditions.
         """
         ref = [0.0]
-        fast_node_index = [2, 3, 4]
+        fast_node_index = np.array([2, 3, 4])
         fast_node_err_bounds = [(-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)]
         (l, h) = aux.get_noisy_rbf_coefficients(self.settings, self.n, self.k, 
                                                 self.Amat[:self.k, :self.k],

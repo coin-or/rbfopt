@@ -49,18 +49,18 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
     
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
     mat : numpy.matrix or None
@@ -123,7 +123,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         samples = generate_sample_points(settings, n, var_lower, var_upper,
                                          integer_vars, num_samples)
         scores = fitness.bulk_evaluate(samples)
-        point = samples[scores.index(min(scores))]
+        point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
         # Optimize using Pyomo    
         if (settings.algorithm == 'Gutmann'):
@@ -160,7 +160,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
                  pyomo.opt.TerminationCondition.optimal)):
                 # this is feasible and optimal
                 instance.solutions.load_from(results)
-                point = [instance.x[i].value for i in instance.N]
+                point = np.array([instance.x[i].value for i in instance.N])
                 ru.round_integer_vars(point, integer_vars)
             else:
                 point = None
@@ -192,18 +192,18 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars: List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
     rbf_lambda : List[float]
@@ -237,9 +237,6 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     assert (isinstance(var_lower, np.ndarray))
     assert (isinstance(var_upper, np.ndarray))
     assert (isinstance(integer_vars, np.ndarray))
-    var_lower = var_lower.tolist()
-    var_upper = var_upper.tolist()
-    integer_vars = integer_vars.tolist()
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
@@ -278,12 +275,13 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
              pyomo.opt.TerminationCondition.optimal)):
             # this is feasible and optimal
             instance.solutions.load_from(results)
-            point = [instance.x[i].value for i in instance.N]
+            point = np.array([instance.x[i].value for i in instance.N])
             ru.round_integer_vars(point, integer_vars)
         else:
             point = None
     except:
         point = None
+        raise
 
     return point
 
@@ -311,18 +309,18 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars: List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
     rbf_lambda : List[float]
@@ -369,6 +367,11 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         If the solver cannot be found.
 
     """
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
+    assert (isinstance(node_pos, np.ndarray))
+    assert (isinstance(rbf_lambda, np.ndarray))
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
@@ -377,9 +380,6 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     assert(fmin <= fmax)
     assert(isinstance(settings, RbfSettings))
 
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
-    assert (isinstance(integer_vars, np.ndarray))
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
@@ -417,7 +417,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         samples = generate_sample_points(settings, n, var_lower, var_upper,
                                          integer_vars, num_samples)
         scores = fitness.bulk_evaluate(samples)
-        point = samples[scores.index(min(scores))]
+        point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
         # Optimize using Pyomo    
         if (settings.algorithm == 'Gutmann'):
@@ -465,7 +465,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
                  pyomo.opt.TerminationCondition.optimal)):
                 # this is feasible and optimal
                 instance.solutions.load_from(results)
-                point = [instance.x[i].value for i in instance.N]
+                point = np.array([instance.x[i].value for i in instance.N])
                 ru.round_integer_vars(point, integer_vars)
             else:
                 point = None
@@ -604,10 +604,10 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     Pmat : numpy.matrix
         Matrix P, i.e. top right part of the standard RBF matrix.
 
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
     
-    fast_node_index : List[int]
+    fast_node_index : 1D numpy.ndarray[int]
         List of indices of nodes whose function value should be
         considered variable within the allowed range.
     
@@ -616,17 +616,17 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
         error. This is a list of pairs (lower, upper) of the same
         length as fast_node_index.
 
-    init_rbf_lambda : List[float] or None
+    init_rbf_lambda : 1D numpy.ndarray[float] or None
         Initial values that should be used for the lambda coefficients
         of the RBF. Can be None.
 
-    init_rbf_h : List[float] or None
+    init_rbf_h : 1D numpy.ndarray[float] or None
         Initial values that should be used for the h coefficients of
         the RBF. Can be None.
 
     Returns
     ---
-    (List[float], List[float])
+    (1D numpy.ndarray[float], 1D numpy.ndarray[float])
         Two vectors: lambda coefficients (for the radial basis
         functions), and h coefficients (for the polynomial). If
         initialization information was provided and was valid, then
@@ -641,11 +641,15 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
         If the solver cannot be found.
     """    
     assert(isinstance(settings, RbfSettings))
+    assert(isinstance(node_val, np.ndarray))
     assert(len(node_val)==k)
     assert(isinstance(Phimat, np.matrix))
     assert(isinstance(Pmat, np.matrix))
+    assert(isinstance(fast_node_index, np.ndarray))
     assert(len(fast_node_index)==len(fast_node_err_bounds))
+    assert(isinstance(init_rbf_lambda, np.ndarray))
     assert(init_rbf_lambda is None or len(init_rbf_lambda)==k)
+    assert(isinstance(init_rbf_h, np.ndarray))
     assert(init_rbf_h is None or len(init_rbf_h)==Pmat.shape[1])
     
     # Instantiate model
@@ -686,8 +690,8 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
              pyomo.opt.TerminationCondition.optimal)):
             # this is feasible and optimal
             instance.solutions.load_from(results)
-            rbf_lambda = [instance.rbf_lambda[i].value for i in instance.K]
-            rbf_h = [instance.rbf_h[i].value for i in instance.P]
+            rbf_lambda = np.array([instance.rbf_lambda[i].value for i in instance.K])
+            rbf_h = np.array([instance.rbf_h[i].value for i in instance.P])
         else:
             # If we have initialization information, return it. It is
             # a feasible solution. Otherwise, this will be None.
@@ -757,13 +761,13 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     n : int
         The dimension of the problem, i.e. size of the space.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
@@ -773,31 +777,41 @@ def generate_sample_points(settings, n, var_lower, var_upper,
 
     Returns
     -------
-    List[List[float]]
-        A list of sample points.
+    2D numpy.ndarray[float]
+        A Numpy array of sample points.
     """
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
 
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(isinstance(settings, RbfSettings))
 
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
-    assert (isinstance(integer_vars, np.ndarray))
-    var_lower = var_lower.tolist()
-    var_upper = var_upper.tolist()
-    integer_vars = integer_vars.tolist()
+    # OLD
+    # values_by_var = list()
+    # for i in range(n):
+    #     low = var_lower[i]
+    #     up = var_upper[i]
+    #     if (integer_vars is None or i not in integer_vars):
+    #         values_by_var.append(np.random.uniform(low, up, (1, num_samples)))
+    #     else:
+    #         values_by_var.append(np.random.randint(low, up + 1,
+    #                                                (1, num_samples)))
+    # return np.array([[v[0, i] for v in values_by_var] for i in range(num_samples)])
 
-    values_by_var = list()
-    for i in range(n):
-        low = var_lower[i]
-        up = var_upper[i]
-        if (integer_vars is None or i not in integer_vars):
-            values_by_var.append(np.random.uniform(low, up, (1, num_samples)))
-        else:
-            values_by_var.append(np.random.randint(low, up + 1,
-                                                   (1, num_samples)))
-    return np.array([[v[0, i] for v in values_by_var] for i in range(num_samples)])
+    cdef int i, col
+
+    # Generate samples
+    samples = np.random.rand(num_samples, n) * (var_upper - var_lower) + var_lower
+
+    # Round integer vars
+    for i in range(len(integer_vars)):
+        col = integer_vars[i]
+        assert (col < n)
+        np.around(samples[:, col], out=samples[:, col])
+
+    return samples
 
 
 
@@ -818,10 +832,10 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     n : int
         The dimension of the problem, i.e. size of the space.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
     
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
     integer_vars : List[int]
@@ -959,10 +973,10 @@ def ga_mutate(n, var_lower, var_upper, is_integer, individual,
     n : int
         The dimension of the problem, i.e. size of the space.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
     
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
     is_integer : List[bool]
@@ -985,7 +999,7 @@ def ga_mutate(n, var_lower, var_upper, is_integer, individual,
     # Randomly mutate some of the coordinates. First determine how
     # many are mutated, then pick them randomly.
     size_pert = np.random.randint(max_size_pert)
-    perturbed = np.random.choice(np.arange(n), size_pert, replace = False)
+    perturbed = np.random.choice(np.arange(n), size_pert, replace=False)
     for i in perturbed:
         if is_integer[i]:
             individual[i] = np.random.randint(var_lower[i], var_upper[i] + 1)
@@ -1084,7 +1098,7 @@ class MetricSRSMObj:
         # Store useful parameters
         self.max_dist = max_dist
         self.min_obj = min_obj
-        return map(self.evaluate, dist, obj)
+        return np.array(map(self.evaluate, dist, obj))
     # -- end function
 
     def evaluate(self, distance, objfun):
@@ -1167,7 +1181,7 @@ class MaximinDistanceObj:
             The score for Maximin Distance algorithm (lower is better).
         """
         dist = ru.bulk_get_min_distance(points, self.node_pos)
-        return [-val for val in dist]
+        return -dist
     # -- end function
 # -- end class MaximinDistanceObj
 
@@ -1255,30 +1269,30 @@ class GutmannHkObj:
             The score for the h_k criterion (lower is better).
 
         """
+        assert(isinstance(points, np.ndarray))
+        assert(isinstance(self.node_pos, np.ndarray))
+
         rbf_function = ru.get_rbf_function(self.settings)
         p = ru.get_size_P_matrix(self.settings, self.n)
         # Formula:
         # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
 
-        # Convert to numpy
-        point_mat = np.array(points)
-        node_mat = np.array(self.node_pos)
         # Create distance matrix
-        dist_mat = ss.distance.cdist(point_mat, node_mat)
+        dist_mat = ss.distance.cdist(points, self.node_pos)
         # Evaluate radial basis function on each distance
         rbf_vec = map(rbf_function, dist_mat.ravel())
-        u_mat = np.reshape(np.array(rbf_vec), (len(point_mat), -1))
+        u_mat = np.reshape(np.array(rbf_vec), (len(points), -1))
         # Contributions to the RBF interpolant value s_k: the u part,
         # the pi part, and the nonhomogenous part. At the same time,
         # build the matrix with the vectors u_pi.
         part1 = np.dot(u_mat, self.rbf_lambda)
         if (ru.get_degree_polynomial(self.settings) == 1):
-            part2 = np.dot(point_mat, self.rbf_h[:-1])
-            u_pi_mat = np.concatenate((u_mat, point_mat, 
-                                       np.ones((len(point_mat), 1))), axis=1)
+            part2 = np.dot(points, self.rbf_h[:-1])
+            u_pi_mat = np.concatenate((u_mat, points,
+                                       np.ones((len(points), 1))), axis=1)
         else:
-            part2 = np.zeros(len(point_mat))
-            u_pi_mat = np.concatenate((u_mat, np.ones((len(point_mat), 1))),
+            part2 = np.zeros(len(points))
+            u_pi_mat = np.concatenate((u_mat, np.ones((len(points), 1))),
                                       axis=1)
         part3 = self.rbf_h[-1] if (p > 0) else 0.0
         # The vector rbf_value contains the value of the RBF interpolant
@@ -1286,11 +1300,17 @@ class GutmannHkObj:
         # This is the shift in the computation of \mu_k
         shift = rbf_function(0.0)
         sign = (-1)**ru.get_degree_polynomial(self.settings)
-        return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], np.array(self.Amatinv)),
-                                 u_pi_mat[i, ]) - shift)) /
-                (rbf_value[i] - self.target_val)**2
-                for i in range(len(points))]
-    # -- end function
+
+        # OLD
+        # return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], np.array(self.Amatinv)),
+        #                          u_pi_mat[i, ]) - shift)) /
+        #         (rbf_value[i] - self.target_val)**2
+        #         for i in range(len(points))]
+
+        return -(sign * (np.sum(np.dot(u_pi_mat, np.array(self.Amatinv)) * u_pi_mat, axis=1) -
+                  shift)) / (rbf_value - self.target_val)**2
+
+        # -- end function
 # -- end class GutmannHkObj
 
 class GutmannMukObj:
@@ -1353,31 +1373,36 @@ class GutmannMukObj:
             The score for the \mu_k criterion (lower is better).
 
         """
+        assert(isinstance(points, np.ndarray))
+        assert(isinstance(self.node_pos, np.ndarray))
+
         rbf_function = ru.get_rbf_function(self.settings)
         p = ru.get_size_P_matrix(self.settings, self.n)
         # Formula:
         # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
 
-        # Convert to numpy
-        point_mat = np.array(points)
-        node_mat = np.array(self.node_pos)
         # Create distance matrix
-        dist_mat = ss.distance.cdist(point_mat, node_mat)
+        dist_mat = ss.distance.cdist(points, self.node_pos)
         # Evaluate radial basis function on each distance
         rbf_vec = map(rbf_function, dist_mat.ravel())
-        u_mat = np.reshape(np.array(rbf_vec), (len(point_mat), -1))
+        u_mat = np.reshape(np.array(rbf_vec), (len(points), -1))
         # Build the matrix with the vectors u_pi.
         if (ru.get_degree_polynomial(self.settings) == 1):
-            u_pi_mat = np.concatenate((u_mat, point_mat, 
-                                       np.ones((len(point_mat), 1))), axis=1)
+            u_pi_mat = np.concatenate((u_mat, points,
+                                       np.ones((len(points), 1))), axis=1)
         else:
-            u_pi_mat = np.concatenate((u_mat, np.ones((len(point_mat), 1))),
+            u_pi_mat = np.concatenate((u_mat, np.ones((len(points), 1))),
                                       axis=1)
         # This is the shift in the computation of \mu_k
         shift = rbf_function(0.0)
         sign = (-1)**ru.get_degree_polynomial(self.settings)
-        return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], np.array(self.Amatinv)),
-                                 u_pi_mat[i, ]) + shift)) 
-                for i in range(len(points))]
+
+        # OLD
+        # return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], np.array(self.Amatinv)),
+        #                          u_pi_mat[i, ]) + shift))
+        #         for i in range(len(points))]
+
+        return -(sign * (np.sum(np.dot(u_pi_mat, np.array(self.Amatinv)) * u_pi_mat, axis=1) +
+                         shift))
     # -- end function
 # -- end class GutmannMukObj

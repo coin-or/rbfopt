@@ -24,12 +24,15 @@ import numpy as np
 from multiprocessing import Pool
 try:
     import cython_rbfopt.rbfopt_utils as ru
-    print('Imported Cython version of rbfopt_utils')
+    if 'cython_rbfopt.rbfopt_utils' not in sys.modules.keys():
+        print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 try:
+    was_there = ('cython_rbfopt.rbfopt_aux_problems' in sys.modules.keys())
     import cython_rbfopt.rbfopt_aux_problems as aux
-    print('Imported Cython version of rbfopt_aux_problems')
+    if not was_there:
+        print('Imported Cython version of rbfopt_aux_problems')
 except ImportError:
     import rbfopt_aux_problems as aux
 import rbfopt_model_selection as ms

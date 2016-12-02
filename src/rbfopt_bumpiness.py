@@ -14,12 +14,19 @@ from __future__ import absolute_import
 
 import math
 import numpy as np
+import sys
 try:
+    was_there = ('cython_rbfopt.rbfopt_utils' in sys.modules.keys())
     import cython_rbfopt.rbfopt_utils as ru
+    if not was_there:
+        print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 try:
+    was_there = ('cython_rbfopt.rbfopt_aux_problems' in sys.modules.keys())
     import cython_rbfopt.rbfopt_aux_problems as aux
+    if not was_there:
+        print('Imported Cython version of rbfopt_aux_problems')
 except ImportError:
     import rbfopt_aux_problems as aux
 from rbfopt_settings import RbfSettings
@@ -52,7 +59,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
         The matrix A = [Phi P; P^T 0] of equation (3) in the paper by
         Costa and Nannicini.
 
-    node_val : Numpy array (float)
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
     fast_node_index : List[int]
@@ -136,13 +143,13 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    node_pos : 2-D Numpy array (float)
+    node_pos : 2D numpy.ndarray[float]
         Location of current interpolation nodes.
 
-    node_val : Numpy array (float)
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
-    new_node : List[float]
+    new_node : 1D numpy.ndarray[float]
         Location of new interpolation node.
 
     fast_node_index : List[int]
@@ -170,8 +177,8 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     assert (new_node is not None)
 
     # Add the new node to existing ones
-    n_node_pos = node_pos + [new_node]
-    n_node_val = node_val + [target_val]
+    n_node_pos = np.vstack(node_pos, new_node)
+    n_node_val = np.vstack(node_val, target_val)
 
     # Compute the matrices necessary for the algorithm
     Amat = ru.get_rbf_matrix(settings, n, k + 1, n_node_pos)

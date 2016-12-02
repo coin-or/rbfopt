@@ -803,21 +803,22 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
         Matrix [Phi P; P^T 0] defining the linear system. Must be a
         square matrix of appropriate size.
 
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
     Returns
     -------
-    (List[float], List[float])
+    (1D numpy.ndarray[float], 1D numpy.ndarray[float])
         Lambda coefficients (for the radial basis functions), and h
         coefficients (for the polynomial).
     """    
-    assert(len(node_val)==(k))
+    assert(len(np.atleast_1d(node_val))==k)
     assert(isinstance(settings, RbfSettings))
     assert(isinstance(Amat, np.matrix))
+    assert(isinstance(node_val, np.ndarray))
     p = get_size_P_matrix(settings, n)
-    assert(Amat.shape==(k+p,k+p))
-    rhs = node_val + [0 for i in range(p)]
+    assert(Amat.shape==(k+p, k+p))
+    rhs = np.append(node_val, np.zeros(p))
     try:
         solution = np.linalg.solve(Amat, rhs)
     except np.linalg.LinAlgError as e:

@@ -15,6 +15,7 @@ import unittest
 import random
 import numpy as np
 import test_rbfopt_env
+import rbfopt_bumpiness as rb
 try:
     import cython_rbfopt.rbfopt_utils as ru
     print('Imported Cython version of rbfopt_utils')
@@ -41,7 +42,7 @@ class TestUtils(unittest.TestCase):
 
         """
         settings = RbfSettings(rbf = 'cubic')
-        ind, bump = ru.get_min_bump_node(settings, 1, 10, np.matrix((1,1)), 
+        ind, bump = rb.get_min_bump_node(settings, 1, 10, np.matrix((1,1)),
                                          [0] * 10, [], [], 0)
         self.assertIsNone(ind, msg = 'Failed whith empty list')
         self.assertEqual(bump, float('+inf'), msg = 'Failed whith empty list')
@@ -71,7 +72,7 @@ class TestUtils(unittest.TestCase):
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
         Amat = np.matrix(Amat)
         for j in range(k):
-            ind, bump = ru.get_min_bump_node(settings, n, k, Amat, node_val,
+            ind, bump = rb.get_min_bump_node(settings, n, k, Amat, node_val,
                                              fast_node_index,
                                              fast_node_err_bounds,
                                              node_val[j] - 0.5)
@@ -122,7 +123,7 @@ class TestUtils(unittest.TestCase):
             # Set increasing target values
             target_val = 5 + i*10000
             # Compute new bumpiness
-            nbump = ru.get_bump_new_node(settings, n, k, node_pos, node_val, 
+            nbump = rb.get_bump_new_node(settings, n, k, node_pos, node_val,
                                          new_node, fast_node_index,
                                          fast_node_err_bounds, target_val)
             self.assertGreaterEqual(nbump, bump,
