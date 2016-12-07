@@ -208,22 +208,16 @@ class OptAlgorithm:
         var_upper = black_box.get_var_upper()
         integer_vars = black_box.get_integer_vars()
         # Check for fixed variables
-        fixed_vars = list()
-        for i in range(dimension):
-            if (var_lower[i] >= var_upper[i] - settings.eps_zero):
-                fixed_vars.append(i)
+        fixed_vars = np.isclose(var_lower, var_upper, 0, settings.eps_zero).nonzero()[0]
+
+        # TODO: perhaps transform in a dictionary?
         self.fixed_vars = [(i, var_lower[i]) for i in fixed_vars]
+        # TODO: test this part if fixed_vars is not empty
         # Adjust basic data if there are fixed vars
         if (fixed_vars):
-            var_lower = [var_lower[i] for i in range(dimension) 
-                         if i not in fixed_vars]
-            var_upper = [var_upper[i] for i in range(dimension) 
-                         if i not in fixed_vars]
-            integer_vars_dense = [True if i in integer_vars else False 
-                                  for i in range(dimension)]
-            reduced = [integer_vars_dense[i] for i in range(dimension)
-                       if i not in fixed_vars]
-            integer_vars = [i for i in range(len(reduced)) if reduced[i]]
+            var_lower = var_lower[fixed_vars]
+            var_upper = var_upper[fixed_vars]
+            integer_vars = np.setdiff1d(integer_vars, fixed_vars, assume_unique=True)
             dimension -= len(fixed_vars)
         self.var_lower, self.var_upper = var_lower, var_upper
         self.integer_vars = integer_vars
@@ -291,11 +285,12 @@ class OptAlgorithm:
             for point in self.init_node_pos:
                 ru.round_integer_vars(point, self.integer_vars)
         self.init_node_val = init_node_val
+        # TODO: fix the initialization of arrays
         # Initialize global lists
-        self.all_node_pos, self.all_node_val = list(), list()
-        self.node_pos, self.node_val = list(), list()
+        self.all_node_pos, self.all_node_val = np.array([]), np.array([])
+        self.node_pos, self.node_val = np.array([]), np.array([])
         # Store if each function evaluation is fast or accurate
-        self.node_is_fast, self.all_node_is_fast = list(), list()
+        self.node_is_fast, self.all_node_is_fast = np.array([]), np.array([])
         # We need to remember the index of the first node in all_node_pos
         # after every restart
         self.num_nodes_at_restart = 0
@@ -419,12 +414,12 @@ class OptAlgorithm:
         """
         assert(0 <= index <= len(self.node_pos))
         assert(0 <= index + all_node_shift <= len(self.all_node_pos))
-        self.node_pos.pop(index)
-        self.node_val.pop(index)
-        self.node_is_fast.pop(index)
-        self.all_node_pos.pop(all_node_shift + index)
-        self.all_node_val.pop(all_node_shift + index)
-        self.all_node_is_fast.pop(all_node_shift + index)
+        np.delete(self.node_pos, index, axis=0)
+        np.delete(self.node_val, index)
+        np.delete(self.node_is_fast, index)
+        np.delete(self.all_node_pos, all_node_shift + index, axis=0)
+        np.delete(self.all_node_val, all_node_shift + index)
+        np.delete(self.all_node_is_fast, all_node_shift + index)
     # -- end function
 
     def add_node(self, point, orig_point, value, is_fast):
@@ -456,18 +451,18 @@ class OptAlgorithm:
             RbfSettings.eps_opt), False otherwise.
 
         """
-        self.node_pos.append(point)
-        self.node_val.append(value)
-        self.node_is_fast.append(is_fast)
-        self.all_node_pos.append(orig_point)
-        self.all_node_val.append(value)
-        self.all_node_is_fast.append(is_fast)
+        np.append(self.node_pos, point.reshape(1, self.n), axis=0)
+        np.append(self.node_val, value)
+        np.append(self.node_is_fast, is_fast)
+        np.append(self.all_node_pos, orig_point.reshape(1, self.n), axis=0)
+        np.append(self.all_node_val, value)
+        np.append(self.all_node_is_fast, is_fast)
+
         improvement = False
         # Update fmin and fmax
         self.fmax = max(self.fmax, value)
         if (value < self.fmin):
-            if (value <= self.fmin -
-                self.l_settings.eps_impr*max(1.0, abs(self.fmin))):
+            if (value <= self.fmin - self.l_settings.eps_impr*max(1.0, abs(self.fmin))):
                 improvement = True
             self.fmin_index = len(self.node_pos) - 1
             self.fmin = value
@@ -575,7 +570,7 @@ class OptAlgorithm:
 
         start_time_retrieve_min = time.time()
         # Find best point and return it
-        i = self.all_node_val.index(min(self.all_node_val))
+        i = self.all_node_val.argmin()
         self.fmin = self.all_node_val[i]
         gap = ru.compute_gap(self.l_settings, self.fmin,
                              self.all_node_is_fast[i])
@@ -661,6 +656,7 @@ class OptAlgorithm:
             # Number of nodes at current iteration
             k = len(self.node_pos)
 
+            # TODO: ndarray?
             # Compute indices of fast node evaluations (sparse format)
             fast_node_index = ([i for (i, val) in enumerate(self.node_is_fast) 
                                 if val] if self.two_phase_optimization 

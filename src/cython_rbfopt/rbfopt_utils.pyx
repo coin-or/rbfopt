@@ -455,9 +455,9 @@ def round_integer_vars(point, integer_vars):
 
     Parameters
     ----------
-    point : List[float]
+    point : 1D numpy.ndarray[float]
         The point to be rounded.
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list of indices of integer variables.
     """
     assert (isinstance(point, np.ndarray))
@@ -478,13 +478,13 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
 
     Parameters
     ----------
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         List of lower bounds of the variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
@@ -511,7 +511,7 @@ def norm(p):
 
     Parameters
     ----------
-    p : List[float]
+    p : 1D numpy.ndarray[float]
         The point whose norm should be computed.
 
     Returns
@@ -532,9 +532,9 @@ def distance(p1, p2):
 
     Parameters
     ----------
-    p1 : List[float]
+    p1 : 1D numpy.ndarray[float]
         First point.
-    p2 : List[float]
+    p2 : 1D numpy.ndarray[float]
         Second point.
 
     Returns
@@ -558,10 +558,10 @@ def get_min_distance(point, other_points):
 
     Parameters
     ----------
-    point : List[float]
+    point : 1D numpy.ndarray[float]
         The point we compute the distances from.
 
-    other_points : List[List[float]]
+    other_points : 2D numpy.ndarray[float]
         The list of points we want to compute the distances to.
 
     Returns
@@ -587,10 +587,10 @@ def get_min_distance_index(point, other_points):
 
     Parameters
     ----------
-    point : List[float]
+    point : 1D numpy.ndarray[float]
         The point we compute the distances from.
 
-    other_points : List[List[float]]
+    other_points : 2D numpy.ndarray[float]
         The list of points we want to compute the distances to.
 
     Returns
@@ -618,10 +618,10 @@ def bulk_get_min_distance(points, other_points):
 
     Parameters
     ----------
-    point : List[List[float]]
+    point : 2D numpy.ndarray[float]
         The points in R^n that we compute the distances from.
 
-    other_points : List[List[float]]
+    other_points : 2D numpy.ndarray[float]
         The list of points we want to compute the distances to.
 
     Returns

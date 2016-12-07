@@ -450,8 +450,8 @@ class RbfSettings:
         RbfSettings
             A copy of the settings, without any 'auto' parameter values.
         """
-        assert(dimension==len(var_lower))
-        assert(dimension==len(var_upper))
+        assert(dimension == len(var_lower))
+        assert(dimension == len(var_upper))
         assert((not integer_vars) or (max(integer_vars) < dimension))
 
         l_settings = copy.deepcopy(self)
@@ -470,7 +470,7 @@ class RbfSettings:
                 l_settings.domain_scaling = 'off'
             else:
                 # Compute the length of the domain of each variable
-                size = [var_upper[i]-var_lower[i] for i in range(dimension)]
+                size = var_upper - var_lower
                 size.sort()
                 # If the problem is badly scaled, i.e. a variable has
                 # a domain 5 times as large as anoether, rescale.
