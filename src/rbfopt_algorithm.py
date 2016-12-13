@@ -792,7 +792,6 @@ class OptAlgorithm:
                                                      
             # If the optimization failed or the point is too close to
             # current nodes, discard it. Otherwise, add it to the list.
-            print(next_p)
             if ((next_p is None) or 
                 (ru.get_min_distance(next_p, self.node_pos) <= 
                  l_settings.min_dist)):
