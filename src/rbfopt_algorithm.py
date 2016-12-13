@@ -204,9 +204,10 @@ class OptAlgorithm:
         self.bb = black_box
         dimension = black_box.get_dimension()
         assert(dimension >= 1)
-        var_lower = black_box.get_var_lower()
-        var_upper = black_box.get_var_upper()
-        integer_vars = black_box.get_integer_vars()
+        # We make sure this vectors are Numpy arrays
+        var_lower = np.array(black_box.get_var_lower(), dtype=np.float_)
+        var_upper = np.array(black_box.get_var_upper(), dtype=np.float_)
+        integer_vars = np.array(black_box.get_integer_vars(), dtype=np.int_)
         # Check for fixed variables
         fixed_vars = np.isclose(var_lower, var_upper, 0, settings.eps_zero).nonzero()[0]
 
@@ -451,12 +452,18 @@ class OptAlgorithm:
             RbfSettings.eps_opt), False otherwise.
 
         """
-        np.append(self.node_pos, point.reshape(1, self.n), axis=0)
-        np.append(self.node_val, value)
-        np.append(self.node_is_fast, is_fast)
-        np.append(self.all_node_pos, orig_point.reshape(1, self.n), axis=0)
-        np.append(self.all_node_val, value)
-        np.append(self.all_node_is_fast, is_fast)
+        if not self.node_pos.size:
+            self.node_pos = point.copy()
+        else:
+            self.node_pos = np.vstack((self.node_pos, point))
+        self.node_val = np.append(self.node_val, value)
+        self.node_is_fast = np.append(self.node_is_fast, is_fast)
+        if not self.all_node_pos.size:
+            self.all_node_pos = orig_point.copy()
+        else:
+            self.all_node_pos = np.vstack((self.all_node_pos, orig_point))
+        self.all_node_val = np.append(self.all_node_val, value)
+        self.all_node_is_fast = np.append(self.all_node_is_fast, is_fast)
 
         improvement = False
         # Update fmin and fmax
@@ -620,7 +627,6 @@ class OptAlgorithm:
 
         # Save number of iterations at start
         itercount_at_start = self.itercount
-
         # If this is the first iteration, initialize the algorithm
         if (self.itercount == 0):
             self.restart()
@@ -658,16 +664,16 @@ class OptAlgorithm:
 
             # TODO: ndarray?
             # Compute indices of fast node evaluations (sparse format)
-            fast_node_index = ([i for (i, val) in enumerate(self.node_is_fast) 
-                                if val] if self.two_phase_optimization 
-                               else list())
+            fast_node_index = np.array(([i for (i, val) in enumerate(self.node_is_fast)
+                                         if val] if self.two_phase_optimization
+                                        else list()))
 
             # If function scaling is automatic, determine which one to use
-            if (settings.function_scaling == 'auto' and 
-                self.current_step <= self.first_step):
-                sorted_node_val = sorted(self.node_val)
-                if (sorted_node_val[len(sorted_node_val)//2] - 
-                    sorted_node_val[0] > l_settings.log_scaling_threshold):
+            if (settings.function_scaling == 'auto' and
+                        self.current_step <= self.first_step):
+                sorted_node_val = np.sort(self.node_val)
+                if (sorted_node_val[len(sorted_node_val)//2] -
+                        sorted_node_val[0] > l_settings.log_scaling_threshold):
                     l_settings.function_scaling = 'log'
                 else:
                     l_settings.function_scaling = 'off'
@@ -706,7 +712,7 @@ class OptAlgorithm:
                 Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
                 # Compute RBF interpolant at current stage
-                if (fast_node_index):
+                if (fast_node_index.size):
                     # Get coefficients for the exact RBF
                     rc = ru.get_rbf_coefficients(l_settings, n, k, 
                                                  Amat, scaled_node_val)
@@ -786,6 +792,7 @@ class OptAlgorithm:
                                                      
             # If the optimization failed or the point is too close to
             # current nodes, discard it. Otherwise, add it to the list.
+            print(next_p)
             if ((next_p is None) or 
                 (ru.get_min_distance(next_p, self.node_pos) <= 
                  l_settings.min_dist)):
@@ -980,8 +987,8 @@ class OptAlgorithm:
                             # chance that the node position
                             # changed. Make sure we have the right one.
                             if (ru.distance(self.node_pos[ind], next_p) >=
-                                l_settings.eps_zero):
-                                ind = self.node_pos.index(next_p)
+                                    l_settings.eps_zero):
+                                ind = np.where(self.node_pos == next_p)[0]
                             self.remove_node(ind, 
                                              self.num_nodes_at_restart)
                             # We must update k here to make sure it is
@@ -1065,23 +1072,23 @@ class OptAlgorithm:
                 # If there were no results in the pipeline, we should
                 # restart.
                 self.update_log('Restart')
-                self.restart(gap, pool = pool)
+                self.restart(gap, pool=pool)
 
             # Nodes at current iteration, including temporary ones
-            node_pos = self.node_pos + temp_node_pos
-            node_val = self.node_val + temp_node_val
-            node_is_fast = self.node_is_fast + temp_node_is_fast
+            node_pos = np.vstack((self.node_pos, temp_node_pos))
+            node_val = np.append(self.node_val, temp_node_val)
+            node_is_fast = np.append(self.node_is_fast, temp_node_is_fast)
             k = len(node_pos)
 
             # Compute indices of fast node evaluations (sparse format)
-            fast_node_index = ([i for (i, val) in enumerate(self.node_is_fast) 
-                                if val] if self.two_phase_optimization 
-                               else list())
+            fast_node_index = np.array(([i for (i, val) in enumerate(self.node_is_fast)
+                                         if val] if self.two_phase_optimization
+                                        else list()))
 
             # If function scaling is automatic, determine which one to use
             if (settings.function_scaling == 'auto' and 
                 self.current_step <= self.first_step):
-                sorted_node_val = sorted(node_val)
+                sorted_node_val = np.sort(node_val)
                 if (sorted_node_val[len(sorted_node_val)//2] - 
                     sorted_node_val[0] > l_settings.log_scaling_threshold):
                     l_settings.function_scaling = 'log'
@@ -1122,7 +1129,7 @@ class OptAlgorithm:
                 Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
                 # Compute RBF interpolant at current stage
-                if (fast_node_index):
+                if (fast_node_index.size):
                     # Get coefficients for the exact RBF
                     rc = ru.get_rbf_coefficients(l_settings, n, k, 
                                                  Amat, scaled_node_val)
@@ -1259,7 +1266,7 @@ class OptAlgorithm:
         self.num_fast_restarts += (1 if self.current_mode == 'fast' 
                                    else 0)
         # Store the current number of nodes
-        self.num_nodes_at_restart = len(self.all_node_pos)
+        self.num_nodes_at_restart = np.shape(self.all_node_pos)[0]
         # Compute a new set of starting points
         node_pos = ru.initialize_nodes(self.l_settings, self.var_lower, 
                                        self.var_upper, self.integer_vars)
@@ -1268,76 +1275,83 @@ class OptAlgorithm:
             (self.fast_evalcount + self.n + 1 >=
              self.l_settings.max_fast_evaluations)):
             if (pool is None):
-                node_val = [objfun([self.bb, point, self.fixed_vars]) 
-                            for point in node_pos]
+                node_val = np.array([objfun([self.bb, point, self.fixed_vars])
+                                     for point in node_pos])
             else:
                 map_arg = [[self.bb, point, self.fixed_vars] 
                            for point in node_pos]
-                node_val = pool.map(objfun, map_arg)
+                node_val = np.array(pool.map(objfun, map_arg))
             self.evalcount += len(node_val)
         else:
             if (pool is None):
-                node_val = [objfun_fast([self.bb, point, self.fixed_vars])
-                            for point in node_pos]
+                node_val = np.array([objfun_fast([self.bb, point, self.fixed_vars])
+                            for point in node_pos])
             else:
                 map_arg = [[self.bb, point, self.fixed_vars] 
                            for point in node_pos]
-                node_val = pool.map(objfun_fast, map_arg)
+                node_val = np.array(pool.map(objfun_fast, map_arg))
             self.fast_evalcount += len(node_val)
-        self.node_is_fast = [self.current_mode == 'fast' 
-                             for val in node_val]
+        self.node_is_fast = np.array([self.current_mode == 'fast'
+                             for val in node_val])
         # Add user-provided points if this is the first iteration
         if (self.init_node_pos is not None and self.itercount == 0):
             # Determine which points can be added
             dist = ru.bulk_get_min_distance(self.init_node_pos,
                                             node_pos)
-            init_node_pos = [self.init_node_pos[i] 
+            init_node_pos = np.array([self.init_node_pos[i]
                              for i in range(len(self.init_node_pos)) 
-                             if dist[i] > self.l_settings.min_dist]
+                             if dist[i] > self.l_settings.min_dist])
             if (self.init_node_val is None):
                 if (pool is None):
-                    init_node_val = [objfun([self.bb, point, 
+                    init_node_val = np.array([objfun([self.bb, point,
                                              self.fixed_vars])
-                                     for point in init_node_pos]
+                                     for point in init_node_pos])
                 else:
                     map_arg = [[self.bb, point, self.fixed_vars] 
                                for point in init_node_pos]
-                    init_node_val = pool.map(objfun, map_arg)
+                    init_node_val = np.array(pool.map(objfun, map_arg))
                 self.evalcount += len(init_node_val)
             else:
-                init_node_val = [self.init_node_val[i] 
+                init_node_val = np.array([self.init_node_val[i]
                                  for i in range(len(self.init_node_pos)) 
-                                 if dist[i] > self.l_settings.min_dist]
-            node_pos.extend(init_node_pos)
-            node_val.extend(init_node_val)
-            self.node_is_fast.extend([False for val in init_node_val])
+                                 if dist[i] > self.l_settings.min_dist])
+            if not node_pos.size:
+                node_pos = init_node_pos.copy()
+            else:
+                node_pos = np.vstack((node_pos, init_node_pos))
+            node_val = np.append(node_val, init_node_val)
 
-        self.all_node_pos.extend(node_pos)
-        self.all_node_val.extend(node_val)
-        self.all_node_is_fast.extend(self.node_is_fast)
+            self.node_is_fast = np.append(self.node_is_fast, np.zeros(np.shape(init_node_val)[0], dtype=bool))
+
+        if not self.all_node_pos.size:
+            self.all_node_pos = node_pos.copy()
+        else:
+            self.all_node_pos = np.vstack((self.all_node_pos, node_pos))
+        self.all_node_val = np.append(self.all_node_val, node_val)
+        self.all_node_is_fast = np.append(self.all_node_is_fast, self.node_is_fast)
 
         # Rescale the domain of the function
-        node_pos = [ru.transform_domain(self.l_settings, self.var_lower,
-                                        self.var_upper, point)
-                    for point in node_pos]           
+        node_pos = ru.bulk_transform_domain(self.l_settings, self.var_lower,
+                                       self.var_upper, node_pos)
         # Update references
         self.node_pos, self.node_val = node_pos, node_val
         # Update all counters and values to restart properly
-        self.fmin_index = node_val.index(min(node_val))
+        self.fmin_index = np.argmin(node_val)
         self.fmin = node_val[self.fmin_index]
-        self.fmax = max(node_val)
+        self.fmax = np.max(node_val)
         self.fmin_cycle_start = self.fmin
         self.num_stalled_cycles = 0
         self.num_cons_discarded = 0
         self.is_best_fast = self.node_is_fast[self.fmin_index]
 
-        gap  = min(ru.compute_gap(self.l_settings, self.fmin,
+        gap = min(ru.compute_gap(self.l_settings, self.fmin,
                                   self.is_best_fast), current_gap)
+        # TODO: do we need this?
         # Print the initialization points
         for (i, val) in enumerate(self.node_val):
-            min_dist = ru.get_min_distance(self.node_pos[i], 
-                                           self.node_pos[:i] + 
-                                           self.node_pos[(i+1):])
+            min_dist = ru.get_min_distance(self.node_pos[i],
+                                           np.vstack((self.node_pos[:i],
+                                                      self.node_pos[(i+1):])))
             self.update_log('Initialization', self.node_is_fast[i], val, gap)
 
     # -- end function
@@ -1351,16 +1365,16 @@ class OptAlgorithm:
 
         Returns
         -------
-        List[float] or None
+        1D numpy.ndarray[float] or None
             The next point to be evaluated, or None if it cannot be
             found.
 
         """
         restoration_done = False
         cons_restoration = 0
-        self.node_val.pop()
-        self.node_pos.pop()
-        self.node_is_fast.pop()
+        np.delete(self.node_val, -1)
+        np.delete(self.node_pos, -1)
+        np.delete(self.node_is_fast, -1)
 
         while (not restoration_done and cons_restoration < 
                self.l_settings.max_consecutive_restoration):
@@ -1377,9 +1391,8 @@ class OptAlgorithm:
                                           self.node_pos, None)
             else:
                 # If that does not work (unlikely), generate a random point
-                next_p = [np.random.uniform(self.var_lower[i], 
-                                            self.var_upper[i])
-                          for i in range(self.n)]
+                next_p = np.random.rand(self.n) * (self.var_upper - self.var_lower) + self.var_lower
+
             ru.round_integer_vars(next_p, self.integer_vars)
             if (ru.get_min_distance(next_p, self.node_pos) >
                 self.l_settings.min_dist):
@@ -1688,6 +1701,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     rbfopt_utils.transform_function_values()
 
     """
+    # TODO: fix with Numpy arrays
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
@@ -1708,8 +1722,8 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     # If the RBF cannot me minimized, or if the minimum is
     # larger than the node with smallest value, just take the
     # node with the smallest value.
-    if (min_rbf is None or 
-        (min_rbf_val >= scaled_fmin + settings.eps_zero)):
+    if (min_rbf is None or
+            (min_rbf_val >= scaled_fmin + settings.eps_zero)):
         min_rbf = node_pos[fmin_index]
         min_rbf_val = scaled_fmin
     # Check if point can be accepted: is there an improvement?
@@ -1724,14 +1738,14 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
         # some sort of local search
         target_val = scaled_fmin - 0.01*max(1.0, abs(scaled_fmin))
         dist_weight = 0.05
-        local_varl = [max(var_lower[i], min_rbf[i] -
+        local_varl = np.array([max(var_lower[i], min_rbf[i] -
                           settings.local_search_box_scaling * 
                           0.33 * (var_upper[i] - var_lower[i]))
-                      for i in range(n)]
-        local_varu = [min(var_upper[i], min_rbf[i] +
+                      for i in range(n)])
+        local_varu = np.array([min(var_upper[i], min_rbf[i] +
                           settings.local_search_box_scaling * 
                           0.33 * (var_upper[i] - var_lower[i]))
-                      for i in range(n)]
+                      for i in range(n)])
         ru.round_integer_bounds(local_varl, local_varu, 
                                 integer_vars)
         next_p = aux.global_search(settings, n, k, local_varl,
@@ -1839,6 +1853,12 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         The point to be evaluated next, or None if errors occurred.
 
     """
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
+    assert (isinstance(rbf_lambda, np.ndarray))
+    assert (isinstance(rbf_h, np.ndarray))
+    assert (isinstance(node_pos, np.ndarray))
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
@@ -1849,6 +1869,8 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(0 <= current_step <= settings.num_global_searches)
 
     scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
+
+    assert (isinstance(scaled_node_val, np.ndarray))
 
     # Global search: compromise between finding a good value of the
     # objective function, and improving the model.
@@ -1900,14 +1922,14 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     # If the global search is almost a local search, we restrict the
     # search to a box following Regis and Shoemaker (2007)
     if (scaling <= config.LOCAL_SEARCH_THRESHOLD):
-        local_varl = [max(var_lower[i], min_rbf[i] -
+        local_varl = np.array([max(var_lower[i], min_rbf[i] -
                           settings.local_search_box_scaling * 
                           math.sqrt(scaling) * (var_upper[i] - var_lower[i]))
-                      for i in range(n)]
-        local_varu = [min(var_upper[i], min_rbf[i] +
+                      for i in range(n)])
+        local_varu = np.array([min(var_upper[i], min_rbf[i] +
                           settings.local_search_box_scaling * 
                           math.sqrt(scaling) * (var_upper[i] - var_lower[i]))
-                      for i in range(n)]
+                      for i in range(n)])
         ru.round_integer_bounds(local_varl, local_varu, integer_vars)
     else:
         # Otherwise, use original bounds

@@ -24,7 +24,7 @@ from rbfopt_settings import RbfSettings
 cimport numpy as np
 from libc.math cimport log, sqrt, floor, ceil
 
-DTYPE = np.float64
+DTYPE = np.float_
 
 cpdef get_rbf_function(settings):
     """Return a radial basis function.
@@ -432,7 +432,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         elif (settings.init_strategy == 'lhd_corr'):
             nodes = get_lhd_corr_points(var_lower, var_upper)
 
-        if (integer_vars.any()):
+        if (integer_vars.size):
                 for i in integer_vars:
                     np.around(nodes[:,i],out=nodes[:,i])
 
@@ -462,7 +462,7 @@ def round_integer_vars(point, integer_vars):
     """
     assert (isinstance(point, np.ndarray))
     assert (isinstance(integer_vars, np.ndarray))
-    if (integer_vars.any()):
+    if (integer_vars.size):
         assert(np.amax(integer_vars)<len(point))
         for i in integer_vars:
             point[i] = round(point[i])
@@ -492,7 +492,7 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
     assert (isinstance(var_lower, np.ndarray))
     assert (isinstance(var_upper, np.ndarray))
     assert (isinstance(integer_vars, np.ndarray))
-    if (integer_vars.any()):
+    if (integer_vars.size):
         assert(len(var_lower)==len(var_upper))
         assert(max(integer_vars)<len(var_lower))
         for i in integer_vars:
@@ -571,8 +571,8 @@ def get_min_distance(point, other_points):
     """
     assert (isinstance(point, np.ndarray))
     assert (isinstance(other_points, np.ndarray))
-    assert(point is not None and point.any())
-    assert(other_points is not None and other_points.any())
+    assert(point is not None and point.size)
+    assert(other_points is not None and other_points.size)
 
     distances = map(lambda x : distance(x, point), other_points)
     return min(distances)
@@ -601,8 +601,8 @@ def get_min_distance_index(point, other_points):
     """
     assert (isinstance(point, np.ndarray))
     assert (isinstance(other_points, np.ndarray))
-    assert(point is not None and point.any())
-    assert(other_points is not None and other_points.any())
+    assert(point is not None and point.size)
+    assert(other_points is not None and other_points.size)
 
     distances = map(lambda x : distance(np.array(x), np.array(point)), other_points)
     return distances.index(min(distances))
@@ -636,8 +636,8 @@ def bulk_get_min_distance(points, other_points):
     """
     assert(isinstance(points, np.ndarray))
     assert(isinstance(other_points, np.ndarray))
-    assert(points.any())
-    assert(other_points.any())
+    assert(points.size)
+    assert(other_points.size)
     assert(len(points[0]) == len(other_points[0]))
 
     # Create distance matrix
@@ -938,7 +938,7 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     """
     assert (isinstance(points, np.ndarray))
     assert (isinstance(node_pos, np.ndarray))
-    assert(points.any())
+    assert(points.size)
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
     assert(isinstance(settings, RbfSettings))
@@ -1061,6 +1061,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
     ValueError
         If the function scaling strategy requested is not implemented.
     """
+    # TODO: needs numpy arrays
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
     # Check dynamism: if too high, replace large function values with
@@ -1086,7 +1087,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
 
     if (settings.function_scaling == 'off'):
         # We make a copy because the caller may assume that
-        return (list(clip_val), fmin, fmax, 
+        return (np.array(clip_val), fmin, fmax,
                 [get_fast_error_bounds(settings, clip_val[i])
                  for i in fast_node_index])
     elif (settings.function_scaling == 'affine'):
@@ -1094,7 +1095,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
         # zero. This may happen if the surface is "flat" after median
         # clipping.
         denom = (fmax - fmin) if (fmax - fmin > settings.eps_zero) else 1.0
-        return ([(val - fmin)/denom for val in clip_val], 0.0, 
+        return (np.array([(val - fmin)/denom for val in clip_val]), 0.0,
                 1.0 if (fmax - fmin > settings.eps_zero) else 0.0,
                 [tuple([val/denom for val in 
                         get_fast_error_bounds(settings, clip_val[i])])
@@ -1104,7 +1105,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
         shift = (max(0.0, 1.0 - fmin) if not fast_node_index
                  else max(0.0, 1.0 - fmin -
                           get_fast_error_bounds(settings, fmin)[0]))
-        return ([math.log(val + shift) for val in clip_val], 
+        return (np.array([math.log(val + shift) for val in clip_val]),
                 math.log(fmin + shift), math.log(fmax + shift),
                 [tuple([math.log((clip_val[i] + shift + val) / 
                                  (clip_val[i] + shift))
@@ -1127,13 +1128,13 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
     settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         List of lower bounds of the variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
-    point : List[float]
+    point : 1D numpy.ndarray[float]
         Point in the domain to be rescaled.
 
     reverse : bool
@@ -1142,7 +1143,7 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
 
     Returns
     -------
-    List[float]
+    1D numpy.ndarray[float]
         Rescaled point.
     
     Raises
@@ -1173,6 +1174,64 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
         raise ValueError('Domain scaling "' + settings.domain_scaling + 
                          '" not implemented')
     
+# -- end function
+
+
+def bulk_transform_domain(settings, var_lower, var_upper, points, reverse = False):
+    """Rescale the domain.
+
+    Rescale the function domain according to the chosen strategy.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    var_lower : 1D numpy.ndarray[float]
+        List of lower bounds of the variables.
+
+    var_upper : 1D numpy.ndarray[float]
+        List of upper bounds of the variables.
+
+    points : 2D numpy.ndarray[float]
+        Point in the domain to be rescaled.
+
+    reverse : bool
+        False if we transform from the original domain to the
+        transformed space, True if we want to apply the reverse.
+
+    Returns
+    -------
+    2D numpy.ndarray[float]
+        Rescaled points.
+
+    Raises
+    ------
+    ValueError
+        If the requested rescaling strategy is not implemented.
+    """
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(points, np.ndarray))
+    assert(isinstance(settings, RbfSettings))
+    assert(len(var_lower)==len(var_upper))
+    assert(len(var_lower)==len(points[0]))
+
+    if (settings.domain_scaling == 'off'):
+        # Make a copy because the caller may assume so
+        return points.copy()
+    elif (settings.domain_scaling == 'affine'):
+        # Make an affine transformation to the unit hypercube
+        if (reverse):
+            return points * (var_upper - var_lower) + var_lower
+        else:
+            var_diff = var_upper - var_lower
+            var_diff[var_diff == 0] = 1
+            return (points - var_lower)/var_diff
+    else:
+        raise ValueError('Domain scaling "' + settings.domain_scaling +
+                         '" not implemented')
+
 # -- end function
 
 def transform_domain_bounds(settings, var_lower, var_upper):

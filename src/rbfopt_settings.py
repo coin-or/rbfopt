@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import copy
 import math
+import numpy as np
 
 class RbfSettings:
     """Global and algorithmic settings for RBF method.
@@ -434,13 +435,13 @@ class RbfSettings:
         dimension : int
             The dimension of the problem, i.e. size of the space.
 
-        var_lower : List[float]
+        var_lower : 1D numpy.ndarray[float]
             Vector of variable lower bounds.
 
-        var_upper : List[float]
+        var_upper : 1D numpy.ndarray[float]
             Vector of variable upper bounds.
 
-        integer_vars : List[int]
+        integer_vars : 1D numpy.ndarray[int]
             A list containing the indices of the integrality
             constrained variables. If empty list, all
             variables are assumed to be continuous.
@@ -450,9 +451,12 @@ class RbfSettings:
         RbfSettings
             A copy of the settings, without any 'auto' parameter values.
         """
+        assert(isinstance(var_lower, np.ndarray))
+        assert(isinstance(var_upper, np.ndarray))
+        assert(isinstance(integer_vars, np.ndarray))
         assert(dimension == len(var_lower))
         assert(dimension == len(var_upper))
-        assert((not integer_vars) or (max(integer_vars) < dimension))
+        assert((not integer_vars.any()) or (np.max(integer_vars) < dimension))
 
         l_settings = copy.deepcopy(self)
 
@@ -466,7 +470,7 @@ class RbfSettings:
             l_settings.dynamism_clipping = 'median'
                 
         if (l_settings.domain_scaling == 'auto'):
-            if (integer_vars):
+            if (integer_vars.any()):
                 l_settings.domain_scaling = 'off'
             else:
                 # Compute the length of the domain of each variable
