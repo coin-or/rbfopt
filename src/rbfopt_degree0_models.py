@@ -44,23 +44,23 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
@@ -68,11 +68,18 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     -------
     pyomo.ConcreteModel
         The concrete model describing the problem.
-    """    
+    """
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
+
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
-    assert(len(rbf_h)==(1))
+    assert(len(rbf_h)==1)
     assert(len(node_pos)==k)
     assert(isinstance(settings, RbfSettings))
     assert(ru.get_degree_polynomial(settings)==0)

@@ -141,20 +141,20 @@ def get_all_corners(var_lower, var_upper):
 
     Parameters
     ----------
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         List of lower bounds of the variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
     Returns
     -------
-    List[List[float]]
+    2D numpy.ndarray[float]
         All the corner points.
     """
     assert(len(var_lower)==len(var_upper))
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
 
     n = len(var_lower)
     node_pos = np.empty([2 ** n, n], DTYPE)
@@ -182,20 +182,20 @@ def get_lower_corners(var_lower, var_upper):
 
     Parameters
     ----------
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         List of lower bounds of the variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
     Returns
     -------
-    List[List[float]]
+    2D numpy.ndarray[float]
         The lower corner points.
     """
     assert(len(var_lower)==len(var_upper))
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
 
     n = len(var_lower)
 
@@ -218,20 +218,21 @@ def get_random_corners(var_lower, var_upper):
 
     Parameters
     ----------
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         List of lower bounds of the variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
     Returns
     -------
-    List[List[float]]
+    2D numpy.ndarray[float]
         A list of random corner points.
     """
     assert(len(var_lower)==len(var_upper))
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    # TODO: use Numpy arrays
 
     n = len(var_lower)
     node_pos = list()
@@ -261,11 +262,12 @@ def get_uniform_lhs(n, num_samples):
 
     Returns
     -------
-    List[List[float]]
+    2D numpy.ndarray[float]
         A list of n-dimensional points in the unit hypercube.
     """
     assert(n >= 0)
     assert(num_samples >= 0)
+    # TODO: use Numpy arrays
     # Generate integer LH in [0, num_samples]
     int_lh = np.array([np.random.permutation(num_samples) for i in range(n)], DTYPE)
     int_lh = int_lh.T
@@ -287,10 +289,10 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
 
     Parameters
     ----------
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         List of lower bounds of the variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
     num_trials : int
@@ -298,7 +300,7 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
 
     Returns
     -------
-    List[List[float]]
+    2D numpy.ndarray[float]
         List of points in the latin hypercube design.
     """
     assert(len(var_lower)==len(var_upper))
@@ -336,10 +338,10 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
 
     Parameters
     ----------
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         List of lower bounds of the variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
     num_trials : int
@@ -347,12 +349,12 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
 
     Returns
     -------
-    List[List[float]]
+    2D numpy.ndarray[float]
         List of points in the latin hypercube design.
     """
-    assert(len(var_lower)==len(var_upper))
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
     if (n == 1):
@@ -385,20 +387,20 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         List of lower bounds of the variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
 
     Returns
     -------
-    List[List[float]]
+    2D numpy.ndarray[float]
         List of at least n+1 corner points, where n is the dimension
         of the space. The number and position of points depends on the
         chosen strategy.
@@ -409,11 +411,11 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         If a set of feasible and linearly independent sample points
         cannot be computed within the prescribed number of iterations.
     """
-    assert(len(var_lower)==len(var_upper))
     assert(isinstance(settings, RbfSettings))
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
-    assert (isinstance(integer_vars, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(len(var_lower) == len(var_upper))
 
     # We must make sure points are linearly independent; if they are
     # not, we perform a given number of iterations
@@ -460,8 +462,8 @@ def round_integer_vars(point, integer_vars):
     integer_vars : 1D numpy.ndarray[int]
         A list of indices of integer variables.
     """
-    assert (isinstance(point, np.ndarray))
-    assert (isinstance(integer_vars, np.ndarray))
+    assert(isinstance(point, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
     if (integer_vars.size):
         assert(np.amax(integer_vars)<len(point))
         for i in integer_vars:
@@ -604,7 +606,7 @@ def get_min_distance_index(point, other_points):
     assert(point is not None and point.size)
     assert(other_points is not None and other_points.size)
 
-    distances = map(lambda x : distance(np.array(x), np.array(point)), other_points)
+    distances = map(lambda x : distance(x, point), other_points)
     return distances.index(min(distances))
 
 # -- end function
@@ -663,6 +665,9 @@ def get_rbf_matrix(settings, n, k, node_pos):
     k : int
         Number of interpolation nodes.
 
+    node_pos : 2D numpy.ndarray[float]
+        List of coordinates of the nodes.
+
     Returns
     -------
     numpy.matrix
@@ -673,6 +678,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
     ValueError
         If the type of RBF function is not supported.
     """
+    assert(isinstance(node_pos, np.ndarray))
     assert(len(node_pos)==k)
     assert(isinstance(settings, RbfSettings))
 
@@ -702,15 +708,13 @@ def get_rbf_matrix(settings, n, k, node_pos):
     # A = ([ Phi[i] + P[i] for i in range(k) ] +
     #      [ PTr[i] + [0 for j in range(p)] for i in range(p)])
 
-    node_pos_arr = np.array(node_pos, DTYPE)
-
     rbf = get_rbf_function(settings)
     p = get_size_P_matrix(settings, n)
     # Create matrix P.
     if (p == n + 1):
         # Keep the node coordinates and append a 1.
         # P is ((k) x (n+1)), PTr is its transpose
-        P = np.insert(node_pos_arr, n, 1, axis=1)
+        P = np.insert(node_pos, n, 1, axis=1)
         PTr = P.T
     elif (p == 1):
         # P is an all-one vector of size ((k) x (1))
@@ -720,11 +724,11 @@ def get_rbf_matrix(settings, n, k, node_pos):
         raise ValueError('Rbf "' + settings.rbf + '" not implemented yet')
 
     # Now create matrix Phi. Phi is ((k) x (k))
-    Phi = ss.distance.cdist(node_pos_arr, node_pos_arr)
+    Phi = ss.distance.cdist(node_pos, node_pos)
     Phi = Phi.reshape(-1)
     for i, v in enumerate(Phi):
         Phi[i] = rbf(v)
-    Phi = Phi.reshape(np.shape(node_pos_arr)[0],-1)
+    Phi = Phi.reshape(np.shape(node_pos)[0],-1)
 
     # Put together to obtain [Phi P; P^T 0].
     A = np.vstack((np.hstack((Phi, P)), np.hstack((PTr, np.zeros((p, p))))))

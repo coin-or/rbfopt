@@ -111,6 +111,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
             fitness = GutmannMukObj(settings, n, k, node_pos, mat)
         elif (settings.algorithm == 'MSRSM'):
             fitness = MaximinDistanceObj(settings, n, k, node_pos)
+        else:
+            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
         point = ga_optimize(settings, n, var_lower, var_upper,
                             integer_vars, fitness.bulk_evaluate)
     elif (settings.global_search_method == 'sampling'):
@@ -119,6 +121,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
             fitness = GutmannMukObj(settings, n, k, node_pos, mat)
         elif (settings.algorithm == 'MSRSM'):
             fitness = MaximinDistanceObj(settings, n, k, node_pos)
+        else:
+            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
         num_samples = n * settings.num_samples_aux_problems
         samples = generate_sample_points(settings, n, var_lower, var_upper,
                                          integer_vars, num_samples)
@@ -140,7 +144,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
                                                        integer_vars, node_pos)
             # Initialize variables for local search
             initialize_instance_variables(settings, instance, False)
-
+        else:
+            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
         # Instantiate optimizer
         opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
                                       executable = 
@@ -206,17 +211,17 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
     Returns
     -------
-    List[float]
+    1D numpy.ndarray[float]
         A minimizer. It is difficult to do global optimization so
         typically this method returns a local minimum.
 
@@ -226,7 +231,13 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
         If some parameters are not supported.
     RuntimeError
         If the solver cannot be found.
-    """    
+    """
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
 
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
@@ -234,13 +245,9 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(node_pos)==k)
     assert(isinstance(settings, RbfSettings))
 
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
-    assert (isinstance(integer_vars, np.ndarray))
-
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
-    assert(len(rbf_h)==(p))
+    assert(len(rbf_h)==p)
 
     # Instantiate model
     if (ru.get_degree_polynomial(settings) == 1):
@@ -259,7 +266,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
 
     # Instantiate optimizer
     opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
-                                  executable = config.MINLP_SOLVER_PATH,
+                                  executable=config.MINLP_SOLVER_PATH,
                                   solver_io='nl')
     if opt is None:
         raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
@@ -268,8 +275,8 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
 
     # Solve and load results
     try:
-        results = opt.solve(instance, keepfiles = False,
-                            tee = settings.print_solver_output)
+        results = opt.solve(instance, keepfiles=False,
+                            tee=settings.print_solver_output)
         if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
             (results.solver.termination_condition == 
              pyomo.opt.TerminationCondition.optimal)):
@@ -281,7 +288,6 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
             point = None
     except:
         point = None
-        raise
 
     return point
 
@@ -323,11 +329,11 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
@@ -355,7 +361,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
 
     Returns
     -------
-    List[float]
+    1D numpy.ndarray[float]
         A local optimum. It is difficult to do global optimization so
         typically this method returns a local optimum.
 
@@ -367,11 +373,12 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         If the solver cannot be found.
 
     """
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
-    assert (isinstance(integer_vars, np.ndarray))
-    assert (isinstance(node_pos, np.ndarray))
-    assert (isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
@@ -385,7 +392,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     p = ru.get_size_P_matrix(settings, n)
     assert((mat is None and settings.algorithm == 'MSRSM' )
            or (isinstance(mat, np.matrix) and mat.shape==(k + p, k + p)))
-    assert(len(rbf_h)==(p))
+    assert(len(rbf_h)==p)
 
     # Instantiate model
     if (ru.get_degree_polynomial(settings) == 1):
@@ -403,6 +410,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         elif (settings.algorithm == 'MSRSM'):
             fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda, 
                                     rbf_h, dist_weight)
+        else:
+            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
         point = ga_optimize(settings, n, var_lower, var_upper,
                             integer_vars, fitness.bulk_evaluate)
     elif (settings.global_search_method == 'sampling'):
@@ -413,6 +422,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         elif (settings.algorithm == 'MSRSM'):
             fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda, 
                                     rbf_h, dist_weight)
+        else:
+            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
         num_samples = n * settings.num_samples_aux_problems
         samples = generate_sample_points(settings, n, var_lower, var_upper,
                                          integer_vars, num_samples)
@@ -434,7 +445,6 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
             # OptAlgorithm keeps track of them, but in the grand
             # scheme of things the computation is rarely performed and
             # is not as expensive as the subsequent optimization.
-            point_mat = np.array(node_pos)
             dist_mat = ss.distance.cdist(node_pos, node_pos)
             dist_min = np.min(dist_mat[np.triu_indices(k, 1)])
             dist_max = np.max(dist_mat[np.triu_indices(k, 1)])
@@ -446,7 +456,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
                                                     dist_max, fmin, fmax)
             initialize_instance_variables(settings, instance)
             initialize_msrsm_aux_variables(settings, instance)
-
+        else:
+            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
         # Instantiate optimizer
         opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
                                       executable = config.MINLP_SOLVER_PATH,
@@ -800,8 +811,6 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     #                                                (1, num_samples)))
     # return np.array([[v[0, i] for v in values_by_var] for i in range(num_samples)])
 
-    cdef int i, col
-
     # Generate samples
     samples = np.random.rand(num_samples, n) * (var_upper - var_lower) + var_lower
 
@@ -838,7 +847,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
@@ -851,17 +860,16 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
 
     Returns
     -------
-    List[float]
+    1D numpy.ndarray[float]
         The best solution found.
 
     """
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(isinstance(settings, RbfSettings))
-
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
-    assert (isinstance(integer_vars, np.ndarray))
     
     # Define parameters here, for now. Will move them to
     # rbfopt_settings later if it seems that the user should be able
@@ -1028,16 +1036,16 @@ class MetricSRSMObj:
     k : int
         Number of nodes, i.e. interpolation points.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k. Can be
         None if dist_weight is equal to 1, in which case RBF values
         are not used.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1. Can be None if
         dist_weight is equal to 1, in which case RBF values are not

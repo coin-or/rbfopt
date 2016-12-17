@@ -23,8 +23,9 @@ import pickle
 import numpy as np
 from multiprocessing import Pool
 try:
+    was_there = ('cython_rbfopt.rbfopt_utils' in sys.modules.keys())
     import cython_rbfopt.rbfopt_utils as ru
-    if 'cython_rbfopt.rbfopt_utils' not in sys.modules.keys():
+    if not was_there:
         print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
@@ -415,12 +416,12 @@ class OptAlgorithm:
         """
         assert(0 <= index <= len(self.node_pos))
         assert(0 <= index + all_node_shift <= len(self.all_node_pos))
-        np.delete(self.node_pos, index, axis=0)
-        np.delete(self.node_val, index)
-        np.delete(self.node_is_fast, index)
-        np.delete(self.all_node_pos, all_node_shift + index, axis=0)
-        np.delete(self.all_node_val, all_node_shift + index)
-        np.delete(self.all_node_is_fast, all_node_shift + index)
+        self.node_pos = np.delete(np.atleast_2d(self.node_pos), index, axis=0)
+        self.node_val = np.delete(self.node_val, index)
+        self.node_is_fast = np.delete(self.node_is_fast, index)
+        self.all_node_pos = np.delete(np.atleast_2d(self.all_node_pos), all_node_shift + index, axis=0)
+        self.all_node_val = np.delete(self.all_node_val, all_node_shift + index)
+        self.all_node_is_fast = np.delete(self.all_node_is_fast, all_node_shift + index)
     # -- end function
 
     def add_node(self, point, orig_point, value, is_fast):
@@ -918,9 +919,9 @@ class OptAlgorithm:
 
         # We will keep here temporary nodes submitted for
         # evaluation. A position will be none if unfilled.
-        temp_node_pos = list()
-        temp_node_val = list()
-        temp_node_is_fast = list()
+        temp_node_pos = np.array([])
+        temp_node_val = np.array([])
+        temp_node_is_fast = np.array([])
 
         # If this is the first iteration, initialize the algorithm
         if (self.itercount == 0):
@@ -958,9 +959,9 @@ class OptAlgorithm:
                     if (self.itercount % l_settings.save_state_interval == 0):
                         self.save_to_file(l_settings.save_state_file)
                     # Remove from list of temporary points
-                    temp_node_pos.pop(j)
-                    temp_node_val.pop(j)
-                    temp_node_is_fast.pop(j)
+                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), j, axis=0)
+                    temp_node_val = np.delete(temp_node_val, j)
+                    temp_node_is_fast = np.delete(temp_node_is_fast, j)
                     # Perform main updates
                     self.stalling_update()
                     self.phase_update()
@@ -1004,7 +1005,7 @@ class OptAlgorithm:
                     if ((next_p is None) or 
                         (ru.get_min_distance(next_p, self.node_pos) <= 
                          l_settings.min_dist) or 
-                        (temp_node_pos and
+                        (temp_node_pos.size and
                          (ru.get_min_distance(next_p, temp_node_pos) <= 
                           l_settings.min_dist))):
                         self.num_cons_discarded += 1
@@ -1033,10 +1034,13 @@ class OptAlgorithm:
                         # Append point to the list of temporary nodes
                         val = ru.evaluate_rbf(l_settings, next_p, n, k, 
                                               node_pos, rbf_l, rbf_h)
-                        temp_node_pos.append(next_p)
-                        temp_node_val.append(np.clip(val, self.fmin, 
-                                                     self.fmax))
-                        temp_node_is_fast.append(node_is_fast)
+                        if (temp_node_pos.size):
+                            temp_node_pos = np.vstack((temp_node_pos, next_p))
+                        else:
+                            temp_node_pos = np.atleast_2d(next_p)
+                        temp_node_val = np.append(temp_node_val, np.clip(val, self.fmin,
+                                                                         self.fmax))
+                        temp_node_is_fast = np.append(temp_node_is_fast, node_is_fast)
                 # -- end for
             # -- end if
             
@@ -1074,7 +1078,10 @@ class OptAlgorithm:
                 self.restart(gap, pool=pool)
 
             # Nodes at current iteration, including temporary ones
-            node_pos = np.vstack((self.node_pos, temp_node_pos))
+            if (temp_node_pos.size):
+                node_pos = np.vstack((self.node_pos, temp_node_pos))
+            else:
+                node_pos = self.node_pos
             node_val = np.append(self.node_val, temp_node_val)
             node_is_fast = np.append(self.node_is_fast, temp_node_is_fast)
             k = len(node_pos)
@@ -1180,9 +1187,9 @@ class OptAlgorithm:
                 # Remove necessary nodes and move them to the
                 # temporary list
                 for j in reversed(to_remove):
-                    temp_node_pos.pop(j)
-                    temp_node_val.pop(j)
-                    temp_node_is_fast.pop(j)
+                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), j, axis=0)
+                    temp_node_val = np.delete(temp_node_val, j)
+                    temp_node_is_fast = np.delete(temp_node_is_fast, j)
                     res_removed.append(res_eval.pop(j))
                 iteration_id = 'Restoration'
             
@@ -1371,9 +1378,9 @@ class OptAlgorithm:
         """
         restoration_done = False
         cons_restoration = 0
-        np.delete(self.node_val, -1)
-        np.delete(self.node_pos, -1)
-        np.delete(self.node_is_fast, -1)
+        self.node_val = np.delete(self.node_val, -1)
+        self.node_pos = np.delete(np.atleast_2d(self.node_pos), -1, axis=0)
+        self.node_is_fast = np.delete(self.node_is_fast, -1)
 
         while (not restoration_done and cons_restoration < 
                self.l_settings.max_consecutive_restoration):
@@ -1441,14 +1448,14 @@ class OptAlgorithm:
                                   self.n, len(self.node_pos) +
                                   len(temp_node_pos), self.l_lower,
                                   self.l_upper, self.integer_vars,
-                                  self.node_pos + temp_node_pos, None)
+                                  np.vstack((self.node_pos, temp_node_pos)), None)
         # Loop through all temporary nodes, and try to restore the
         # matrix by substituting the above point.
         i = len(temp_node_pos) - 1
         while (not restoration_done and i >= 0 and
                cons_restoration <  
                self.l_settings.max_consecutive_restoration):
-            red_node_pos = temp_node_pos[:i] + temp_node_pos[(i+1):]
+            red_node_pos = np.vstack((temp_node_pos[:i], temp_node_pos[(i+1):]))
             # Try inverting the RBF matrix to see if
             # nonsingularity is restored
             try:
@@ -1465,6 +1472,7 @@ class OptAlgorithm:
             try:
                 Amat = ru.get_rbf_matrix(self.l_settings, self.n,
                                          len(self.node_pos), self.node_pos)
+                # TODO: why are we doing this?
                 Amatinv = ru.get_matrix_inverse(self.l_settings, Amat)
                 to_be_removed = [i for i in range(len(temp_node_pos))]
                 restoration_done = True
@@ -1606,6 +1614,10 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert((mat is None and settings.algorithm == 'MSRSM') or 
            isinstance(mat, np.matrix))
     assert(isinstance(settings, RbfSettings))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
     # Infstep: explore the parameter space
     return aux.pure_global_search(settings, n, k, var_lower, var_upper, 
                                   integer_vars, node_pos, mat)
@@ -1636,25 +1648,25 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars: List[int]
+    integer_vars: 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
@@ -1662,7 +1674,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
         Transformed function values: scaled node values, scaled
         minimum, scaled maximum, and node error bounds.
 
-    fast_node_index : List[int]
+    fast_node_index : 1D numpy.ndarray[int]
         List of indices of nodes whose function value should be
         considered variable withing the allowed range.
 
@@ -1701,6 +1713,12 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
 
     """
     # TODO: fix with Numpy arrays
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
@@ -1808,25 +1826,25 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars: List[int]
+    integer_vars: 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
@@ -1848,16 +1866,16 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
 
     Returns
     -------
-    List[float] or None
+    1D numpy.ndarray[float] or None
         The point to be evaluated next, or None if errors occurred.
 
     """
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
-    assert (isinstance(integer_vars, np.ndarray))
-    assert (isinstance(rbf_lambda, np.ndarray))
-    assert (isinstance(rbf_h, np.ndarray))
-    assert (isinstance(node_pos, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)

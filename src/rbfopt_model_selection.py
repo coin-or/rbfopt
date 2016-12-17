@@ -67,6 +67,8 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
         An estimate of the leave-one-out cross-validation error, which
         can be interpreted as a measure of model quality.
     """
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
     assert(len(node_val)==k)
     assert(len(node_pos)==k)
@@ -74,11 +76,12 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
     # condition is not met.
     assert(k > n + 1)
 
-    sorted_list = sorted([(node_val[i], node_pos[i]) for i in range(k)])
+
+    # sorted_list = sorted([(node_val[i], node_pos[i]) for i in range(k)])
 
     # Create a copy of the interpolation nodes and values
-    cv_node_pos = [node_pos[i] for i in range(k-1)]
-    cv_node_val = [node_val[i] for i in range(k-1)]
+    cv_node_pos = node_pos[:(k - 1)]
+    cv_node_val = node_val[:(k - 1)]
 
     # The node that was left out
     rm_node_pos = node_pos[-1]
@@ -105,7 +108,9 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
 
         # Update the node left out, unless we are at the last iteration
         if (i < k - 1):
-            cv_node_pos[k-2-i], rm_node_pos = rm_node_pos, cv_node_pos[k-2-i]
+            tmp = cv_node_pos[k-2-i].copy()
+            cv_node_pos[k-2-i] = rm_node_pos
+            rm_node_pos = tmp
             cv_node_val[k-2-i], rm_node_val = rm_node_val, cv_node_val[k-2-i]
 
     return loo_error/k
@@ -146,6 +151,8 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
         An estimate of the leave-one-out cross-validation error, which
         can be interpreted as a measure of model quality.
     """
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
     assert(len(node_val)==k)
     assert(len(node_pos)==k)
@@ -155,15 +162,15 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
     assert(k > n + 1)
 
     # Sort interpolation nodes by increasing objective function value
-    sorted_list = sorted([(node_val[i], node_pos[i]) for i in range(k)])
+    sorted_idx = node_val.argsort()
 
     # Initialize the arrays used for the cross-validation
-    cv_node_pos = [sorted_list[i][1] for i in range(1,k)]
-    cv_node_val = [sorted_list[i][0] for i in range(1,k)]
+    cv_node_pos = node_pos[sorted_idx[1:]]
+    cv_node_val = node_val[sorted_idx[1:]]
 
     # The node that was left out
-    rm_node_pos = sorted_list[0][1]
-    rm_node_val = sorted_list[0][0]
+    rm_node_pos = node_pos[sorted_idx[0]]
+    rm_node_val = node_val[sorted_idx[0]]
 
     # Estimate of the model error
     loo_error = 0.0
@@ -173,7 +180,6 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
         Amat = ru.get_rbf_matrix(settings, n, k-1, cv_node_pos)
         (rbf_l, rbf_h) = ru.get_rbf_coefficients(settings, n, k-1, 
                                                  Amat, cv_node_val)
-
         # Compute value of the interpolant at the removed node
         predicted_val = ru.evaluate_rbf(settings, rm_node_pos, n, k-1,
                                         cv_node_pos, rbf_l, rbf_h)
@@ -183,7 +189,9 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
 
         # Update the node left out
         if (i < k - 1):
-            cv_node_pos[i], rm_node_pos = rm_node_pos, cv_node_pos[i]
+            tmp = cv_node_pos[i].copy()
+            cv_node_pos[i] = rm_node_pos
+            rm_node_pos = tmp
             cv_node_val[i], rm_node_val = rm_node_val, cv_node_val[i]
 
     return loo_error/num_iterations
@@ -256,11 +264,11 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
     # Sort interpolation nodes by increasing objective function value
-    sorted_list = sorted([(node_val[i], node_pos[i]) for i in range(k)])
+    sorted_idx = node_val.argsort()
 
     # Initialize the arrays used for the cross-validation
-    cv_node_pos = [sorted_list[i][1] for i in range(k)]
-    cv_node_val = [sorted_list[i][0] for i in range(k)]
+    cv_node_pos = node_pos[sorted_idx]
+    cv_node_val = node_val[sorted_idx]
 
     # Compute the RBF matrix
     Amat = ru.get_rbf_matrix(settings, n, k, cv_node_pos)
@@ -399,11 +407,11 @@ def get_model_quality_estimate_clp(settings, n, k, node_pos, node_val,
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
     # Sort interpolation nodes by increasing objective function value
-    sorted_list = sorted([(node_val[i], node_pos[i]) for i in range(k)])
+    sorted_idx = node_val.argsort()
 
     # Initialize the arrays used for the cross-validation
-    cv_node_pos = [sorted_list[i][1] for i in range(k)]
-    cv_node_val = [sorted_list[i][0] for i in range(k)]
+    cv_node_pos = node_pos[sorted_idx]
+    cv_node_val = node_val[sorted_idx]
 
     # Compute the RBF matrix, and the two submatrices of interest
     Amat = ru.get_rbf_matrix(settings, n, k, cv_node_pos)

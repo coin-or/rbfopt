@@ -62,7 +62,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
     node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
-    fast_node_index : List[int]
+    fast_node_index : 1D numpy.ndarray[int]
         List of indices of nodes whose function value should be
         considered variable withing the allowed range.
 
@@ -80,6 +80,8 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
         The index of the node and corresponding bumpiness value
         indicating the sought node in the list node_pos.
     """
+    assert (isinstance(node_val, np.ndarray))
+    assert (isinstance(fast_node_index, np.ndarray))
     assert (isinstance(settings, RbfSettings))
     assert (len(node_val) == k)
     assert (isinstance(Amat, np.matrix))
@@ -152,7 +154,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     new_node : 1D numpy.ndarray[float]
         Location of new interpolation node.
 
-    fast_node_index : List[int]
+    fast_node_index : 1D numpy.ndarray[float]
         List of indices of nodes whose function value should be
         considered variable withing the allowed range.
 
@@ -170,6 +172,10 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
         The bumpiness of the interpolant having a new node at the
         specified location, with value target_val.
     """
+    assert (isinstance(node_pos, np.ndarray))
+    assert (isinstance(node_val, np.ndarray))
+    assert (isinstance(new_node, np.ndarray))
+    assert (isinstance(fast_node_index, np.ndarray))
     assert (isinstance(settings, RbfSettings))
     assert (len(node_val) == k)
     assert (len(node_pos) == k)
@@ -177,8 +183,8 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     assert (new_node is not None)
 
     # Add the new node to existing ones
-    n_node_pos = np.vstack(node_pos, new_node)
-    n_node_val = np.vstack(node_val, target_val)
+    n_node_pos = np.vstack((node_pos, new_node))
+    n_node_val = np.append(node_val, target_val)
 
     # Compute the matrices necessary for the algorithm
     Amat = ru.get_rbf_matrix(settings, n, k + 1, n_node_pos)

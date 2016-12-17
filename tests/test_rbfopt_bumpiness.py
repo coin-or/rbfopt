@@ -11,14 +11,17 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 
+import sys
 import unittest
 import random
 import numpy as np
 import test_rbfopt_env
 import rbfopt_bumpiness as rb
 try:
+    was_there = ('cython_rbfopt.rbfopt_utils' in sys.modules.keys())
     import cython_rbfopt.rbfopt_utils as ru
-    print('Imported Cython version of rbfopt_utils')
+    if not was_there:
+        print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 from rbfopt_settings import RbfSettings
@@ -43,18 +46,18 @@ class TestUtils(unittest.TestCase):
         """
         settings = RbfSettings(rbf = 'cubic')
         ind, bump = rb.get_min_bump_node(settings, 1, 10, np.matrix((1,1)),
-                                         [0] * 10, [], [], 0)
+                                         np.array([0] * 10), np.array([]), [], 0)
         self.assertIsNone(ind, msg = 'Failed whith empty list')
         self.assertEqual(bump, float('+inf'), msg = 'Failed whith empty list')
 
         n = 3
         k = 5
-        var_lower = [i for i in range(n)]
-        var_upper = [i + 10 for i in range(n)]
-        node_pos = [var_lower, var_upper,
-                    [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]]
-        node_val = [2*i for i in range(k)]
-        fast_node_index = [i for i in range(k)]
+        var_lower = np.array([i for i in range(n)])
+        var_upper = np.array([i + 10 for i in range(n)])
+        node_pos = np.array([var_lower, var_upper,
+                    [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
+        node_val = np.array([2*i for i in range(k)])
+        fast_node_index = np.array([i for i in range(k)])
         fast_node_err_bounds = [(-1, +1) for i in range(k)]
         Amat = [[0.0, 5196.152422706633, 5.196152422706631,
                  1714.338065908822, 2143.593744305343, 0.0, 1.0, 2.0, 1.0],
@@ -92,12 +95,12 @@ class TestUtils(unittest.TestCase):
         settings = RbfSettings(rbf = 'cubic')
         n = 3
         k = 5
-        var_lower = [i for i in range(n)]
-        var_upper = [i + 10 for i in range(n)]
-        node_pos = [var_lower, var_upper,
-                    [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]]
-        node_val = [2*i for i in range(k)]
-        fast_node_index = [i for i in range(k)]
+        var_lower = np.array([i for i in range(n)])
+        var_upper = np.array([i + 10 for i in range(n)])
+        node_pos = np.array([var_lower, var_upper,
+                    [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
+        node_val = np.array([2*i for i in range(k)])
+        fast_node_index = np.array([i for i in range(k)])
         fast_node_err_bounds = [(-1, +1) for i in range(k)]
         Amat = [[0.0, 5196.152422706633, 5.196152422706631,
                  1714.338065908822, 2143.593744305343, 0.0, 1.0, 2.0, 1.0],
@@ -114,10 +117,10 @@ class TestUtils(unittest.TestCase):
                 [2.0, 12.0, 3.0, 8.8, 12.0, 0.0, 0.0, 0.0, 0.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
         Amat = np.matrix(Amat)
-        fast_node_index = [0, 1]
+        fast_node_index = np.array([0, 1])
         fast_node_err_bounds = [(-1, 1), (-1, 1)]
         # Previous bumpiness
-        new_node = [(var_lower[i] + var_upper[i])/2 for i in range(n)]
+        new_node = np.array([(var_lower[i] + var_upper[i])/2 for i in range(n)])
         bump = 0.0
         for i in range(5):
             # Set increasing target values
