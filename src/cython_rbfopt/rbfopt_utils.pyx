@@ -142,19 +142,19 @@ def get_all_corners(var_lower, var_upper):
     Parameters
     ----------
     var_lower : 1D numpy.ndarray[float]
-        List of lower bounds of the variables.
+        Numpy array of lower bounds of the variables.
 
     var_upper : 1D numpy.ndarray[float]
-        List of upper bounds of the variables.
+        Numpy array of upper bounds of the variables.
 
     Returns
     -------
     2D numpy.ndarray[float]
         All the corner points.
     """
-    assert(len(var_lower)==len(var_upper))
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
+    assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
     node_pos = np.empty([2 ** n, n], DTYPE)
@@ -175,7 +175,7 @@ def get_all_corners(var_lower, var_upper):
 def get_lower_corners(var_lower, var_upper):
     """Compute the lower corner points of a box.
 
-    Compute a list of (n+1) corner points of the given box, where n is
+    Compute a Numpy array of (n+1) corner points of the given box, where n is
     the dimension of the space. The selected points are the bottom
     left (i.e. corresponding to the origin in the 0-1 hypercube) and
     the n adjacent ones.
@@ -183,23 +183,23 @@ def get_lower_corners(var_lower, var_upper):
     Parameters
     ----------
     var_lower : 1D numpy.ndarray[float]
-        List of lower bounds of the variables.
+        Numpy array of lower bounds of the variables.
 
     var_upper : 1D numpy.ndarray[float]
-        List of upper bounds of the variables.
+        Numpy array of upper bounds of the variables.
 
     Returns
     -------
     2D numpy.ndarray[float]
         The lower corner points.
     """
-    assert(len(var_lower)==len(var_upper))
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
+    assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
 
-    # Make sure we copy the lists instead of copying just a reference
+    # Make sure we copy the Numpy arrays instead of copying just a reference
     node_pos = np.tile(var_lower, (n + 1, 1))
     # Generate adjacent corners
     for i in range(n):
@@ -212,28 +212,28 @@ def get_lower_corners(var_lower, var_upper):
 def get_random_corners(var_lower, var_upper):
     """Compute some randomly selected corner points of the box.
 
-    Compute a list of (n+1) corner points of the given box, where n is
+    Compute a Numpy array of (n+1) corner points of the given box, where n is
     the dimension of the space. The selected points are picked
     randomly.
 
     Parameters
     ----------
     var_lower : 1D numpy.ndarray[float]
-        List of lower bounds of the variables.
+        Numpy array of lower bounds of the variables.
 
     var_upper : 1D numpy.ndarray[float]
-        List of upper bounds of the variables.
+        Numpy array of upper bounds of the variables.
 
     Returns
     -------
     2D numpy.ndarray[float]
-        A list of random corner points.
+        A Numpy array of random corner points.
     """
-    assert(len(var_lower)==len(var_upper))
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
-    # TODO: use Numpy arrays
+    assert(len(var_lower) == len(var_upper))
 
+    # TODO: so far did't find a better way of doing this with solely Numpy arrays
     n = len(var_lower)
     node_pos = list()
     while (len(node_pos) < n+1):
@@ -263,18 +263,19 @@ def get_uniform_lhs(n, num_samples):
     Returns
     -------
     2D numpy.ndarray[float]
-        A list of n-dimensional points in the unit hypercube.
+        A Numpy array of n-dimensional points in the unit hypercube.
     """
     assert(n >= 0)
     assert(num_samples >= 0)
-    # TODO: use Numpy arrays
+
     # Generate integer LH in [0, num_samples]
+    # TODO: is there a way to make this without going through lists?
     int_lh = np.array([np.random.permutation(num_samples) for i in range(n)], DTYPE)
     int_lh = int_lh.T
     # Map integer LH back to unit hypercube, and perturb points so that
     # they are uniformly distributed in the corresponding intervals
-    lhs = np.array([[np.random.uniform(i/num_samples, (i + 1)/num_samples)
-            for i in point] for point in int_lh], DTYPE)
+    lhs = (np.random.rand(num_samples, n) + int_lh) / num_samples
+
     return lhs
 
 # -- end function
@@ -282,7 +283,7 @@ def get_uniform_lhs(n, num_samples):
 def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     """Compute a latin hypercube design with maximin distance.
 
-    Compute a list of (n+1) points in the given box, where n is the
+    Compute a Numpy array of (n+1) points in the given box, where n is the
     dimension of the space. The selected points are picked according
     to a random latin hypercube design with maximin distance
     criterion. 
@@ -290,10 +291,10 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     Parameters
     ----------
     var_lower : 1D numpy.ndarray[float]
-        List of lower bounds of the variables.
+        Numpy array of lower bounds of the variables.
 
     var_upper : 1D numpy.ndarray[float]
-        List of upper bounds of the variables.
+        Numpy array of upper bounds of the variables.
 
     num_trials : int
         Maximum number of generated LHs to choose from.
@@ -301,11 +302,11 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     Returns
     -------
     2D numpy.ndarray[float]
-        List of points in the latin hypercube design.
+        Numpy array of points in the latin hypercube design.
     """
-    assert(len(var_lower)==len(var_upper))
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
     if (n == 1):
@@ -331,7 +332,7 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
 
     """Compute a latin hypercube design with min correlation.
 
-    Compute a list of (n+1) points in the given box, where n is the
+    Compute a Numpy array of (n+1) points in the given box, where n is the
     dimension of the space. The selected points are picked according
     to a random latin hypercube design with minimum correlation
     criterion. This function relies on the library pyDOE.
@@ -339,10 +340,10 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
     Parameters
     ----------
     var_lower : 1D numpy.ndarray[float]
-        List of lower bounds of the variables.
+        Numpy array of lower bounds of the variables.
 
     var_upper : 1D numpy.ndarray[float]
-        List of upper bounds of the variables.
+        Numpy array of upper bounds of the variables.
 
     num_trials : int
         Maximum number of generated LHs to choose from.
@@ -350,7 +351,7 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
     Returns
     -------
     2D numpy.ndarray[float]
-        List of points in the latin hypercube design.
+        Numpy array of points in the latin hypercube design.
     """
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
@@ -379,7 +380,7 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
 def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     """Compute the initial sample points.
 
-    Compute an initial list of nodes using the initialization strategy
+    Compute an initial Numpy array of nodes using the initialization strategy
     indicated in the algorithmic settings.
     
     Parameters
@@ -388,20 +389,20 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         Global and algorithmic settings.
 
     var_lower : 1D numpy.ndarray[float]
-        List of lower bounds of the variables.
+        Numpy array of lower bounds of the variables.
 
     var_upper : 1D numpy.ndarray[float]
-        List of upper bounds of the variables.
+        Numpy array of upper bounds of the variables.
 
     integer_vars : 1D numpy.ndarray[int]
-        A list containing the indices of the integrality constrained
-        variables. If empty list, all variables are assumed to be
+        A Numpy array containing the indices of the integrality constrained
+        variables. If empty Numpy array, all variables are assumed to be
         continuous.
 
     Returns
     -------
     2D numpy.ndarray[float]
-        List of at least n+1 corner points, where n is the dimension
+        Numpy array of at least n+1 corner points, where n is the dimension
         of the space. The number and position of points depends on the
         chosen strategy.
 
@@ -460,7 +461,7 @@ def round_integer_vars(point, integer_vars):
     point : 1D numpy.ndarray[float]
         The point to be rounded.
     integer_vars : 1D numpy.ndarray[int]
-        A list of indices of integer variables.
+        A Numpy array of indices of integer variables.
     """
     assert(isinstance(point, np.ndarray))
     assert(isinstance(integer_vars, np.ndarray))
@@ -481,14 +482,14 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
     Parameters
     ----------
     var_lower : 1D numpy.ndarray[float]
-        List of lower bounds of the variables.
+        Numpy array of lower bounds of the variables.
 
     var_upper : 1D numpy.ndarray[float]
-        List of upper bounds of the variables.
+        Numpy array of upper bounds of the variables.
 
     integer_vars : 1D numpy.ndarray[int]
-        A list containing the indices of the integrality constrained
-        variables. If empty list, all variables are assumed to be
+        A Numpy array containing the indices of the integrality constrained
+        variables. If empty Numpy array, all variables are assumed to be
         continuous.
     """
     assert (isinstance(var_lower, np.ndarray))
@@ -544,8 +545,8 @@ def distance(p1, p2):
     float
         Euclidean distance.
     """
-    assert (isinstance(p1, np.ndarray))
-    assert (isinstance(p2, np.ndarray))
+    assert(isinstance(p1, np.ndarray))
+    assert(isinstance(p2, np.ndarray))
     assert(len(p1) == len(p2))
 
     return sqrt(np.dot(p1 - p2, p1 - p2))
@@ -556,7 +557,7 @@ def get_min_distance(point, other_points):
     """Compute minimum distance from a set of points.
 
     Compute the minimum Euclidean distance between a given point and a
-    list of points.
+    Numpy array of points.
 
     Parameters
     ----------
@@ -564,15 +565,15 @@ def get_min_distance(point, other_points):
         The point we compute the distances from.
 
     other_points : 2D numpy.ndarray[float]
-        The list of points we want to compute the distances to.
+        The Numpy array of points we want to compute the distances to.
 
     Returns
     -------
     float
         Minimum distance between point and the other_points.
     """
-    assert (isinstance(point, np.ndarray))
-    assert (isinstance(other_points, np.ndarray))
+    assert(isinstance(point, np.ndarray))
+    assert(isinstance(other_points, np.ndarray))
     assert(point is not None and point.size)
     assert(other_points is not None and other_points.size)
 
@@ -584,7 +585,7 @@ def get_min_distance(point, other_points):
 def get_min_distance_index(point, other_points):
     """Compute the index of the point with minimum distance.
 
-    Compute the index of the point in a list that achieves minimum
+    Compute the index of the point in a Numpy array that achieves minimum
     Euclidean distance to a given point.
 
     Parameters
@@ -593,7 +594,7 @@ def get_min_distance_index(point, other_points):
         The point we compute the distances from.
 
     other_points : 2D numpy.ndarray[float]
-        The list of points we want to compute the distances to.
+        The Numpy array of points we want to compute the distances to.
 
     Returns
     -------
@@ -624,11 +625,11 @@ def bulk_get_min_distance(points, other_points):
         The points in R^n that we compute the distances from.
 
     other_points : 2D numpy.ndarray[float]
-        The list of points we want to compute the distances to.
+        The Numpy array of points we want to compute the distances to.
 
     Returns
     -------
-    List[float]
+    1D numpy.ndarray[float]
         Minimum distance between each point in points and the
         other_points.
 
@@ -666,7 +667,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
         Number of interpolation nodes.
 
     node_pos : 2D numpy.ndarray[float]
-        List of coordinates of the nodes.
+        Numpy array of coordinates of the nodes.
 
     Returns
     -------
@@ -808,7 +809,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
         square matrix of appropriate size.
 
     node_val : 1D numpy.ndarray[float]
-        List of values of the function at the nodes.
+        Numpy array of values of the function at the nodes.
 
     Returns
     -------
@@ -846,7 +847,7 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
     settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
-    point : List[float]
+    point : 1D numpy.ndarray[float]
         The point in R^n where we want to evaluate the interpolant.
     
     n : int
@@ -855,22 +856,26 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
     k : int
         Number of interpolation nodes.
 
-    node_pos : List[List[float]]
-        List of coordinates of the interpolation points. 
+    node_pos : 2D numpy.ndarray[float]
+        Numpy array of coordinates of the interpolation points.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
-        to the radial basis functions. List of dimension k.
+        to the radial basis functions. Numpy array of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to he
-        polynomial. List of dimension given by get_size_P_matrix().
+        polynomial. Numpy array of dimension given by get_size_P_matrix().
 
     Returns
     -------
     float
         Value of the RBF interpolant at the given point.
     """
+    assert(isinstance(point, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
     assert(len(point)==n)
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
@@ -892,11 +897,11 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
 
 def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
                       return_distances = 'no'):
-    """Evaluate the RBF interpolant at all points in a given list.
+    """Evaluate the RBF interpolant at all points in a given Numpy array.
 
-    Evaluate the RBF interpolant at all points in a given list. This
+    Evaluate the RBF interpolant at all points in a given Numpy array. This
     version uses numpy and should be faster than individually
-    evaluating the RBF at each single point, provided that the list of
+    evaluating the RBF at each single point, provided that the Numpy array of
     points is large enough. It also computes the distance or the
     minimum distance of each point from the interpolation nodes, if
     requested, since this comes almost for free.
@@ -906,8 +911,8 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
-    points : List[List[float]]
-        The list of points in R^n where we want to evaluate the
+    points : 2D numpy.ndarray[float]
+        The Numpy array of points in R^n where we want to evaluate the
         interpolant.
     
     n : int
@@ -916,16 +921,16 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     k : int
         Number of interpolation nodes.
 
-    node_pos : List[List[float]]
-        List of coordinates of the interpolation points. 
+    node_pos : 2D numpy.ndarray[float]
+        Numpy array of coordinates of the interpolation points.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
-        to the radial basis functions. List of dimension k.
+        to the radial basis functions. Numpy array of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to he
-        polynomial. List of dimension given by get_size_P_matrix().
+        polynomial. Numpy array of dimension given by get_size_P_matrix().
 
     return_distances : string
         If 'no', do nothing. If 'min', return the minimum distance of
@@ -934,14 +939,16 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
 
     Returns
     -------
-    List[float] or (List[float], List[float])
+    1D numpy.ndarray[float] or (1D numpy.ndarray[float], 1D numpy.ndarray[float])
         Value of the RBF interpolant at each point; if
         compute_min_dist is True, additionally returns the minimum
         distance of each point from the interpolation nodes.
 
     """
-    assert (isinstance(points, np.ndarray))
-    assert (isinstance(node_pos, np.ndarray))
+    assert(isinstance(points, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
     assert(points.size)
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
@@ -1133,10 +1140,10 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
         Global and algorithmic settings.
 
     var_lower : 1D numpy.ndarray[float]
-        List of lower bounds of the variables.
+        Numpy array of lower bounds of the variables.
 
     var_upper : 1D numpy.ndarray[float]
-        List of upper bounds of the variables.
+        Numpy array of upper bounds of the variables.
 
     point : 1D numpy.ndarray[float]
         Point in the domain to be rescaled.
@@ -1192,10 +1199,10 @@ def bulk_transform_domain(settings, var_lower, var_upper, points, reverse = Fals
         Global and algorithmic settings.
 
     var_lower : 1D numpy.ndarray[float]
-        List of lower bounds of the variables.
+        Numpy array of lower bounds of the variables.
 
     var_upper : 1D numpy.ndarray[float]
-        List of upper bounds of the variables.
+        Numpy array of upper bounds of the variables.
 
     points : 2D numpy.ndarray[float]
         Point in the domain to be rescaled.
@@ -1248,14 +1255,14 @@ def transform_domain_bounds(settings, var_lower, var_upper):
     ----------
     settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
-    var_lower : List[float]
-        List of lower bounds of the variables.
-    var_upper : List[float]
-        List of upper bounds of the variables.
+    var_lower : 1D numpy.ndarray[float]
+        Numpy array of lower bounds of the variables.
+    var_upper : 1D numpy.ndarray[float]
+        Numpy array of upper bounds of the variables.
 
     Returns
     -------
-    (List[float], List[float])
+    (1D numpy.ndarray[float], 1D numpy.ndarray[float])
         Rescaled bounds as (lower, upper).
     
     Raises
@@ -1331,8 +1338,8 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
         Number of nodes, i.e. interpolation points.
     current_step : int
         The current step in the cyclic search strategy.
-    node_val : List[float]
-        List of function values.
+    node_val : 1D numpy.ndarray[float]
+        Numpy array of function values.
 
     Returns
     -------
