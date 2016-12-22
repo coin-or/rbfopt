@@ -658,10 +658,10 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     assert(isinstance(Pmat, np.matrix))
     assert(isinstance(fast_node_index, np.ndarray))
     assert(len(fast_node_index)==len(fast_node_err_bounds))
-    assert(isinstance(init_rbf_lambda, np.ndarray))
-    assert(init_rbf_lambda is None or len(init_rbf_lambda)==k)
-    assert(isinstance(init_rbf_h, np.ndarray))
-    assert(init_rbf_h is None or len(init_rbf_h)==Pmat.shape[1])
+    assert(init_rbf_lambda is None or (isinstance(init_rbf_lambda, np.ndarray) and
+                                       len(init_rbf_lambda)==k))
+    assert(init_rbf_h is None or (isinstance(init_rbf_h, np.ndarray) and
+                                  len(init_rbf_h)==Pmat.shape[1]))
     
     # Instantiate model
     if (ru.get_degree_polynomial(settings) == 1):
@@ -799,7 +799,7 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     assert(len(var_upper)==n)
     assert(isinstance(settings, RbfSettings))
 
-    # OLD
+    # # OLD VERSION
     # values_by_var = list()
     # for i in range(n):
     #     low = var_lower[i]
@@ -911,7 +911,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
                                                  var_upper, integer_vars,
                                                  num_new)
         # Make a copy of best individual, and mutate it
-        best_mutated = best_individuals[0,:].copy()
+        best_mutated = best_individuals[0, :].copy()
         ga_mutate(n, var_lower, var_upper, is_integer, 
                   best_mutated, max_size_pert)
         # Mutate surviving (except best) if necessary

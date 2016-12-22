@@ -117,8 +117,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
             node_val[i] = orig_node_val
             fast_node_err_bounds[pos] = orig_node_err_bounds
             # Compute bumpiness using the formula \lambda^T \Phi \lambda
-            bump = math.fsum(rbf_l[h] * Phimat[h, j] * rbf_l[j]
-                             for h in range(k) for j in range(k))
+            bump = np.dot(np.dot(rbf_l, Phimat), rbf_l)
             if (bump < min_bump):
                 min_bump_index, min_bump = i, bump
 
@@ -172,15 +171,15 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
         The bumpiness of the interpolant having a new node at the
         specified location, with value target_val.
     """
-    assert (isinstance(node_pos, np.ndarray))
-    assert (isinstance(node_val, np.ndarray))
-    assert (isinstance(new_node, np.ndarray))
-    assert (isinstance(fast_node_index, np.ndarray))
-    assert (isinstance(settings, RbfSettings))
-    assert (len(node_val) == k)
-    assert (len(node_pos) == k)
-    assert (len(fast_node_index) == len(fast_node_err_bounds))
-    assert (new_node is not None)
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(node_val, np.ndarray))
+    assert(isinstance(new_node, np.ndarray))
+    assert(isinstance(fast_node_index, np.ndarray))
+    assert(isinstance(settings, RbfSettings))
+    assert(len(node_val) == k)
+    assert(len(node_pos) == k)
+    assert(len(fast_node_index) == len(fast_node_err_bounds))
+    assert(new_node is not None)
 
     # Add the new node to existing ones
     n_node_pos = np.vstack((node_pos, new_node))
@@ -202,8 +201,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
                                                     fast_node_err_bounds,
                                                     rbf_l, rbf_h)
 
-    bumpiness = math.fsum(rbf_l[h] * Amat[h, j] * rbf_l[j]
-                          for h in range(k + 1) for j in range(k + 1))
+    bumpiness = np.dot(np.dot(rbf_l, Amat), rbf_l)
 
     return bumpiness
 

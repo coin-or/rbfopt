@@ -38,6 +38,7 @@ except ImportError:
     import rbfopt_aux_problems as aux
 import rbfopt_model_selection as ms
 import rbfopt_config as config
+import rbfopt_bumpiness as rb
 from rbfopt_black_box import BlackBox
 from rbfopt_settings import RbfSettings
 
@@ -1327,7 +1328,7 @@ class OptAlgorithm:
                 node_pos = np.vstack((node_pos, init_node_pos))
             node_val = np.append(node_val, init_node_val)
 
-            self.node_is_fast = np.append(self.node_is_fast, np.zeros(np.shape(init_node_val)[0], dtype=bool))
+            self.node_is_fast = np.append(self.node_is_fast, np.zeros(init_node_val.shape[0], dtype=bool))
 
         if not self.all_node_pos.size:
             self.all_node_pos = node_pos.copy()
@@ -1777,7 +1778,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     # if it is better to evaluate a brand new point or re-evaluate
     # a previously known point.
     if ((two_phase_optimization == True) and (current_mode == 'accurate')):
-        (ind, bump) = ru.get_min_bump_node(settings, n, k, Amat, 
+        (ind, bump) = rb.get_min_bump_node(settings, n, k, Amat,
                                            scaled_node_val, fast_node_index, 
                                            node_err_bounds, target_val)
         
@@ -1786,7 +1787,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
             # existing one.
             if (ru.get_min_distance(next_p, node_pos) > settings.min_dist):
                 # If not, compute bumpiness of the newly proposed point.
-                n_bump = ru.get_bump_new_node(settings, n, k, node_pos,
+                n_bump = rb.get_bump_new_node(settings, n, k, node_pos,
                                               scaled_node_val, next_p,
                                               fast_node_index, 
                                               node_err_bounds,

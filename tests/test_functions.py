@@ -15,31 +15,6 @@ from __future__ import absolute_import
 
 import math
 
-class usps:
-    """
-    The USPS handwritten digit database.
-    """
-
-    @staticmethod
-    def evaluate(x):
-        """
-        Branin function of the Dixon-Szego test set.
-        """
-        assert(len(x)==2)
-        value = ((x[1] - (5.1/(4*math.pi*math.pi))*x[0]*x[0] +
-                  5/math.pi*x[0] - 6)**2 + 10*(1-1/(8*math.pi)) *
-                 math.cos(x[0]) +10)
-        return(value)
-
-    dimension = 2
-    var_lower = [-5, 0]
-    var_upper = [10, 15]
-    optimum_point = [9.42477796, 2.47499998]
-    optimum_value = 0.397887357729739
-    integer_vars = []
-
-# -- end class
-
 
 class branin:
     """

@@ -233,7 +233,14 @@ def get_random_corners(var_lower, var_upper):
     assert(isinstance(var_upper, np.ndarray))
     assert(len(var_lower) == len(var_upper))
 
-    # TODO: so far did't find a better way of doing this with solely Numpy arrays
+    # # Faster version but does not work for large n
+    # n = len(var_lower)
+    # limits = np.vstack((var_upper, var_lower)).T
+    # dec_idx = np.random.choice(2 ** n, n + 1, replace=False)
+    # bin_idx = ((dec_idx[:, None] & (1 << np.arange(n))) != 0).astype(int)
+    #
+    # return limits[np.arange(n), bin_idx]
+
     n = len(var_lower)
     node_pos = list()
     while (len(node_pos) < n+1):
@@ -243,6 +250,7 @@ def get_random_corners(var_lower, var_upper):
             node_pos.append(point)
 
     return np.array(node_pos, DTYPE)
+
     
 # -- end function
 
