@@ -198,7 +198,7 @@ The two packages above are optional.
    contact the mailing list (see below) if you are unsure about some
    test failure.
 
-5) To run the library on a user-defined black-box function, have a
+6) To run the library on a user-defined black-box function, have a
    look at the example in src/rbfopt_black_box_example.py. You can
    implement a similar class (derived from rbfopt_black_box.BlackBox),
    say in a file called my_black_box.py, and the alorithm can be
@@ -213,7 +213,7 @@ The two packages above are optional.
    (If no module is specified with the -m option, the algorithm will
    be applied to rbfopt_black_box_example.py.)
 
-6) To take advantage of faster model selection procedures, you must
+7) To take advantage of faster model selection procedures, you must
    have either IBM-ILOG Cplex or COIN-OR Clp available on your
    machine. By default, the model selection procedure uses Numpy and
    it can be slow on large problems. Using Cplex (via its Python
