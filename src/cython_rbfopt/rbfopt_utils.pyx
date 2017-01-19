@@ -557,7 +557,9 @@ def distance(p1, p2):
     assert(isinstance(p2, np.ndarray))
     assert(len(p1) == len(p2))
 
-    return sqrt(np.dot(p1 - p2, p1 - p2))
+    p = p1 - p2
+
+    return sqrt(np.dot(p, p))
 
 # -- end function
 
