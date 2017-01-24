@@ -16,17 +16,11 @@ import math
 import numpy as np
 import sys
 try:
-    was_there = ('cython_rbfopt.rbfopt_utils' in sys.modules.keys())
     import cython_rbfopt.rbfopt_utils as ru
-    if not was_there:
-        print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 try:
-    was_there = ('cython_rbfopt.rbfopt_aux_problems' in sys.modules.keys())
     import cython_rbfopt.rbfopt_aux_problems as aux
-    if not was_there:
-        print('Imported Cython version of rbfopt_aux_problems')
 except ImportError:
     import rbfopt_aux_problems as aux
 from rbfopt_settings import RbfSettings
@@ -190,8 +184,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
 
     # Get coefficients for the exact RBF
     (rbf_l, rbf_h) = ru.get_rbf_coefficients(settings, n, k + 1, Amat,
-                                          n_node_val)
-
+                                             n_node_val)
     # Get RBF coefficients for noisy interpolant
     (rbf_l, rbf_h) = aux.get_noisy_rbf_coefficients(settings, n, k + 1,
                                                     Amat[:(k + 1), :(k + 1)],
@@ -201,7 +194,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
                                                     fast_node_err_bounds,
                                                     rbf_l, rbf_h)
 
-    bumpiness = np.dot(np.dot(rbf_l, Amat), rbf_l)
+    bumpiness = np.dot(np.dot(rbf_l, Amat[:(k+1), :(k+1)]), rbf_l)
 
     return bumpiness
 

@@ -18,7 +18,6 @@ import numpy as np
 import test_rbfopt_env
 try:
     import cython_rbfopt.rbfopt_utils as ru
-    print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 import rbfopt_config as config
@@ -285,14 +284,14 @@ class TestUtils(unittest.TestCase):
         transf = ru.transform_function_values
         # Create list of values to test: node_val and corresponding
         # fast_node_index
-        to_test = [(np.array([0, -100, settings.dynamism_threshold * 10]), []),
-                   (np.array([0.0]), [0]),
-                   (np.array([0.0 for i in range(10)]), [8, 9]),
-                   (np.array([100.0 for i in range(10)]), [i for i in range(10)]),
-                   (np.array([10**i for i in range(-20, 20)]), []),
-                   (np.array([-10**i for i in range(-20, 20)] +
-                    [10**i for i in range(-20, 20)]),
-                    [i for i in range (50, 60)])]
+        to_test = [(np.array([0, -100, settings.dynamism_threshold * 10]), np.array([])),
+                   (np.array([0.0]), np.array([0])),
+                   (np.array([0.0 for i in range(10)]), np.array([8, 9])),
+                   (np.array([100.0 for i in range(10)]), np.array([i for i in range(10)])),
+                   (np.array([10.0**i for i in range(-20, 20)]), np.array([])),
+                   (np.append(np.array([-10.0**i for i in range(-20, 20)]),
+                    np.array([10.0**i for i in range(-20, 20)])),
+                    np.array([i for i in range(50, 60)]))]
         for scaling in list_scaling:
             for clipping in list_clipping:
                 header = '({:s}, {:s}):'.format(scaling, clipping)

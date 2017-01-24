@@ -23,17 +23,11 @@ import pickle
 import numpy as np
 from multiprocessing import Pool
 try:
-    was_there = ('cython_rbfopt.rbfopt_utils' in sys.modules.keys())
     import cython_rbfopt.rbfopt_utils as ru
-    if not was_there:
-        print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 try:
-    was_there = ('cython_rbfopt.rbfopt_aux_problems' in sys.modules.keys())
     import cython_rbfopt.rbfopt_aux_problems as aux
-    if not was_there:
-        print('Imported Cython version of rbfopt_aux_problems')
 except ImportError:
     import rbfopt_aux_problems as aux
 import rbfopt_model_selection as ms
@@ -1563,7 +1557,7 @@ class OptAlgorithm:
         # In this case, perform a double evaluation.
         best_possible = ((ru.get_fast_error_bounds(self.l_settings,
                                                    self.fmin)[0]
-                          if self.is_best_fast else 0.0) +  self.fmin)
+                          if self.is_best_fast else 0.0) + self.fmin)
         if ((fast_val <= best_possible -
              self.l_settings.eps_impr*max(1.0, abs(best_possible))) or
             (fast_val <= self.l_settings.target_objval +

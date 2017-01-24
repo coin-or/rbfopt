@@ -33,7 +33,7 @@ rbfopt_black_box.py:
 rbfopt_black_box_example.py:
 	Example of an implementation of a simple black-box function.
 rbfopt_algorithm.py:
-        Main optimization algorithm, both serial and parallel.
+    Main optimization algorithm, both serial and parallel.
 rbfopt_aux_problems.py:
 	Interface for the auxiliary problems solved during
 	the optimization process.
@@ -51,6 +51,8 @@ rbfopt_settings.py:
 	Global and algorithmic settings.
 rbfopt_utils.py:
 	Utility routines.
+rbfopt_bumpiness.py:
+    Routines regarding the bumpiness of the RBF interpolant.
 
 
 Contents of the tests/ directory:
@@ -71,7 +73,9 @@ test_rbfopt_env.py:
 test_rbfopt_settings.py:
 	Testing module for rbfopt_settings.py.
 test_rbfopt_utils.py
-	Testing module for rbfopt_utils.pu.
+	Testing module for rbfopt_utils.py.
+test_rbfopt_bumpiness.py
+	Testing module for rbfopt_bumpiness.py.
 
 Contents of the doc/ directory:
 
@@ -92,7 +96,7 @@ make.bat:
 This package requires the following software:
 
 Python 2.7.* (latest 2.7.* release recommended)
-NumPy version >= 1.8.1
+NumPy version >= 1.12.0
 SciPy version >= 0.13.3
 Pyomo version 4.3.11388
 
@@ -191,7 +195,9 @@ The two packages above are optional.
    testing.
 
 5) Unit tests for the library can be executed by running:
+
    python2.7 -m unittest discover -s tests/
+
    from the current (main) directory. This may take some time. If some
    of the tests fail, the library may or may not work correctly. Some
    of the test failures are relatively harmless. You are advised to

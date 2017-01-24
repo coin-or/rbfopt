@@ -16,12 +16,10 @@ import numpy as np
 import test_rbfopt_env
 try:
     import cython_rbfopt.rbfopt_utils as ru
-    print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 try:
     import cython_rbfopt.rbfopt_aux_problems as aux
-    print('Imported Cython version of rbfopt_aux_problems')
 except ImportError:
     import rbfopt_aux_problems as aux
 from rbfopt_settings import RbfSettings

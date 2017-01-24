@@ -18,10 +18,7 @@ import numpy as np
 import test_rbfopt_env
 import rbfopt_bumpiness as rb
 try:
-    was_there = ('cython_rbfopt.rbfopt_utils' in sys.modules.keys())
     import cython_rbfopt.rbfopt_utils as ru
-    if not was_there:
-        print('Imported Cython version of rbfopt_utils')
 except ImportError:
     import rbfopt_utils as ru
 from rbfopt_settings import RbfSettings
@@ -92,13 +89,13 @@ class TestUtils(unittest.TestCase):
         bumpiness, and that's what we check.
 
         """
-        settings = RbfSettings(rbf = 'cubic')
+        settings = RbfSettings(rbf='cubic')
         n = 3
         k = 5
         var_lower = np.array([i for i in range(n)])
         var_upper = np.array([i + 10 for i in range(n)])
         node_pos = np.array([var_lower, var_upper,
-                    [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
+                             [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
         node_val = np.array([2*i for i in range(k)])
         fast_node_index = np.array([i for i in range(k)])
         fast_node_err_bounds = [(-1, +1) for i in range(k)]
@@ -130,7 +127,7 @@ class TestUtils(unittest.TestCase):
                                          new_node, fast_node_index,
                                          fast_node_err_bounds, target_val)
             self.assertGreaterEqual(nbump, bump,
-                                    msg = 'Bumpiness not increasing')
+                                    msg='Bumpiness not increasing')
             # Store new bumpiness
             bump = nbump
     # -- end function

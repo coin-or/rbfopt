@@ -23,6 +23,7 @@ from rbfopt_settings import RbfSettings
 
 DTYPE = np.float_
 
+
 def get_rbf_function(settings):
     """Return a radial basis function.
 
@@ -50,11 +51,13 @@ def get_rbf_function(settings):
     elif (settings.rbf == 'multiquadric'):
         return _multiquadric
 
+
 # -- List of radial basis functions
 def _cubic(r):
     """Cubic RBF: :math: `f(x) = x^3`"""
     assert(r >= 0)
     return r*r*r
+
 
 def _thin_plate_spline(r):
     """Thin plate spline RBF: :math: `f(x) = x^2 \log x`"""
@@ -63,16 +66,19 @@ def _thin_plate_spline(r):
         return 0.0
     return math.log(r)*r*r
 
+
 def _linear(r):
     """Linear RBF: :math: `f(x) = x`"""
     assert(r >= 0)
     return r
+
 
 def _multiquadric(r):
     """Multiquadric RBF: :math: `f(x) = \sqrt{x^2 + \gamma^2}`"""
     assert(r >= 0)
     return math.sqrt(r*r + config.GAMMA*config.GAMMA)
 # -- end list of radial basis functions
+
 
 def get_degree_polynomial(settings):
     """Compute the degree of the polynomial for the interpolant.
@@ -100,6 +106,7 @@ def get_degree_polynomial(settings):
         return -1
 
 # -- end function
+
 
 def get_size_P_matrix(settings, n):
     """Compute size of the P part of the RBF matrix.
@@ -129,6 +136,7 @@ def get_size_P_matrix(settings, n):
         return 0
 
 # -- end function
+
 
 def get_all_corners(var_lower, var_upper):
     """Compute all corner points of a box.
@@ -169,6 +177,7 @@ def get_all_corners(var_lower, var_upper):
 
 # -- end function
 
+
 def get_lower_corners(var_lower, var_upper):
     """Compute the lower corner points of a box.
 
@@ -196,7 +205,7 @@ def get_lower_corners(var_lower, var_upper):
 
     n = len(var_lower)
 
-    # Make sure we copy the lists instead of copying just a reference
+    # Make sure we copy the object instead of copying just a reference
     node_pos = np.tile(var_lower, (n + 1, 1))
     # Generate adjacent corners
     for i in range(n):
@@ -205,6 +214,7 @@ def get_lower_corners(var_lower, var_upper):
     return node_pos
 
 # -- end function
+
 
 def get_random_corners(var_lower, var_upper):
     """Compute some randomly selected corner points of the box.
@@ -224,24 +234,34 @@ def get_random_corners(var_lower, var_upper):
     Returns
     -------
     2D numpy.ndarray[float]
-        A list of random corner points.
+        A List of random corner points.
     """
-    assert(len(var_lower)==len(var_upper))
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
-    # TODO: use Numpy arrays
+    assert(len(var_lower) == len(var_upper))
+
+    # # Faster version but does not work when n > 31 (or > 63) because
+    # # 2 ** n becomes too big for np.random.choice
+    #
+    # n = len(var_lower)
+    # limits = np.vstack((var_upper, var_lower)).T
+    # dec_idx = np.random.choice(2 ** n, n + 1, replace=False)
+    # bin_idx = ((dec_idx[:, None] & (1 << np.arange(n))) != 0).astype(int)
+    #
+    # return limits[np.arange(n), bin_idx]
 
     n = len(var_lower)
-    node_pos = list()
+    limits = np.vstack((var_upper, var_lower))
+    node_pos = np.atleast_2d(limits[np.random.randint(2, size=n), np.arange(n)])
     while (len(node_pos) < n+1):
-        point = [var_lower[i] if (np.random.rand() <= 0.5) else var_upper[i]
-                 for i in range(n)]
-        if (not node_pos or get_min_distance(np.array(point), np.array(node_pos)) > 0):
-            node_pos.append(point)
+        point = limits[np.random.randint(2, size=n), np.arange(n)]
+        if (get_min_distance(point, node_pos) > 0):
+            node_pos = np.vstack((node_pos, point))
 
     return np.array(node_pos, DTYPE)
 
 # -- end function
+
 
 def get_uniform_lhs(n, num_samples):
     """Generate random Latin Hypercube samples.
@@ -264,17 +284,19 @@ def get_uniform_lhs(n, num_samples):
     """
     assert(n >= 0)
     assert(num_samples >= 0)
-    # TODO: use Numpy arrays
+
     # Generate integer LH in [0, num_samples]
-    int_lh = np.array([np.random.permutation(num_samples) for i in range(n)], DTYPE)
-    int_lh = int_lh.T
+    # TODO: is there a way to do this without going through a list?
+    int_lh = np.array([np.random.permutation(num_samples)
+                       for i in range(n)], DTYPE).T
     # Map integer LH back to unit hypercube, and perturb points so that
     # they are uniformly distributed in the corresponding intervals
-    lhs = np.array([[np.random.uniform(i/num_samples, (i + 1)/num_samples)
-            for i in point] for point in int_lh], DTYPE)
+    lhs = (np.random.rand(num_samples, n) + int_lh) / num_samples
+
     return lhs
 
 # -- end function
+
 
 def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     """Compute a latin hypercube design with maximin distance.
@@ -300,9 +322,9 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     2D numpy.ndarray[float]
         List of points in the latin hypercube design.
     """
-    assert(len(var_lower)==len(var_upper))
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
     if (n == 1):
@@ -323,6 +345,7 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     return node_pos
 
 # -- end function
+
 
 def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
 
@@ -373,6 +396,7 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
 
 # -- end function
 
+
 def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     """Compute the initial sample points.
 
@@ -391,8 +415,8 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         List of upper bounds of the variables.
 
     integer_vars : 1D numpy.ndarray[int]
-        A list containing the indices of the integrality constrained
-        variables. If empty list, all variables are assumed to be
+        A List containing the indices of the integrality constrained
+        variables. If empty, all variables are assumed to be
         continuous.
 
     Returns
@@ -446,6 +470,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
 
 # -- end function
 
+
 def round_integer_vars(point, integer_vars):
     """Round a point to the closest integer.
 
@@ -463,10 +488,10 @@ def round_integer_vars(point, integer_vars):
     assert(isinstance(integer_vars, np.ndarray))
     if (integer_vars.size):
         assert(np.amax(integer_vars)<len(point))
-        for i in integer_vars:
-            point[i] = round(point[i])
+        point[integer_vars] = np.around(point[integer_vars])
 
 # -- end function
+
 
 def round_integer_bounds(var_lower, var_upper, integer_vars):
     """Round the variable bounds to integer values.
@@ -485,7 +510,7 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
 
     integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
-        variables. If empty list, all variables are assumed to be
+        variables. If empty, all variables are assumed to be
         continuous.
     """
     assert (isinstance(var_lower, np.ndarray))
@@ -495,13 +520,14 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
         assert(len(var_lower)==len(var_upper))
         assert(max(integer_vars)<len(var_lower))
         for i in integer_vars:
-            var_lower[i] = floor(var_lower[i])
-            var_upper[i] = ceil(var_upper[i])
+            var_lower[i] = math.floor(var_lower[i])
+            var_upper[i] = math.ceil(var_upper[i])
             if (var_upper[i] < var_lower[i]):
                 # Swap the two bounds
                 var_lower[i], var_upper[i] = var_upper[i], var_lower[i]
 
 # -- end function
+
 
 def norm(p):
     """Compute the L2-norm of a vector
@@ -520,9 +546,10 @@ def norm(p):
     """
     assert(isinstance(p, np.ndarray))
 
-    return sqrt(np.dot(p, p))
+    return math.sqrt(np.dot(p, p))
 
 # -- end function
+
 
 def distance(p1, p2):
     """Compute Euclidean distance between two points.
@@ -541,13 +568,16 @@ def distance(p1, p2):
     float
         Euclidean distance.
     """
-    assert (isinstance(p1, np.ndarray))
-    assert (isinstance(p2, np.ndarray))
+    assert(isinstance(p1, np.ndarray))
+    assert(isinstance(p2, np.ndarray))
     assert(len(p1) == len(p2))
 
-    return sqrt(np.dot(p1 - p2, p1 - p2))
+    p = p1 - p2
+
+    return math.sqrt(np.dot(p, p))
 
 # -- end function
+
 
 def get_min_distance(point, other_points):
     """Compute minimum distance from a set of points.
@@ -568,8 +598,8 @@ def get_min_distance(point, other_points):
     float
         Minimum distance between point and the other_points.
     """
-    assert (isinstance(point, np.ndarray))
-    assert (isinstance(other_points, np.ndarray))
+    assert(isinstance(point, np.ndarray))
+    assert(isinstance(other_points, np.ndarray))
     assert(point is not None and point.size)
     assert(other_points is not None and other_points.size)
 
@@ -577,6 +607,7 @@ def get_min_distance(point, other_points):
     return min(distances)
 
 # -- end function
+
 
 def get_min_distance_index(point, other_points):
     """Compute the index of the point with minimum distance.
@@ -608,6 +639,7 @@ def get_min_distance_index(point, other_points):
 
 # -- end function
 
+
 def bulk_get_min_distance(points, other_points):
     """Get the minimum distance between two sets of points.
 
@@ -617,7 +649,7 @@ def bulk_get_min_distance(points, other_points):
 
     Parameters
     ----------
-    point : 2D numpy.ndarray[float]
+    points : 2D numpy.ndarray[float]
         The points in R^n that we compute the distances from.
 
     other_points : 2D numpy.ndarray[float]
@@ -625,7 +657,7 @@ def bulk_get_min_distance(points, other_points):
 
     Returns
     -------
-    List[float]
+    1D numpy.ndarray[float]
         Minimum distance between each point in points and the
         other_points.
 
@@ -644,6 +676,7 @@ def bulk_get_min_distance(points, other_points):
     return np.amin(dist, 1)
 
 # -- end function
+
 
 def get_rbf_matrix(settings, n, k, node_pos):
     """Compute the matrix for the RBF system.
@@ -725,7 +758,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
     Phi = Phi.reshape(-1)
     for i, v in enumerate(Phi):
         Phi[i] = rbf(v)
-    Phi = Phi.reshape(np.shape(node_pos)[0],-1)
+    Phi = Phi.reshape(node_pos.shape[0], -1)
 
     # Put together to obtain [Phi P; P^T 0].
     A = np.vstack((np.hstack((Phi, P)), np.hstack((PTr, np.zeros((p, p))))))
@@ -738,6 +771,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
     return Amat
 
 # -- end function
+
 
 def get_matrix_inverse(settings, Amat):
     """Compute the inverse of a matrix.
@@ -769,8 +803,8 @@ def get_matrix_inverse(settings, Amat):
         Amatinv = Amat.getI()
     except np.linalg.LinAlgError as e:
         print('Exception raised trying to invert the RBF matrix',
-              file = sys.stderr)
-        print(e, file = sys.stderr)
+              file=sys.stderr)
+        print(e, file=sys.stderr)
         raise e
 
     # Zero out tiny elements of the inverse -- this is potentially
@@ -782,6 +816,7 @@ def get_matrix_inverse(settings, Amat):
     return Amatinv
 
 # -- end function
+
 
 def get_rbf_coefficients(settings, n, k, Amat, node_val):
     """Compute the coefficients of the RBF interpolant.
@@ -833,6 +868,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
 
 # -- end function
 
+
 def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
     """Evaluate the RBF interpolant at a given point.
 
@@ -843,7 +879,7 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
     settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
-    point : List[float]
+    point : 1D numpy.ndarray[float]
         The point in R^n where we want to evaluate the interpolant.
 
     n : int
@@ -852,14 +888,14 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
     k : int
         Number of interpolation nodes.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the interpolation points.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to he
         polynomial. List of dimension given by get_size_P_matrix().
 
@@ -868,12 +904,16 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
     float
         Value of the RBF interpolant at the given point.
     """
-    assert(len(point)==n)
-    assert(len(rbf_lambda)==k)
-    assert(len(node_pos)==k)
+    assert(isinstance(point, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
+    assert(len(point) == n)
+    assert(len(rbf_lambda) == k)
+    assert(len(node_pos) == k)
     assert(isinstance(settings, RbfSettings))
     p = get_size_P_matrix(settings, n)
-    assert(len(rbf_h)==p)
+    assert(len(rbf_h) == p)
 
     rbf_function = get_rbf_function(settings)
 
@@ -903,7 +943,7 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     settings : :class:`rbfopt_settings.RbfSettings`.
         Global and algorithmic settings.
 
-    points : List[List[float]]
+    points : 2D numpy.ndarray[float]
         The list of points in R^n where we want to evaluate the
         interpolant.
 
@@ -913,14 +953,14 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     k : int
         Number of interpolation nodes.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the interpolation points.
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to he
         polynomial. List of dimension given by get_size_P_matrix().
 
@@ -931,14 +971,16 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
 
     Returns
     -------
-    List[float] or (List[float], List[float])
+    1D numpy.ndarray[float] or (1D numpy.ndarray[float], 1D numpy.ndarray[float])
         Value of the RBF interpolant at each point; if
         compute_min_dist is True, additionally returns the minimum
         distance of each point from the interpolation nodes.
 
     """
-    assert (isinstance(points, np.ndarray))
-    assert (isinstance(node_pos, np.ndarray))
+    assert(isinstance(points, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
     assert(points.size)
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
@@ -970,6 +1012,7 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
 
 # -- end function
 
+
 def get_fast_error_bounds(settings, value):
     """Compute error bounds for fast interpolation nodes.
 
@@ -999,6 +1042,7 @@ def get_fast_error_bounds(settings, value):
 
 # -- end function
 
+
 def compute_gap(settings, fmin, is_best_fast):
     """Compute the optimality gap w.r.t. the target value.
 
@@ -1022,8 +1066,9 @@ def compute_gap(settings, fmin, is_best_fast):
     return gap
 # -- end function
 
+
 def transform_function_values(settings, node_val, fmin, fmax,
-                              fast_node_index = list()):
+                              fast_node_index = None):
     """Rescale function values.
 
     Rescale and adjust function values according to the chosen
@@ -1036,7 +1081,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
     settings : :class:`rbfopt_settings.RbfSettings`
        Global and algorithmic settings.
 
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
        List of function values at the interpolation nodes.
 
     fmin : float
@@ -1045,7 +1090,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
     fmax : float
        Maximum function value found so far.
 
-    fast_node_index : List[int] or None
+    fast_node_index : 1D numpy.ndarray[float] or None
        Index of function evaluations in 'fast' mode. If this is empty,
        then error bounds will not be returned.
 
@@ -1062,8 +1107,8 @@ def transform_function_values(settings, node_val, fmin, fmax,
     ValueError
         If the function scaling strategy requested is not implemented.
     """
-    # TODO: needs numpy arrays
     assert(isinstance(node_val, np.ndarray))
+    assert(fast_node_index is None or isinstance(fast_node_index, np.ndarray))
     assert(isinstance(settings, RbfSettings))
     # Check dynamism: if too high, replace large function values with
     # the median or clip at maximum dynamism
@@ -1073,22 +1118,20 @@ def transform_function_values(settings, node_val, fmin, fmax,
          (abs(fmin) <= settings.eps_zero and
           abs(fmax) > settings.dynamism_threshold))):
         if (settings.dynamism_clipping == 'median'):
-            sorted_values = np.sort(node_val)
-            median = sorted_values[len(sorted_values)//2]
-            clip_val = [min(val, median) for val in node_val]
-            fmax = median
+            med = np.median(node_val)
+            clip_val = np.clip(node_val, None, med)
+            fmax = med
         elif (settings.dynamism_clipping == 'clip_at_dyn'):
             # We should not multiply by abs(fmin) if it is too small
             mult = abs(fmin) if (abs(fmin) > settings.eps_zero) else 1.0
-            clip_val = [min(val, settings.dynamism_threshold*mult)
-                        for val in node_val]
+            clip_val = np.clip(node_val, None, settings.dynamism_threshold*mult)
             fmax = settings.dynamism_threshold*mult
     else:
         clip_val = node_val
 
     if (settings.function_scaling == 'off'):
         # We make a copy because the caller may assume that
-        return (np.array(clip_val), fmin, fmax,
+        return (clip_val, fmin, fmax,
                 [get_fast_error_bounds(settings, clip_val[i])
                  for i in fast_node_index])
     elif (settings.function_scaling == 'affine'):
@@ -1096,17 +1139,17 @@ def transform_function_values(settings, node_val, fmin, fmax,
         # zero. This may happen if the surface is "flat" after median
         # clipping.
         denom = (fmax - fmin) if (fmax - fmin > settings.eps_zero) else 1.0
-        return (np.array([(val - fmin)/denom for val in clip_val]), 0.0,
+        return ((clip_val - fmin)/denom, 0.0,
                 1.0 if (fmax - fmin > settings.eps_zero) else 0.0,
                 [tuple([val/denom for val in
                         get_fast_error_bounds(settings, clip_val[i])])
                  for i in fast_node_index])
     elif (settings.function_scaling == 'log'):
         # Compute by how much we should translate to make all points >= 1
-        shift = (max(0.0, 1.0 - fmin) if not fast_node_index
+        shift = (max(0.0, 1.0 - fmin) if not fast_node_index.size
                  else max(0.0, 1.0 - fmin -
                           get_fast_error_bounds(settings, fmin)[0]))
-        return (np.array([math.log(val + shift) for val in clip_val]),
+        return (np.log(clip_val + shift),
                 math.log(fmin + shift), math.log(fmax + shift),
                 [tuple([math.log((clip_val[i] + shift + val) /
                                  (clip_val[i] + shift))
@@ -1118,6 +1161,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
                          '" not implemented')
 
 # -- end function
+
 
 def transform_domain(settings, var_lower, var_upper, point, reverse = False):
     """Rescale the domain.
@@ -1167,10 +1211,10 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
         if (reverse):
             return point * (var_upper - var_lower) + var_lower
         else:
-            return np.array([(point[i] - var_lower[i]) /
-                    ((var_upper[i] - var_lower[i])
-                     if (var_upper[i] > var_lower[i]) else 1.0)
-                    for i in range(len(point))], DTYPE)
+            var_diff = var_upper-var_lower
+            var_diff[var_diff == 0] = 1.0
+            return (point - var_lower) / var_diff
+
     else:
         raise ValueError('Domain scaling "' + settings.domain_scaling +
                          '" not implemented')
@@ -1235,6 +1279,7 @@ def bulk_transform_domain(settings, var_lower, var_upper, points, reverse = Fals
 
 # -- end function
 
+
 def transform_domain_bounds(settings, var_lower, var_upper):
     """Rescale the variable bounds.
 
@@ -1245,14 +1290,14 @@ def transform_domain_bounds(settings, var_lower, var_upper):
     ----------
     settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         List of lower bounds of the variables.
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
     Returns
     -------
-    (List[float], List[float])
+    (1D numpy.ndarray[float], 1D numpy.ndarray[float])
         Rescaled bounds as (lower, upper).
 
     Raises
@@ -1276,6 +1321,7 @@ def transform_domain_bounds(settings, var_lower, var_upper):
                          '" not implemented')
 
 # -- end function
+
 
 def get_sigma_n(k, current_step, num_global_searches, num_initial_points):
     """Compute sigma_n.
@@ -1311,6 +1357,7 @@ def get_sigma_n(k, current_step, num_global_searches, num_initial_points):
 
 # -- end function
 
+
 def get_fmax_current_iter(settings, n, k, current_step, node_val):
     """Compute the largest function value for target value computation.
 
@@ -1328,7 +1375,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
         Number of nodes, i.e. interpolation points.
     current_step : int
         The current step in the cyclic search strategy.
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
         List of function values.
 
     Returns
@@ -1359,7 +1406,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
 
 def results_ready(results):
     """Check if some asynchronous results completed.
-    
+
     Given a list containing results of asynchronous computations
     dispatched to a worker pool, verify if some of them are ready for
     processing.
@@ -1383,9 +1430,10 @@ def results_ready(results):
     return False
 # -- end if
 
+
 def get_ready_indices(results):
     """Get indices of results of async computations that are ready.
-    
+
     Given a list containing results of asynchronous computations
     dispatched to a worker pool, obtain the index of computations that
     have concluded.
@@ -1411,6 +1459,7 @@ def get_ready_indices(results):
             ready.append(i)
     return ready
 # -- end if
+
 
 def init_rand_seed(seed):
     """Initialize the random seed.

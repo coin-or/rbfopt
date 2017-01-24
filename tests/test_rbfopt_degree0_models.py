@@ -16,7 +16,10 @@ import numpy as np
 import pyomo.environ
 import test_rbfopt_env
 import rbfopt_degree0_models as d0
-import rbfopt_utils as ru
+try:
+    import cython_rbfopt.rbfopt_utils as ru
+except ImportError:
+    import rbfopt_utils as ru
 from rbfopt_settings import RbfSettings
 
 class TestMultiquadricModels(unittest.TestCase):
