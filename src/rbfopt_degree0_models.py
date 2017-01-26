@@ -23,6 +23,7 @@ import numpy as np
 import rbfopt_config as config
 from rbfopt_settings import RbfSettings
 
+
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
                          integer_vars, node_pos, rbf_lambda, rbf_h):
     """Create the concrete model to minimize the RBF.
@@ -72,14 +73,13 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     assert(isinstance(node_pos, np.ndarray))
     assert(isinstance(rbf_lambda, np.ndarray))
     assert(isinstance(rbf_h, np.ndarray))
-
-    assert(len(var_lower)==n)
-    assert(len(var_upper)==n)
-    assert(len(rbf_lambda)==k)
-    assert(len(rbf_h)==1)
-    assert(len(node_pos)==k)
+    assert(len(var_lower) == n)
+    assert(len(var_upper) == n)
+    assert(len(rbf_lambda) == k)
+    assert(len(rbf_h) == 1)
+    assert(len(node_pos) == k)
     assert(isinstance(settings, RbfSettings))
-    assert(ru.get_degree_polynomial(settings)==0)
+    assert(ru.get_degree_polynomial(settings) == 0)
 
     model = ConcreteModel()
     
@@ -146,6 +146,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     return model
 # -- end function
 
+
 def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper, 
                                  integer_vars, node_pos, mat):
     """Create the concrete model to maximize 1/\mu.
@@ -168,17 +169,17 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
 
-    node_pos : List[List[float]]
-        List of coordinates of the nodes.
+    node_pos : 2D numpy.ndarray[float]
+        List of coordinates of the nodes (one on each row).
 
     mat: numpy.matrix
         The matrix necessary for the computation. This is the inverse
@@ -190,13 +191,17 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     pyomo.ConcreteModel
         The concrete model describing the problem.
     """
-    assert(len(var_lower)==n)
-    assert(len(var_upper)==n)
-    assert(len(node_pos)==k)
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(len(var_lower) == n)
+    assert(len(var_upper) == n)
+    assert(len(node_pos) == k)
     assert(isinstance(mat, np.matrix))
-    assert(mat.shape==(k+1,k+1))
+    assert(mat.shape == (k+1,k+1))
     assert(isinstance(settings, RbfSettings))
-    assert(ru.get_degree_polynomial(settings)==0)
+    assert(ru.get_degree_polynomial(settings) == 0)
 
     model = ConcreteModel()
 
@@ -279,6 +284,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     return model
 # -- end function
 
+
 def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
                          node_pos, rbf_lambda, rbf_h, mat, target_val):
     """Create the abstract model to maximize h_k.
@@ -298,23 +304,23 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
 
-    node_pos : List[List[float]]
-        List of coordinates of the nodes.
+    node_pos : 2D numpy.ndarray[float]
+        List of coordinates of the nodes (one on each row).
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
@@ -332,15 +338,21 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     pyomo.ConcreteModel
         The concrete model describing the problem.
     """
-    assert(len(var_lower)==n)
-    assert(len(var_upper)==n)
-    assert(len(rbf_lambda)==k)
-    assert(len(rbf_h)==1)
-    assert(len(node_pos)==k)
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
+    assert(len(var_lower) == n)
+    assert(len(var_upper) == n)
+    assert(len(rbf_lambda) == k)
+    assert(len(rbf_h) == 1)
+    assert(len(node_pos) == k)
     assert(isinstance(mat, np.matrix))
-    assert(mat.shape==(k+1, k+1))
+    assert(mat.shape == (k+1, k+1))
     assert(isinstance(settings, RbfSettings))
-    assert(ru.get_degree_polynomial(settings)==0)
+    assert(ru.get_degree_polynomial(settings) == 0)
 
     model = ConcreteModel()
 
@@ -440,6 +452,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
 
 # -- end function
 
+
 def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val, 
                           fast_node_index, fast_node_err_bounds):
     """Create a model to find RBF coefficients with min bumpiness.
@@ -466,10 +479,10 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     Pmat : numpy.matrix
         Matrix P, i.e. top right part of the standard RBF matrix.
 
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
     
-    fast_node_index : List[int]
+    fast_node_index : 1D numpy.ndarray[float]
         List of indices of nodes whose function value should be
         considered variable withing the allowed range.
     
@@ -482,15 +495,17 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     -------
     pyomo.ConcreteModel
         The concrete model describing the problem.
-    """    
+    """
+    assert(isinstance(node_val, np.ndarray))
+    assert(isinstance(fast_node_index, np.ndarray))
     assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
+    assert(len(node_val) == k)
     assert(isinstance(Phimat, np.matrix))
     assert(isinstance(Pmat, np.matrix))
-    assert(Phimat.shape==(k,k))
-    assert(Pmat.shape==(k,1))
-    assert(len(fast_node_index)==len(fast_node_err_bounds))
-    assert(ru.get_degree_polynomial(settings)==0)
+    assert(Phimat.shape == (k, k))
+    assert(Pmat.shape == (k, 1))
+    assert(len(fast_node_index) == len(fast_node_err_bounds))
+    assert(ru.get_degree_polynomial(settings) == 0)
 
     model = ConcreteModel()
 
@@ -562,6 +577,7 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
 
 # -- end function
 
+
 def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
                               integer_vars, node_pos):
     """Create the concrete model to maximize the minimum distance.
@@ -581,16 +597,16 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
 
-    node_pos : List[List[float]]
+    node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
     Returns
@@ -599,9 +615,13 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
         The concrete model describing the problem.
 
     """
-    assert(len(var_lower)==n)
-    assert(len(var_upper)==n)
-    assert(len(node_pos)==k)
+    assert (isinstance(var_lower, np.ndarray))
+    assert (isinstance(var_upper, np.ndarray))
+    assert (isinstance(integer_vars, np.ndarray))
+    assert (isinstance(node_pos, np.ndarray))
+    assert(len(var_lower) == n)
+    assert(len(var_upper) == n)
+    assert(len(node_pos) == k)
     assert(isinstance(settings, RbfSettings))
 
     model = ConcreteModel()
@@ -649,6 +669,7 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
 
 # -- end function
 
+
 def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
                            integer_vars, node_pos, rbf_lambda, rbf_h, 
                            dist_weight, dist_min, dist_max, fmin, fmax):
@@ -671,23 +692,23 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
 
-    node_pos : List[List[float]]
-        List of coordinates of the nodes.
+    node_pos : 2D numpy.ndarray[float]
+        List of coordinates of the nodes (one on each row).
 
-    rbf_lambda : List[float]
+    rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
         to the radial basis functions. List of dimension k.
 
-    rbf_h : List[float]
+    rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
@@ -714,13 +735,19 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
         The concrete model describing the problem.
 
     """
-    assert(len(var_lower)==n)
-    assert(len(var_upper)==n)
-    assert(len(rbf_lambda)==k)
-    assert(len(rbf_h)==(1))
-    assert(len(node_pos)==k)
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(rbf_lambda, np.ndarray))
+    assert(isinstance(rbf_h, np.ndarray))
+    assert(len(var_lower) == n)
+    assert(len(var_upper) == n)
+    assert(len(rbf_lambda) == k)
+    assert(len(rbf_h) == 1)
+    assert(len(node_pos) == k)
     assert(isinstance(settings, RbfSettings))
-    assert(ru.get_degree_polynomial(settings)==0)
+    assert(ru.get_degree_polynomial(settings) == 0)
     assert(0 <= dist_weight <= 1)
     assert(dist_max >= dist_min >= 0)
 
@@ -823,6 +850,7 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
 
 # -- end function
 
+
 def add_integrality_constraints(model, integer_vars):
     """Add integrality constraints to the model.
 
@@ -835,9 +863,10 @@ def add_integrality_constraints(model, integer_vars):
     model : pyomo.ConcreteModel
         The model to which we want to add integrality constraints.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
     """
+    assert(isinstance(integer_vars, np.ndarray))
     assert(len(integer_vars) > 0)
 
     ni = len(integer_vars)
@@ -861,9 +890,11 @@ def add_integrality_constraints(model, integer_vars):
 
 # -- end function
 
+
 # Function to return bounds
 def _x_bounds(model, i):
     return (model.var_lower[i], model.var_upper[i])
+
 
 # Constraints: definition of the u components of u_pi for a multiquadric RBF. 
 # The expression is:
@@ -874,6 +905,7 @@ def _udef_multiquad_constraint_rule(model, i):
                  sum((model.x[j] - model.node[i, j])**2 for j in model.N) +
                  config.GAMMA*config.GAMMA))
 
+
 # Constraints: definition of the u components of u_pi for a linear RBF.
 # The expression is:
 # for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)
@@ -882,10 +914,12 @@ def _udef_linear_constraint_rule(model, i):
             sqrt(config.DISTANCE_SHIFT + 
                  sum((model.x[j] - model.node[i, j])**2 for j in model.N)))
 
+
 # Constraint: definition of the nonhomogeneous term of the polynomial. 
 # The expression is: upi_q = 1.0
 def _nonhomo_constraint_rule(model, i):
     return (model.u_pi[i] == 1.0)
+
 
 # Constraints: definition of the value of the RBF. Expression:
 # sum_{j in K} lambda_j u_j + sum_{j in N} h_j \pi_j + h_{n+1} \pi_{n+1}
@@ -893,6 +927,7 @@ def _nonhomo_constraint_rule(model, i):
 # min sum_{j in Q} lambda_h_j u_pi_j
 def _rbfdef_constraint_rule(model):
     return (model.rbfval == summation(model.lambda_h, model.u_pi))
+
 
 # Constraints: Definition of \mu_k. There should be a constant term
 # \phi(0). Removed because it is zero in this case. Expression:
@@ -902,6 +937,7 @@ def _mukdef_constraint_rule(model):
                 for i in model.Q for j in model.Q) - model.phi_0 == 
             model.mu_k_inv)
 
+
 # Constraints: definition of the interpolation conditions. Expression:
 # Phi lambda + P h + slack = F
 def _intr_constraint_rule(model, i):
@@ -909,16 +945,19 @@ def _intr_constraint_rule(model, i):
             sum(model.Pm[i, j]*model.rbf_h[j] for j in model.P) +
             model.slack[i] == model.node_val[i])
 
+
 # Constraints: definition of the unisolvence conditions. Expression:
 # P \lambda = 0
 def _unis_constraint_rule(model, i):
     return (sum(model.Pm[j, i]*model.rbf_lambda[j] for j in model.K) == 0.0)
+
 
 # Constraints: definition of the minimum distance constraint.
 # for i in K: mindistsq <= dist(x, x^i)^2
 def _mdistdef_constraint_rule(model, i):
     return (model.mindistsq <= config.DISTANCE_SHIFT + 
             sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+
 
 # Objective function for the "minimize rbf" problem. The expression is:
 # min sum_{j in K} lambda_j d_j^3 + sum_{j in N} h_j x_j + h_{n+1}
@@ -927,16 +966,19 @@ def _mdistdef_constraint_rule(model, i):
 def _min_rbf_obj_expression(model):
     return (summation(model.lambda_h, model.u_pi))
 
+
 # Objective function for the "maximize 1/\mu" problem. The expression is:
 # max -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j;
 def _max_one_over_mu_obj_expression(model):
     return (sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
                 for i in model.Q for j in model.Q) - model.phi_0)
 
+
 # Objective function for the "maximize h_k" problem. The expression is:
 # 1/(\mu_k(x) [s_k(x) - f^\ast]^2)
 def _max_h_k_obj_expression(model):
     return (model.mu_k_inv/((model.rbfval - model.fstar)**2))
+
 
 # Objective function for the "minimize bumpiness with variable nodes"
 # problem. The expression is:
@@ -944,6 +986,7 @@ def _max_h_k_obj_expression(model):
 def _min_bump_obj_expression(model):
     return (sum(model.Phi[i,j] * model.rbf_lambda[i] * model.rbf_lambda[j]
                 for i in model.K for j in model.K))
+
 
 # Objective function for the "minimize MSRSM obj" problem. The expression is:
 # dist_weight * (dist_max - \min_k distance(x, x^k)) / (dist_max - dist_min)
@@ -954,14 +997,17 @@ def _min_msrsm_obj_expression(model):
             model.obj_weight * (model.rbfval - model.fmin) / 
             (model.fmax - model.fmin))
 
+
 # Function to return bounds on the slack variables
 def _slack_bounds(model, i):
     return (model.slack_lower[i], model.slack_upper[i])
+
 
 # Function to return bounds of the y variables
 def _y_bounds(model, i):
     return (model.var_lower[model.integer_vars[i]], 
             model.var_upper[model.integer_vars[i]])
+
 
 # Constraints: definition of the integrality constraints for the
 # variables.

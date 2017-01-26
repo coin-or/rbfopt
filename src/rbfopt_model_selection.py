@@ -52,10 +52,10 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
     k : int
         Number of nodes, i.e. interpolation points.
 
-    node_pos : List[List[float]]
-        Location of current interpolation nodes.
+    node_pos : 2D numpy.ndarray[float]
+        Location of current interpolation nodes (one on each row).
 
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
     
     Returns
@@ -67,8 +67,8 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
     assert(isinstance(node_pos, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(len(node_pos)==k)
+    assert(len(node_val) == k)
+    assert(len(node_pos) == k)
     # We cannot find a leave-one-out interpolant if the following
     # condition is not met.
     assert(k > n + 1)
@@ -114,6 +114,7 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
 
 # -- end function
 
+
 def get_model_quality_estimate(settings, n, k, node_pos, node_val,
                                num_iterations):
     """Compute an estimate of model quality.
@@ -133,10 +134,10 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    node_pos : List[List[float]]
-        Location of current interpolation nodes.
+    node_pos : 2D numpy.ndarray[float]
+        Location of current interpolation nodes (one on each row).
 
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
     num_iterations : int
@@ -151,8 +152,8 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
     assert(isinstance(node_pos, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(len(node_pos)==k)
+    assert(len(node_val) == k)
+    assert(len(node_pos) == k)
     assert(num_iterations <= k)
     # We cannot find a leave-one-out interpolant if the following
     # condition is not met.
@@ -195,6 +196,7 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
 
 # -- end function
 
+
 def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
                                    num_iterations):
     """Compute an estimate of model quality using LPs with Cplex.
@@ -217,10 +219,10 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    node_pos : List[List[float]]
-        Location of current interpolation nodes.
+    node_pos : 2D numpy.ndarray[float]
+        Location of current interpolation nodes (one on each row).
 
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
     num_iterations : int
@@ -240,9 +242,11 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
     ValueError
         If some settings are not supported.
     """
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(len(node_pos)==k)
+    assert(len(node_val) == k)
+    assert(len(node_pos) == k)
     assert(num_iterations <= k)
     assert(cpx_available)
     # We cannot find a leave-one-out interpolant if the following
@@ -338,6 +342,7 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
 
 # -- end function
 
+
 def get_model_quality_estimate_clp(settings, n, k, node_pos, node_val,
                                    num_iterations):
     """Compute an estimate of model quality using LPs with Clp.
@@ -360,10 +365,10 @@ def get_model_quality_estimate_clp(settings, n, k, node_pos, node_val,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    node_pos : List[List[float]]
-        Location of current interpolation nodes.
+    node_pos : 2D numpy.ndarray[float]
+        Location of current interpolation nodes (one on each row).
 
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
     num_iterations : int
@@ -383,9 +388,11 @@ def get_model_quality_estimate_clp(settings, n, k, node_pos, node_val,
     ValueError
         If some settings are not supported.
     """
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(len(node_pos)==k)
+    assert(len(node_val) == k)
+    assert(len(node_pos) == k)
     assert(num_iterations <= k)
     assert(cpx_available)
     # We cannot find a leave-one-out interpolant if the following
@@ -491,6 +498,7 @@ def get_model_quality_estimate_clp(settings, n, k, node_pos, node_val,
 
 # -- end function
 
+
 def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
     """Compute which type of RBF yields the best model.
 
@@ -509,13 +517,13 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
     k : int
         Number of nodes, i.e. interpolation points.
 
-    node_pos : List[List[float]]
-        Location of current interpolation nodes.
+    node_pos : 2D numpy.ndarray[float]
+        Location of current interpolation nodes (one on each row.
 
-    node_val : List[float]
+    node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
-    num_iterations : int
+    num_iter : int
         Number of nodes on which quality should be tested.
 
     Returns
@@ -525,10 +533,11 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
         model, based on leave-one-out error. This will be one of the
         supported types of RBF.
     """
-
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(node_val, np.ndarray))
     assert(isinstance(settings, RbfSettings))
-    assert(len(node_val)==k)
-    assert(len(node_pos)==k)
+    assert(len(node_val) == k)
+    assert(len(node_pos) == k)
     assert(num_iter <= k)
     # We cannot find a leave-one-out interpolant if the following
     # condition is not met.
