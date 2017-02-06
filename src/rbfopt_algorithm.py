@@ -1961,6 +1961,7 @@ def objfun_fast(data):
         that describes the problem, the point at which we want to
         apply the evaluate() method, and a list of fixed variables
         given as pairs (indices, value).
+
     Returns
     -------
     float
