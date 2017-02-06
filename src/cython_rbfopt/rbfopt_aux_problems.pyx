@@ -488,8 +488,6 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     else:
         raise ValueError('Global search method ' + settings.algorithm + 
                          ' not supported')
-    if point is not None:
-        point = np.array(point)
 
     return point
 
