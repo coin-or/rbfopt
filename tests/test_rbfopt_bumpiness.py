@@ -1,6 +1,6 @@
-"""Test the module rbfopt_utils in RBFOpt.
+"""Test the module rbfopt_bumpiness in RBFOpt.
 
-This module contains unit tests for the module rbfopt_utils.
+This module contains unit tests for the module rbfopt_bumpiness.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright International Business Machines Corporation 2016.
