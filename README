@@ -33,7 +33,7 @@ rbfopt_black_box.py:
 rbfopt_black_box_example.py:
 	Example of an implementation of a simple black-box function.
 rbfopt_algorithm.py:
-    Main optimization algorithm, both serial and parallel.
+	Main optimization algorithm, both serial and parallel.
 rbfopt_aux_problems.py:
 	Interface for the auxiliary problems solved during
 	the optimization process.
@@ -52,7 +52,7 @@ rbfopt_settings.py:
 rbfopt_utils.py:
 	Utility routines.
 rbfopt_bumpiness.py:
-    Routines regarding the bumpiness of the RBF interpolant.
+	Routines regarding the bumpiness of the RBF interpolant.
 
 
 Contents of the tests/ directory:
