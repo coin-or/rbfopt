@@ -1,3 +1,13 @@
+2017-02-09  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Major changes with the introduction of Numpy and Cython.
+	* rbfopt_aux_problems.py (get_min_bump_node, get_bump_new_node):
+	These functions are moved to aux_problems from utils, to allow
+	faster performance using Cython.
+	* rbfopt_utils.pyx, rbfopt_aux_problems.pyx: Hybrid Python/C
+	version of these modules. At the moment only the RBF functions are
+	written in real C, but this already makes a difference.
+	* setup.py: Created, for automatic compilation in Cython.
+	
 2016-10-02  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_cl_interface.py (register_options): Options are now
 	grouped into Algorithmic settings and Execution settings.
