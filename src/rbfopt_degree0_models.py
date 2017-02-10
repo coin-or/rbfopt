@@ -22,6 +22,7 @@ except ImportError:
 import numpy as np
 import rbfopt_config as config
 from rbfopt_settings import RbfSettings
+from rbfopt_config import GAMMA
 
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
@@ -252,7 +253,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     if (settings.rbf == 'linear'):
         model.phi_0 = Param(initialize=0.0)
     elif (settings.rbf == 'multiquadric'):
-        model.phi_0 = Param(initialize=config.GAMMA)
+        model.phi_0 = Param(initialize=GAMMA)
 
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
@@ -414,7 +415,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     if (settings.rbf == 'linear'):
         model.phi_0 = Param(initialize=0.0)
     elif (settings.rbf == 'multiquadric'):
-        model.phi_0 = Param(initialize=config.GAMMA)
+        model.phi_0 = Param(initialize=GAMMA)
 
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
@@ -810,7 +811,7 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     if (settings.rbf == 'linear'):
         model.phi_0 = Param(initialize=0.0)
     elif (settings.rbf == 'multiquadric'):
-        model.phi_0 = Param(initialize=config.GAMMA)
+        model.phi_0 = Param(initialize=GAMMA)
 
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
@@ -903,7 +904,7 @@ def _udef_multiquad_constraint_rule(model, i):
     return (model.u_pi[i] == 
             sqrt(config.DISTANCE_SHIFT + 
                  sum((model.x[j] - model.node[i, j])**2 for j in model.N) +
-                 config.GAMMA*config.GAMMA))
+                 GAMMA))
 
 
 # Constraints: definition of the u components of u_pi for a linear RBF.

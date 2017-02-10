@@ -100,9 +100,10 @@ class TestMultiquadricModels(unittest.TestCase):
         """
         Phimat = self.Amat[:self.k, :self.k]
         Pmat = self.Amat[:self.k, self.k:]
-        fast_node_index = [0, 1]
-        fast_node_err_bounds = [(self.node_val[i] - 2, self.node_val[i] + 2)
-                                for i in fast_node_index]
+        fast_node_index = np.array([0, 1])
+        fast_node_err_bounds = np.array([[self.node_val[i] - 2, 
+                                          self.node_val[i] + 2]
+                                         for i in fast_node_index])
         model = d0.create_min_bump_model(self.settings, self.n, self.k, 
                                          Phimat, Pmat, self.node_val,
                                          fast_node_index, fast_node_err_bounds)
@@ -214,9 +215,10 @@ class TestLinearModels(unittest.TestCase):
         """
         Phimat = self.Amat[:self.k, :self.k]
         Pmat = self.Amat[:self.k, self.k:]
-        fast_node_index = [0, 1]
-        fast_node_err_bounds = [(self.node_val[i] - 2, self.node_val[i] + 2)
-                                for i in fast_node_index]
+        fast_node_index = np.array([0, 1])
+        fast_node_err_bounds = np.array([[self.node_val[i] - 2, 
+                                          self.node_val[i] + 2]
+                                         for i in fast_node_index])
         model = d0.create_min_bump_model(self.settings, self.n, self.k, 
                                          Phimat, Pmat, self.node_val,
                                          fast_node_index, fast_node_err_bounds)

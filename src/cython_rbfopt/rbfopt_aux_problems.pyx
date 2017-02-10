@@ -8,6 +8,7 @@ modules, and the search algorithms.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
+(C) Copyright International Business Machines Corporation 2017.
 Research partially supported by SUTD-MIT International Design Center.
 """
 
@@ -40,7 +41,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
 
     Parameters
     ----------
- 
+
     settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
@@ -52,7 +53,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
 
     var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
-    
+
     var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
@@ -114,7 +115,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         elif (settings.algorithm == 'MSRSM'):
             fitness = MaximinDistanceObj(settings, n, k, node_pos)
         else:
-            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
+            raise ValueError('Algorithm ' + settings.algorithm + 
+                             ' not supported')
         point = ga_optimize(settings, n, var_lower, var_upper,
                             integer_vars, fitness.bulk_evaluate)
     elif (settings.global_search_method == 'sampling'):
@@ -124,37 +126,38 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         elif (settings.algorithm == 'MSRSM'):
             fitness = MaximinDistanceObj(settings, n, k, node_pos)
         else:
-            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
+            raise ValueError('Algorithm ' + settings.algorithm + 
+                             ' not supported')
         num_samples = n * settings.num_samples_aux_problems
         samples = generate_sample_points(settings, n, var_lower, var_upper,
                                          integer_vars, num_samples)
         scores = fitness.bulk_evaluate(samples)
         point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
-        # Optimize using Pyomo    
+        # Optimize using Pyomo
         if (settings.algorithm == 'Gutmann'):
             instance = model.create_max_one_over_mu_model(settings, n, k,
-                                                          var_lower, 
+                                                          var_lower,
                                                           var_upper,
                                                           integer_vars,
                                                           node_pos, mat)
             # Initialize variables for local search
             initialize_instance_variables(settings, instance)
         elif (settings.algorithm == 'MSRSM'):
-            instance = model.create_maximin_dist_model(settings, n, k, 
+            instance = model.create_maximin_dist_model(settings, n, k,
                                                        var_lower, var_upper,
                                                        integer_vars, node_pos)
             # Initialize variables for local search
             initialize_instance_variables(settings, instance, False)
         else:
-            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
+            raise ValueError('Algorithm ' + settings.algorithm + 
+                             ' not supported')
         # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
-                                      executable=
-                                      config.MINLP_SOLVER_PATH,
+        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME,
+                                      executable=config.MINLP_SOLVER_PATH,
                                       solver_io='nl')
         if opt is None:
-            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
+            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME +
                                ' not found')
         set_minlp_solver_options(opt)
 
@@ -162,8 +165,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         try:
             results = opt.solve(instance, keepfiles=False,
                                 tee=settings.print_solver_output)
-            if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
-                (results.solver.termination_condition == 
+            if ((results.solver.status == pyomo.opt.SolverStatus.ok) and
+                (results.solver.termination_condition ==
                  pyomo.opt.TerminationCondition.optimal)):
                 # this is feasible and optimal
                 instance.solutions.load_from(results)
@@ -172,9 +175,9 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
             else:
                 point = None
         except:
-            point = None     
+            point = None
     else:
-        raise ValueError('Global search method ' + settings.algorithm + 
+        raise ValueError('Global search method ' + settings.algorithm +
                          ' not supported')
 
     return point
@@ -260,19 +263,19 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
-    instance = model.create_min_rbf_model(settings, n, k, var_lower, 
-                                          var_upper, integer_vars, 
+    instance = model.create_min_rbf_model(settings, n, k, var_lower,
+                                          var_upper, integer_vars,
                                           node_pos, rbf_lambda, rbf_h)
 
     # Initialize variables for local search
     initialize_instance_variables(settings, instance)
 
     # Instantiate optimizer
-    opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
+    opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME,
                                   executable=config.MINLP_SOLVER_PATH,
                                   solver_io='nl')
     if opt is None:
-        raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
+        raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME +
                            'not found')
     set_minlp_solver_options(opt)
 
@@ -280,8 +283,8 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     try:
         results = opt.solve(instance, keepfiles=False,
                             tee=settings.print_solver_output)
-        if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
-            (results.solver.termination_condition == 
+        if ((results.solver.status == pyomo.opt.SolverStatus.ok) and
+            (results.solver.termination_condition ==
              pyomo.opt.TerminationCondition.optimal)):
             # this is feasible and optimal
             instance.solutions.load_from(results)
@@ -298,7 +301,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
 
 
 def global_search(settings, n, k, var_lower, var_upper, integer_vars,
-                  node_pos, rbf_lambda, rbf_h, mat, target_val, 
+                  node_pos, rbf_lambda, rbf_h, mat, target_val,
                   dist_weight, fmin, fmax):
     """Global search that tries to balance exploration/exploitation.
 
@@ -408,37 +411,39 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     if (settings.global_search_method == 'genetic'):
         # Use a genetic algorithm to optimize
         if (settings.algorithm == 'Gutmann'):
-            fitness = GutmannHkObj(settings, n, k, node_pos, rbf_lambda, 
+            fitness = GutmannHkObj(settings, n, k, node_pos, rbf_lambda,
                                    rbf_h, mat, target_val)
         elif (settings.algorithm == 'MSRSM'):
-            fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda, 
+            fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda,
                                     rbf_h, dist_weight)
         else:
-            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
+            raise ValueError('Algorithm ' + settings.algorithm + 
+                             ' not supported')
         point = ga_optimize(settings, n, var_lower, var_upper,
                             integer_vars, fitness.bulk_evaluate)
     elif (settings.global_search_method == 'sampling'):
         # Sample random points, and rank according to fitness
         if (settings.algorithm == 'Gutmann'):
-            fitness = GutmannHkObj(settings, n, k, node_pos, rbf_lambda, 
+            fitness = GutmannHkObj(settings, n, k, node_pos, rbf_lambda,
                                    rbf_h, mat, target_val)
         elif (settings.algorithm == 'MSRSM'):
-            fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda, 
+            fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda,
                                     rbf_h, dist_weight)
         else:
-            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
+            raise ValueError('Algorithm ' + settings.algorithm + 
+                             ' not supported')
         num_samples = n * settings.num_samples_aux_problems
         samples = generate_sample_points(settings, n, var_lower, var_upper,
                                          integer_vars, num_samples)
         scores = fitness.bulk_evaluate(samples)
         point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
-        # Optimize using Pyomo    
+        # Optimize using Pyomo
         if (settings.algorithm == 'Gutmann'):
             instance = model.create_max_h_k_model(settings, n, k,
                                                   var_lower, var_upper,
-                                                  integer_vars, node_pos, 
-                                                  rbf_lambda, rbf_h, mat, 
+                                                  integer_vars, node_pos,
+                                                  rbf_lambda, rbf_h, mat,
                                                   target_val)
             initialize_instance_variables(settings, instance)
             initialize_h_k_aux_variables(settings, instance)
@@ -460,13 +465,14 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
             initialize_instance_variables(settings, instance)
             initialize_msrsm_aux_variables(settings, instance)
         else:
-            raise ValueError('Algorithm ' + settings.algorithm + ' not supported')
+            raise ValueError('Algorithm ' + settings.algorithm + 
+                             ' not supported')
         # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME, 
-                                      executable = config.MINLP_SOLVER_PATH,
+        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME,
+                                      executable=config.MINLP_SOLVER_PATH,
                                       solver_io='nl')
         if opt is None:
-            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME + 
+            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME +
                                ' not found')
         set_minlp_solver_options(opt)
 
@@ -474,8 +480,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         try:
             results = opt.solve(instance, keepfiles = False,
                                 tee = settings.print_solver_output)
-            if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
-                (results.solver.termination_condition == 
+            if ((results.solver.status == pyomo.opt.SolverStatus.ok) and
+                (results.solver.termination_condition ==
                  pyomo.opt.TerminationCondition.optimal)):
                 # this is feasible and optimal
                 instance.solutions.load_from(results)
@@ -486,8 +492,10 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         except:
             point = None
     else:
-        raise ValueError('Global search method ' + settings.algorithm + 
+        raise ValueError('Global search method ' + settings.algorithm +
                          ' not supported')
+    if point is not None:
+        point = np.array(point)
 
     return point
 
@@ -513,17 +521,17 @@ def initialize_instance_variables(settings, instance, init_u_pi=True):
         Whether or not the u_pi variables should be initialized.
     """
     assert(isinstance(settings, RbfSettings))
-    
+
     # Obtain radial basis function
     rbf = ru.get_rbf_function(settings)
 
     # Initialize variables for local search
     for i in instance.N:
-        instance.x[i] = np.random.uniform(instance.var_lower[i], 
+        instance.x[i] = np.random.uniform(instance.var_lower[i],
                                           instance.var_upper[i])
     if (init_u_pi):
         for j in instance.K:
-            instance.u_pi[j] = rbf(math.sqrt(math.fsum((instance.x[i].value - 
+            instance.u_pi[j] = rbf(math.sqrt(math.fsum((instance.x[i].value -
                                                         instance.node[j, i])**2
                                                        for i in instance.N)))
         if (ru.get_degree_polynomial(settings) == 1):
@@ -540,7 +548,7 @@ def initialize_instance_variables(settings, instance, init_u_pi=True):
 
 def initialize_h_k_aux_variables(settings, instance):
     """Initialize auxiliary variables for the h_k model.
-    
+
     Initialize the rbfval and mu_k_inv variables of a problem
     instance, using the values for for x and u_pi already given. This
     helps the local search by starting at a feasible point.
@@ -560,7 +568,7 @@ def initialize_h_k_aux_variables(settings, instance):
     instance.mu_k_inv = ((-1)**ru.get_degree_polynomial(settings) *
                          math.fsum(instance.Ainv[i,j] * instance.u_pi[i].value
                                    * instance.u_pi[j].value
-                                   for i in instance.Q for j in instance.Q) + 
+                                   for i in instance.Q for j in instance.Q) +
                          instance.phi_0)
 
 # -- end function
@@ -568,7 +576,7 @@ def initialize_h_k_aux_variables(settings, instance):
 
 def initialize_msrsm_aux_variables(settings, instance):
     """Initialize auxiliary variables for the MSRSM model.
-    
+
     Initialize the rbfval and mindist variables of a problem
     instance, using the values for for x and u_pi already given. This
     helps the local search by starting at a feasible point.
@@ -585,9 +593,9 @@ def initialize_msrsm_aux_variables(settings, instance):
 
     instance.rbfval = math.fsum(instance.lambda_h[i] * instance.u_pi[i].value
                                 for i in instance.Q)
-    dist = [sum((instance.x[j].value - instance.node[i, j])**2 
-                for j in instance.N) for i in instance.K]
-    instance.mindistsq = min(min(dist), config.DISTANCE_SHIFT)
+    dist = min(sum((instance.x[j].value - instance.node[i, j])**2
+                   for j in instance.N) for i in instance.K)
+    instance.mindistsq = min(dist, config.DISTANCE_SHIFT)
 
 # -- end function
 
@@ -622,11 +630,11 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
 
     node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
-    
+
     fast_node_index : 1D numpy.ndarray[int]
         List of indices of nodes whose function value should be
         considered variable within the allowed range.
-    
+
     fast_node_err_bounds : List[(float, float)]
         Allowed deviation from node values for nodes affected by
         error. This is a list of pairs (lower, upper) of the same
@@ -655,7 +663,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
         If some parameters are not supported.
     RuntimeError
         If the solver cannot be found.
-    """    
+    """
     assert(isinstance(settings, RbfSettings))
     assert(isinstance(node_val, np.ndarray))
     assert(len(node_val) == k)
@@ -663,7 +671,8 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     assert(isinstance(Pmat, np.matrix))
     assert(isinstance(fast_node_index, np.ndarray))
     assert(len(fast_node_index) == len(fast_node_err_bounds))
-    assert(init_rbf_lambda is None or (isinstance(init_rbf_lambda, np.ndarray) and
+    assert(init_rbf_lambda is None or (isinstance(init_rbf_lambda, 
+                                                  np.ndarray) and
                                        len(init_rbf_lambda) == k))
     assert(init_rbf_h is None or (isinstance(init_rbf_h, np.ndarray) and
                                   len(init_rbf_h) == Pmat.shape[1]))
@@ -681,7 +690,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
                                            fast_node_err_bounds)
 
     # Instantiate optimizer
-    opt = pyomo.opt.SolverFactory(config.NLP_SOLVER_NAME, 
+    opt = pyomo.opt.SolverFactory(config.NLP_SOLVER_NAME,
                                   executable=config.NLP_SOLVER_PATH,
                                   solver_io='nl')
     if opt is None:
@@ -701,12 +710,13 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     try:
         results = opt.solve(instance, keepfiles=False,
                             tee=settings.print_solver_output)
-        if ((results.solver.status == pyomo.opt.SolverStatus.ok) and 
-            (results.solver.termination_condition == 
+        if ((results.solver.status == pyomo.opt.SolverStatus.ok) and
+            (results.solver.termination_condition ==
              pyomo.opt.TerminationCondition.optimal)):
             # this is feasible and optimal
             instance.solutions.load_from(results)
-            rbf_lambda = np.array([instance.rbf_lambda[i].value for i in instance.K])
+            rbf_lambda = np.array([instance.rbf_lambda[i].value 
+                                   for i in instance.K])
             rbf_h = np.array([instance.rbf_h[i].value for i in instance.P])
         else:
             # If we have initialization information, return it. It is
@@ -724,12 +734,183 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
 # -- end function
 
 
+def get_min_bump_node(settings, n, k, Amat, node_val,
+                      fast_node_index, fast_node_err_bounds,
+                      target_val):
+    """Compute the bumpiness obtained by moving an interpolation point.
+
+    Compute the bumpiness of the interpolant obtained by moving a
+    single node (the one that yields minimum bumpiness, which is
+    determined by this function) within target_val plus or minus
+    error, to target_val.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        Dimension of the problem, i.e. the space where the point lives.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    Amat : numpy.matrix
+        The matrix A = [Phi P; P^T 0] of equation (3) in the paper by
+        Costa and Nannicini.
+
+    node_val : 1D numpy.ndarray[float]
+        List of values of the function at the nodes.
+
+    fast_node_index : 1D numpy.ndarray[int]
+        List of indices of nodes whose function value should be
+        considered variable withing the allowed range.
+
+    fast_node_err_bounds : List[int]
+        Allowed deviation from node values for nodes affected by
+        error. This is a list of tuples (lower, upper) of the same
+        length as fast_node_index.
+
+    target_val : float
+        Target function value at which we want to move the node.
+
+    Returns
+    -------
+    (int, float)
+        The index of the node and corresponding bumpiness value
+        indicating the sought node in the list node_pos.
+    """
+    assert (isinstance(node_val, np.ndarray))
+    assert (isinstance(fast_node_index, np.ndarray))
+    assert (isinstance(settings, RbfSettings))
+    assert (len(node_val) == k)
+    assert (isinstance(Amat, np.matrix))
+    assert (len(fast_node_index) == len(fast_node_err_bounds))
+
+    # Extract the matrices Phi and P from
+    Phimat = Amat[:k, :k]
+    Pmat = Amat[:k, k:]
+
+    min_bump_index, min_bump = None, float('Inf')
+    for (pos, i) in enumerate(fast_node_index):
+        # Check if we are within the allowed range
+        if (node_val[i] + fast_node_err_bounds[pos][0] <= target_val and
+            node_val[i] + fast_node_err_bounds[pos][1] >= target_val):
+            # If so, compute bumpiness. Save original data.
+            orig_node_val = node_val[i]
+            orig_node_err_bounds = fast_node_err_bounds[pos]
+            # Fix this node at the target value.
+            node_val[i] = target_val
+            fast_node_err_bounds[pos] = (0.0, 0.0)
+            # Compute RBF interpolant.
+            # Get coefficients for the exact RBF first
+            (rbf_l, rbf_h) = ru.get_rbf_coefficients(settings, n, k,
+                                                  Amat, node_val)
+            # And now the noisy version
+            (rbf_l,
+             rbf_h) = get_noisy_rbf_coefficients(settings, n, k, Phimat,
+                                                 Pmat, node_val,
+                                                 fast_node_index,
+                                                 fast_node_err_bounds,
+                                                 rbf_l, rbf_h)
+            # Restore original values
+            node_val[i] = orig_node_val
+            fast_node_err_bounds[pos] = orig_node_err_bounds
+            # Compute bumpiness using the formula \lambda^T \Phi \lambda
+            bump = np.dot(np.dot(rbf_l, Phimat), rbf_l)
+            if (bump < min_bump):
+                min_bump_index, min_bump = i, bump
+
+    return (min_bump_index, min_bump)
+
+# -- end function
+
+def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
+                      fast_node_index, fast_node_err_bounds, target_val):
+    """Compute the bumpiness with a new interpolation point.
+
+    Computes the bumpiness of the interpolant obtained by setting a
+    new node in a specified location, at value target_val.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        Dimension of the problem, i.e. the space where the point lives.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    node_pos : 2D numpy.ndarray[float]
+        Location of current interpolation nodes.
+
+    node_val : 1D numpy.ndarray[float]
+        List of values of the function at the nodes.
+
+    new_node : 1D numpy.ndarray[float]
+        Location of new interpolation node.
+
+    fast_node_index : 1D numpy.ndarray[float]
+        List of indices of nodes whose function value should be
+        considered variable withing the allowed range.
+
+    fast_node_err_bounds : List[int]
+        Allowed deviation from node values for nodes affected by
+        error. This is a list of tuples (lower, upper) of the same
+        length as fast_node_index.
+
+    target_val : float
+        Target function value at which we want to move the node.
+
+    Returns
+    -------
+    float
+        The bumpiness of the interpolant having a new node at the
+        specified location, with value target_val.
+    """
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(node_val, np.ndarray))
+    assert(isinstance(new_node, np.ndarray))
+    assert(isinstance(fast_node_index, np.ndarray))
+    assert(isinstance(settings, RbfSettings))
+    assert(len(node_val) == k)
+    assert(len(node_pos) == k)
+    assert(len(fast_node_index) == len(fast_node_err_bounds))
+    assert(new_node is not None)
+
+    # Add the new node to existing ones
+    n_node_pos = np.vstack((node_pos, new_node))
+    n_node_val = np.append(node_val, target_val)
+
+    # Compute the matrices necessary for the algorithm
+    Amat = ru.get_rbf_matrix(settings, n, k + 1, n_node_pos)
+
+    # Get coefficients for the exact RBF
+    (rbf_l, rbf_h) = ru.get_rbf_coefficients(settings, n, k + 1, Amat,
+                                             n_node_val)
+    # Get RBF coefficients for noisy interpolant
+    (rbf_l, rbf_h) = get_noisy_rbf_coefficients(settings, n, k + 1,
+                                                Amat[:(k + 1), :(k + 1)],
+                                                Amat[:(k + 1), (k + 1):],
+                                                n_node_val,
+                                                fast_node_index,
+                                                fast_node_err_bounds,
+                                                rbf_l, rbf_h)
+
+    bumpiness = np.dot(np.dot(rbf_l, Amat[:(k+1), :(k+1)]), rbf_l)
+
+    return bumpiness
+
+# -- end function
+
 def set_minlp_solver_options(solver):
     """Set MINLP solver options.
 
     Set the options of the MINLP solver, using the options indicated
     in the `rbfopt_config` module.
-   
+
     Parameters
     ----------
     solver: pyomo.opt.SolverFactory
@@ -748,7 +929,7 @@ def set_nlp_solver_options(solver):
 
     Set the options of the NLP solver, using the options indicated in
     the `rbfopt_config` module.
-   
+
     Parameters
     ----------
     solver: pyomo.opt.SolverFactory
@@ -807,25 +988,12 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     assert(len(var_upper) == n)
     assert(isinstance(settings, RbfSettings))
 
-    # # OLD VERSION
-    # values_by_var = list()
-    # for i in range(n):
-    #     low = var_lower[i]
-    #     up = var_upper[i]
-    #     if (integer_vars is None or i not in integer_vars):
-    #         values_by_var.append(np.random.uniform(low, up, (1, num_samples)))
-    #     else:
-    #         values_by_var.append(np.random.randint(low, up + 1,
-    #                                                (1, num_samples)))
-    # return np.array([[v[0, i] for v in values_by_var] for i in range(num_samples)])
-
     # Generate samples
-    samples = np.random.rand(num_samples, n) * (var_upper - var_lower) + var_lower
+    samples = (np.random.rand(num_samples, n) * (var_upper - var_lower) + 
+               var_lower)
 
     # Round integer vars
-    for i in range(len(integer_vars)):
-        col = integer_vars[i]
-        assert (col < n)
+    for col in integer_vars:
         np.around(samples[:, col], out=samples[:, col])
 
     return samples
@@ -841,7 +1009,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
 
     Parameters
     ----------
- 
+
     settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
 
@@ -850,7 +1018,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
 
     var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
-    
+
     var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
@@ -877,7 +1045,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
     assert(isinstance(settings, RbfSettings))
-    
+
     # Define parameters here, for now. Will move them to
     # rbfopt_settings later if it seems that the user should be able
     # to change their value.
@@ -914,17 +1082,17 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
         mother = np.random.permutation(best_individuals)
         offspring = map(ga_mate, father, mother)
         # New individuals
-        new_individuals = generate_sample_points(settings, n, var_lower, 
+        new_individuals = generate_sample_points(settings, n, var_lower,
                                                  var_upper, integer_vars,
                                                  num_new)
         # Make a copy of best individual, and mutate it
         best_mutated = best_individuals[0, :].copy()
-        ga_mutate(n, var_lower, var_upper, is_integer, 
+        ga_mutate(n, var_lower, var_upper, is_integer,
                   best_mutated, max_size_pert)
         # Mutate surviving (except best) if necessary
         for point in best_individuals[1:]:
             if (np.random.uniform() < curr_mutation_rate):
-                ga_mutate(n, var_lower, var_upper, is_integer, 
+                ga_mutate(n, var_lower, var_upper, is_integer,
                           point, max_size_pert)
         # Generate new population
         population = np.vstack((best_individuals, offspring, new_individuals,
@@ -944,7 +1112,7 @@ def ga_mate(father, mother):
 
     The offspring will get genes uniformly at random from the mother
     and the father.
-    
+
     Parameters
     ----------
     father : 1D numpy.ndarray[float]
@@ -962,25 +1130,14 @@ def ga_mate(father, mother):
     assert(isinstance(father, np.ndarray))
     assert(len(father) == len(mother))
 
-    # OLD VERSION
-    # prob = np.random.uniform(size = len(father))
-    # return [(father[i] if prob[i] < 0.5 else mother[i])
-    #         for i in range(len(father))]
-
-    n = len(father)
-    offspring = np.empty(n, np.float64)
-    prob = np.random.uniform(size=n)
-    for i in range(n):
-        if prob[i] < 0.5:
-            offspring[i] = father[i]
-        else:
-            offspring[i] = mother[i]
-    return offspring
+    # Take elements from father or mother, depending on coin toss
+    return np.where(np.random.uniform(size=len(father)) < 0.5,
+                    father, mother)
 
 # -- end function
 
 
-def ga_mutate(n, var_lower, var_upper, is_integer, individual, 
+def ga_mutate(n, var_lower, var_upper, is_integer, individual,
               max_size_pert):
     """Mutate an individual (point) for the genetic algorithm.
 
@@ -994,7 +1151,7 @@ def ga_mutate(n, var_lower, var_upper, is_integer, individual,
 
     var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
-    
+
     var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
@@ -1021,13 +1178,12 @@ def ga_mutate(n, var_lower, var_upper, is_integer, individual,
     # many are mutated, then pick them randomly.
     size_pert = np.random.randint(max_size_pert)
     perturbed = np.random.choice(np.arange(n), size_pert, replace=False)
-    for i in perturbed:
-        if is_integer[i]:
-            individual[i] = np.random.randint(var_lower[i], var_upper[i] + 1)
-        else:
-            individual[i] = np.random.uniform(var_lower[i], var_upper[i])
+    new = (var_lower[perturbed] + np.random.rand(size_pert) * 
+                  (var_upper[perturbed] - var_lower[perturbed]))
+    new[is_integer[perturbed]] = np.around(new[is_integer[perturbed]])
+    individual[perturbed] = new
 
-# -- end function    
+# -- end function
 
 
 class MetricSRSMObj:
@@ -1070,7 +1226,7 @@ class MetricSRSMObj:
         A weight of 1.0 corresponds to using solely distance, 0.0 to
         objective function.
     """
-    def __init__(self, settings, n, k, node_pos, rbf_lambda, 
+    def __init__(self, settings, n, k, node_pos, rbf_lambda,
                  rbf_h, dist_weight):
         """Constructor.
         """
@@ -1093,7 +1249,7 @@ class MetricSRSMObj:
         self.obj_weight = (1.0 if settings.modified_msrsm_score
                            else (1 - dist_weight))
     # -- end function
-    
+
     def bulk_evaluate(self, points):
         """Evaluate the objective for Metric SRSM.
 
@@ -1104,7 +1260,7 @@ class MetricSRSMObj:
         points : 2D numpy.ndarray[float]
             Points at which we want to evaluate the objective function
             (one for each row).
-        
+
         Returns
         -------
         float
@@ -1113,7 +1269,7 @@ class MetricSRSMObj:
         assert(isinstance(points, np.ndarray))
         # Determine distance and surrogate model value
         obj, dist = ru.bulk_evaluate_rbf(self.settings, points, self.n,
-                                         self.k, self.node_pos, 
+                                         self.k, self.node_pos,
                                          self.rbf_lambda, self.rbf_h, 'min')
         # Determine scaling factors
         min_dist, max_dist = min(dist), max(dist)
@@ -1142,7 +1298,7 @@ class MetricSRSMObj:
 
         objfun : float
             Value of the RBF interpolant at this point.
-        
+
         Returns
         -------
         float
@@ -1153,7 +1309,7 @@ class MetricSRSMObj:
             return float('inf')
         dist_score = (self.max_dist - distance)/self.dist_denom
         obj_score = (objfun - self.min_obj)/self.obj_denom
-        return (self.obj_weight * obj_score + 
+        return (self.obj_weight * obj_score +
                 self.dist_weight * dist_score)
     # -- end function
 # -- end class MetricSRSMObj
@@ -1193,7 +1349,7 @@ class MaximinDistanceObj:
         self.k = k
         self.node_pos = node_pos
     # -- end function
-    
+
     def bulk_evaluate(self, points):
         """Evaluate the objective for Maximin Distance.
 
@@ -1204,7 +1360,7 @@ class MaximinDistanceObj:
         points : 2D numpy.ndarray[float]
             Points at which we want to evaluate the objective function
             (one for each row).
-        
+
         Returns
         -------
         float
@@ -1250,7 +1406,7 @@ class GutmannHkObj:
         dist_weight is equal to 1, in which case RBF values are not
         used.
 
-    Amatinv : numpy.matrix or None
+    Amatinv : numpy.matrix
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0]. Must be a square numpy.matrix of
         appropriate dimension.
@@ -1260,7 +1416,7 @@ class GutmannHkObj:
         function. Used by Gutmann's RBF method only.
 
     """
-    def __init__(self, settings, n, k, node_pos, rbf_lambda, 
+    def __init__(self, settings, n, k, node_pos, rbf_lambda,
                  rbf_h, Amatinv, target_val):
         """Constructor.
         """
@@ -1272,7 +1428,7 @@ class GutmannHkObj:
         assert(isinstance(settings, RbfSettings))
         # Determine the size of the P matrix
         p = ru.get_size_P_matrix(settings, n)
-        assert(isinstance(Amatinv, np.matrix) and 
+        assert(isinstance(Amatinv, np.matrix) and
                Amatinv.shape == (k + p, k + p))
         assert(len(rbf_h) == p)
 
@@ -1285,7 +1441,7 @@ class GutmannHkObj:
         self.Amatinv = Amatinv
         self.target_val = target_val
     # -- end function
-    
+
     def bulk_evaluate(self, points):
         """Evaluate the objective for the Gutmann h_k objective.
 
@@ -1298,7 +1454,7 @@ class GutmannHkObj:
         points : 2D numpy.ndarray[float]
             Points at which we want to evaluate the objective function
             (one for each row).
-        
+
         Returns
         -------
         float
@@ -1335,15 +1491,10 @@ class GutmannHkObj:
         # This is the shift in the computation of \mu_k
         shift = rbf_function(0.0)
         sign = (-1)**ru.get_degree_polynomial(self.settings)
-
-        # OLD
-        # return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], np.array(self.Amatinv)),
-        #                          u_pi_mat[i, ]) - shift)) /
-        #         (rbf_value[i] - self.target_val)**2
-        #         for i in range(len(points))]
-
-        return -(sign * (np.sum(np.dot(u_pi_mat, np.array(self.Amatinv)) * u_pi_mat, axis=1) -
-                  shift)) / (rbf_value - self.target_val)**2
+        
+        return -((sign * (np.sum(np.dot(u_pi_mat, np.array(self.Amatinv)) *
+                                 u_pi_mat, axis=1) - shift)) / 
+                 (rbf_value - self.target_val)**2)
 
         # -- end function
 # -- end class GutmannHkObj
@@ -1384,7 +1535,7 @@ class GutmannMukObj:
         assert(isinstance(settings, RbfSettings))
         # Determine the size of the P matrix
         p = ru.get_size_P_matrix(settings, n)
-        assert(isinstance(Amatinv, np.matrix) and 
+        assert(isinstance(Amatinv, np.matrix) and
                Amatinv.shape == (k + p, k + p))
 
         self.settings = settings
@@ -1393,7 +1544,7 @@ class GutmannMukObj:
         self.node_pos = node_pos
         self.Amatinv = Amatinv
     # -- end function
-    
+
     def bulk_evaluate(self, points):
         """Evaluate the objective for the Gutmann \mu objective.
 
@@ -1404,7 +1555,7 @@ class GutmannMukObj:
         points : 2D numpy.ndarray[float]
             Points at which we want to evaluate the objective function
             (one for each row).
-        
+
         Returns
         -------
         float
@@ -1434,12 +1585,8 @@ class GutmannMukObj:
         shift = rbf_function(0.0)
         sign = (-1)**ru.get_degree_polynomial(self.settings)
 
-        # OLD
-        # return [-(sign * (np.dot(np.dot(u_pi_mat[i, ], np.array(self.Amatinv)),
-        #                          u_pi_mat[i, ]) + shift))
-        #         for i in range(len(points))]
-
-        return -(sign * (np.sum(np.dot(u_pi_mat, np.array(self.Amatinv)) * u_pi_mat, axis=1) +
+        return -(sign * (np.sum(np.dot(u_pi_mat, np.array(self.Amatinv)) * 
+                                u_pi_mat, axis=1) +
                          shift))
     # -- end function
 # -- end class GutmannMukObj

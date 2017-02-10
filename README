@@ -25,6 +25,8 @@ README:
 	This file.
 requirements.txt:
 	List of dependencies for this project.
+setup.py:
+	Setup file, using distuils, to compile some modules with Cython.
 
 Contents of the src/ directory:
 
@@ -55,6 +57,14 @@ rbfopt_bumpiness.py:
 	Routines regarding the bumpiness of the RBF interpolant.
 
 
+Contents of the src/cython_rbfopt/ directory:
+
+rbfopt_aux_problems.pyx:
+	Interface for the auxiliary problems solved during
+	the optimization process. Cython version.
+rbfopt_utils.pyx:
+	Utility routines. Cython version.
+
 Contents of the tests/ directory:
 
 rbfopt_test_interface.py:
@@ -74,8 +84,6 @@ test_rbfopt_settings.py:
 	Testing module for rbfopt_settings.py.
 test_rbfopt_utils.py
 	Testing module for rbfopt_utils.py.
-test_rbfopt_bumpiness.py
-	Testing module for rbfopt_bumpiness.py.
 
 Contents of the doc/ directory:
 
@@ -96,7 +104,7 @@ make.bat:
 This package requires the following software:
 
 Python 2.7.* (latest 2.7.* release recommended)
-NumPy version >= 1.12.0
+NumPy version >= 1.11.0
 SciPy version >= 0.13.3
 Pyomo version 4.3.11388
 
@@ -228,6 +236,17 @@ The two packages above are optional.
    corresponding "import" Python command (i.e. "import cplex" and
    "import cylp.cy"), you can select the corresponding value for the
    option model_selection_solver.
+
+8) Some modules of RBFOpt can be compiled in C for improved speed,
+   using Cython. The procedure is automated in the file setup.py using
+   distutils. From the current (main) directory, run:
+
+   python2.7 setup.py build_ext --inplace
+
+   This will compile and install the hybrid Python/C version of some
+   modules (all those that are available in C) under the src/build/
+   directory. If this step is not carried out, or the compilation
+   fails, the regular Python modules will be used instead.
 
 
 #--------------------------------------------------------------------------

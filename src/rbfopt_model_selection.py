@@ -321,8 +321,8 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
         if (not lp.solution.is_primal_feasible()):
             raise RuntimeError('Could not solve LP with Cplex')
 
-        rbf_l = lp.solution.get_values(0, k - 1)
-        rbf_h = lp.solution.get_values(k, k + p - 1)
+        rbf_l = np.array(lp.solution.get_values(0, k - 1))
+        rbf_h = np.array(lp.solution.get_values(k, k + p - 1))
 
         # Compute value of the interpolant at the removed node
         predicted_val = ru.evaluate_rbf(settings, cv_node_pos[i], n, k,

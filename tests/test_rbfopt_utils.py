@@ -38,8 +38,7 @@ class TestUtils(unittest.TestCase):
         # Set up values of the RBF at 0 and at 1
         rbf_values = dict()
         rbf_values['linear'] = (0.0, 1.0)
-        rbf_values['multiquadric'] = (config.GAMMA, 
-                                      math.sqrt(1 + config.GAMMA**2))
+        rbf_values['multiquadric'] = (1.0, math.sqrt(1 + 1.0))
         rbf_values['cubic'] = (0.0, 1.0)
         rbf_values['thin_plate_spline'] = (0.0, 0.0)
         for rbf_type in self.rbf_types:
@@ -284,13 +283,15 @@ class TestUtils(unittest.TestCase):
         transf = ru.transform_function_values
         # Create list of values to test: node_val and corresponding
         # fast_node_index
-        to_test = [(np.array([0, -100, settings.dynamism_threshold * 10]), np.array([])),
+        to_test = [(np.array([0, -100, settings.dynamism_threshold * 10]), 
+                    np.array([])),
                    (np.array([0.0]), np.array([0])),
                    (np.array([0.0 for i in range(10)]), np.array([8, 9])),
-                   (np.array([100.0 for i in range(10)]), np.array([i for i in range(10)])),
+                   (np.array([100.0 for i in range(10)]), 
+                    np.array([i for i in range(10)])),
                    (np.array([10.0**i for i in range(-20, 20)]), np.array([])),
                    (np.append(np.array([-10.0**i for i in range(-20, 20)]),
-                    np.array([10.0**i for i in range(-20, 20)])),
+                              np.array([10.0**i for i in range(-20, 20)])),
                     np.array([i for i in range(50, 60)]))]
         for scaling in list_scaling:
             for clipping in list_clipping:

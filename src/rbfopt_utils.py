@@ -1,11 +1,15 @@
 """Utility functions.
 
 This module contains a number of subroutines that are used by the
-other modules.
+other modules. In particular it contains most of the subroutines that
+do the calculations using numpy, as well as utility functions for
+various modules.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
+(C) Copyright International Business Machines Corporation 2017.
 Research partially supported by SUTD-MIT International Design Center.
+
 """
 
 from __future__ import print_function
@@ -20,9 +24,7 @@ import numpy as np
 import scipy.spatial as ss
 import rbfopt_config as config
 from rbfopt_settings import RbfSettings
-
-DTYPE = np.float_
-
+from rbfopt_config import GAMMA
 
 def get_rbf_function(settings):
     """Return a radial basis function.
@@ -55,28 +57,21 @@ def get_rbf_function(settings):
 # -- List of radial basis functions
 def _cubic(r):
     """Cubic RBF: :math: `f(x) = x^3`"""
-    assert(r >= 0)
     return r*r*r
-
 
 def _thin_plate_spline(r):
     """Thin plate spline RBF: :math: `f(x) = x^2 \log x`"""
-    assert(r >= 0)
     if (r == 0.0):
         return 0.0
     return math.log(r)*r*r
 
-
 def _linear(r):
     """Linear RBF: :math: `f(x) = x`"""
-    assert(r >= 0)
     return r
-
 
 def _multiquadric(r):
     """Multiquadric RBF: :math: `f(x) = \sqrt{x^2 + \gamma^2}`"""
-    assert(r >= 0)
-    return math.sqrt(r*r + config.GAMMA*config.GAMMA)
+    return (r*r + GAMMA*GAMMA)**0.5
 # -- end list of radial basis functions
 
 
@@ -162,7 +157,7 @@ def get_all_corners(var_lower, var_upper):
     assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
-    node_pos = np.empty([2 ** n, n], DTYPE)
+    node_pos = np.empty([2 ** n, n], np.float_)
     i = 0
     # Generate all corners
     for corner in itertools.product('lu', repeat=len(var_lower)):
@@ -240,25 +235,16 @@ def get_random_corners(var_lower, var_upper):
     assert(isinstance(var_upper, np.ndarray))
     assert(len(var_lower) == len(var_upper))
 
-    # # Faster version but does not work when n > 31 (or > 63) because
-    # # 2 ** n becomes too big for np.random.choice
-    #
-    # n = len(var_lower)
-    # limits = np.vstack((var_upper, var_lower)).T
-    # dec_idx = np.random.choice(2 ** n, n + 1, replace=False)
-    # bin_idx = ((dec_idx[:, None] & (1 << np.arange(n))) != 0).astype(int)
-    #
-    # return limits[np.arange(n), bin_idx]
-
     n = len(var_lower)
     limits = np.vstack((var_upper, var_lower))
-    node_pos = np.atleast_2d(limits[np.random.randint(2, size=n), np.arange(n)])
+    node_pos = np.atleast_2d(limits[np.random.randint(2, size=n), 
+                                    np.arange(n)])
     while (len(node_pos) < n+1):
         point = limits[np.random.randint(2, size=n), np.arange(n)]
         if (get_min_distance(point, node_pos) > 0):
             node_pos = np.vstack((node_pos, point))
 
-    return np.array(node_pos, DTYPE)
+    return np.array(node_pos, np.float_)
 
 # -- end function
 
@@ -286,9 +272,8 @@ def get_uniform_lhs(n, num_samples):
     assert(num_samples >= 0)
 
     # Generate integer LH in [0, num_samples]
-    # TODO: is there a way to do this without going through a list?
     int_lh = np.array([np.random.permutation(num_samples)
-                       for i in range(n)], DTYPE).T
+                       for i in range(n)], np.float_).T
     # Map integer LH back to unit hypercube, and perturb points so that
     # they are uniformly distributed in the corresponding intervals
     lhs = (np.random.rand(num_samples, n) + int_lh) / num_samples
@@ -301,7 +286,7 @@ def get_uniform_lhs(n, num_samples):
 def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
     """Compute a latin hypercube design with maximin distance.
 
-    Compute a list of (n+1) points in the given box, where n is the
+    Compute an array of (n+1) points in the given box, where n is the
     dimension of the space. The selected points are picked according
     to a random latin hypercube design with maximin distance
     criterion.
@@ -712,32 +697,6 @@ def get_rbf_matrix(settings, n, k, node_pos):
     assert(len(node_pos)==k)
     assert(isinstance(settings, RbfSettings))
 
-    #### OLD VERSION ####
-    # rbf = get_rbf_function(settings)
-    # p = get_size_P_matrix(settings, n)
-    # # Create matrix P.
-    # if (p == n + 1):
-    #     # Keep the node coordinates and append a 1.
-    #     # P is ((k) x (n+1)), PTr is its transpose
-    #     P = [ point + [1.0] for point in node_pos ]
-    #     PTr = [ [point[i] for point in node_pos]
-    #             for i in range(n) ] + [ [1.0 for i in range(k)] ]
-    # elif (p == 1):
-    #     # P is an all-one vector of size ((k) x (1))
-    #     P = [ [1.0] for i in range(k) ]
-    #     PTr = [ [ 1.0 for i in range(k) ] ]
-    # else:
-    #     raise ValueError('Rbf "' + settings.rbf + '" not implemented yet')
-    #
-    #
-    # # Now create matrix Phi. Phi is ((k) x (k))
-    # Phi = [ [rbf(distance(p1, p2)) for p2 in node_pos]
-    #         for p1 in node_pos ]
-    #
-    # # Put together to obtain [Phi P; P^T 0].
-    # A = ([ Phi[i] + P[i] for i in range(k) ] +
-    #      [ PTr[i] + [0 for j in range(p)] for i in range(p)])
-
     rbf = get_rbf_function(settings)
     p = get_size_P_matrix(settings, n)
     # Create matrix P.
@@ -754,11 +713,8 @@ def get_rbf_matrix(settings, n, k, node_pos):
         raise ValueError('Rbf "' + settings.rbf + '" not implemented yet')
 
     # Now create matrix Phi. Phi is ((k) x (k))
-    Phi = ss.distance.cdist(node_pos, node_pos)
-    Phi = Phi.reshape(-1)
-    for i, v in enumerate(Phi):
-        Phi[i] = rbf(v)
-    Phi = Phi.reshape(node_pos.shape[0], -1)
+    dist = ss.distance.cdist(node_pos, node_pos)
+    Phi = np.vectorize(rbf)(dist)
 
     # Put together to obtain [Phi P; P^T 0].
     A = np.vstack((np.hstack((Phi, P)), np.hstack((PTr, np.zeros((p, p))))))
@@ -995,9 +951,7 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     # Create distance matrix
     dist_mat = ss.distance.cdist(points, node_pos)
     # Evaluate radial basis function on each distance
-    rbf_vec = map(rbf_function, dist_mat.ravel())
-    rbf_vec_mat = np.reshape(np.array(rbf_vec, DTYPE), (len(points), -1))
-    part1 = np.dot(rbf_vec_mat, rbf_lambda)
+    part1 = np.dot(np.vectorize(rbf_function)(dist_mat), rbf_lambda)
     if (get_degree_polynomial(settings) == 1):
         part2 = np.dot(points, rbf_h[:-1])
     else:
@@ -1030,15 +984,45 @@ def get_fast_error_bounds(settings, value):
 
     Returns
     -------
-    (float, float)
+    1D numpy.ndarray 
         A tuple (lower_variation, upper_variation) indicating the
         possible deviation to the left (given as a negative number)
         and to the right of the current value.
     """
-    return (-abs(value)*settings.fast_objfun_rel_error -
-            settings.fast_objfun_abs_error,
-            abs(value)*settings.fast_objfun_rel_error +
-            settings.fast_objfun_abs_error)
+    return np.array([-abs(value)*settings.fast_objfun_rel_error -
+                     settings.fast_objfun_abs_error,
+                     abs(value)*settings.fast_objfun_rel_error +
+                     settings.fast_objfun_abs_error])
+
+# -- end function
+
+def bulk_get_fast_error_bounds(settings, values):
+    """Bulk version to compute error bounds for fast interpolation nodes.
+
+    Compute the interval that contains the true value of multiple fast
+    function evaluation, according to the specified relative and
+    absolute error tolerances.
+
+    Parameters
+    ----------
+
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+    values : 1D numpy.ndarray
+        The values for which the error interval should be computed.
+
+    Returns
+    -------
+    2D numpy.ndarray 
+        A 2D matrix (lower_variation, upper_variation) indicating the
+        possible deviation to the left (given as a negative number)
+        and to the right of each of the values, stacked by columns.
+
+    """
+    return np.vstack((-np.absolute(values)*settings.fast_objfun_rel_error -
+                      settings.fast_objfun_abs_error,
+                      np.absolute(values)*settings.fast_objfun_rel_error +
+                      settings.fast_objfun_abs_error)).T
 
 # -- end function
 
@@ -1067,8 +1051,8 @@ def compute_gap(settings, fmin, is_best_fast):
 # -- end function
 
 
-def transform_function_values(settings, node_val, fmin, fmax,
-                              fast_node_index = None):
+def transform_function_values(settings, node_val, fmin, fmax, 
+                              fast_node_index):
     """Rescale function values.
 
     Rescale and adjust function values according to the chosen
@@ -1090,13 +1074,12 @@ def transform_function_values(settings, node_val, fmin, fmax,
     fmax : float
        Maximum function value found so far.
 
-    fast_node_index : 1D numpy.ndarray[float] or None
-       Index of function evaluations in 'fast' mode. If this is empty,
-       then error bounds will not be returned.
+    fast_node_index : 1D numpy.ndarray[float]
+       Index of function evaluations in 'fast' mode. 
 
     Returns
     -------
-    (List[float], float, float, List[(float, float)])
+    (1D numpy.ndarray[float], float, float, List[(float, float)])
         A quadruple (scaled_function_values, scaled_fmin, scaled_fmax,
         fast_error_bounds) containing a list of rescaled function
         values, the rescaled minimum, the rescaled maximum, the
@@ -1108,7 +1091,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
         If the function scaling strategy requested is not implemented.
     """
     assert(isinstance(node_val, np.ndarray))
-    assert(fast_node_index is None or isinstance(fast_node_index, np.ndarray))
+    assert(isinstance(fast_node_index, np.ndarray))
     assert(isinstance(settings, RbfSettings))
     # Check dynamism: if too high, replace large function values with
     # the median or clip at maximum dynamism
@@ -1124,16 +1107,18 @@ def transform_function_values(settings, node_val, fmin, fmax,
         elif (settings.dynamism_clipping == 'clip_at_dyn'):
             # We should not multiply by abs(fmin) if it is too small
             mult = abs(fmin) if (abs(fmin) > settings.eps_zero) else 1.0
-            clip_val = np.clip(node_val, None, settings.dynamism_threshold*mult)
+            clip_val = np.clip(node_val, None, 
+                               settings.dynamism_threshold*mult)
             fmax = settings.dynamism_threshold*mult
     else:
         clip_val = node_val
 
     if (settings.function_scaling == 'off'):
         # We make a copy because the caller may assume that
-        return (clip_val, fmin, fmax,
-                [get_fast_error_bounds(settings, clip_val[i])
-                 for i in fast_node_index])
+        return (clip_val, fmin, fmax, 
+                bulk_get_fast_error_bounds(settings, 
+                                           clip_val[fast_node_index])
+                if len(fast_node_index) else np.array([]))
     elif (settings.function_scaling == 'affine'):
         # Compute denominator separately to make sure that it is not
         # zero. This may happen if the surface is "flat" after median
@@ -1141,21 +1126,28 @@ def transform_function_values(settings, node_val, fmin, fmax,
         denom = (fmax - fmin) if (fmax - fmin > settings.eps_zero) else 1.0
         return ((clip_val - fmin)/denom, 0.0,
                 1.0 if (fmax - fmin > settings.eps_zero) else 0.0,
-                [tuple([val/denom for val in
-                        get_fast_error_bounds(settings, clip_val[i])])
-                 for i in fast_node_index])
+                bulk_get_fast_error_bounds(settings, 
+                                           clip_val[fast_node_index])/denom
+                if len(fast_node_index) else np.array([]))
     elif (settings.function_scaling == 'log'):
         # Compute by how much we should translate to make all points >= 1
         shift = (max(0.0, 1.0 - fmin) if not fast_node_index.size
                  else max(0.0, 1.0 - fmin -
                           get_fast_error_bounds(settings, fmin)[0]))
-        return (np.log(clip_val + shift),
-                math.log(fmin + shift), math.log(fmax + shift),
-                [tuple([math.log((clip_val[i] + shift + val) /
-                                 (clip_val[i] + shift))
-                        for val in get_fast_error_bounds(settings,
-                                                         clip_val[i])])
-                 for i in fast_node_index])
+        # Get the lower bound and the upper bound of the transformed
+        # error bounds
+        if (len(fast_node_index)):
+            err_b = bulk_get_fast_error_bounds(settings, 
+                                               clip_val[fast_node_index])
+            low = np.log((clip_val[fast_node_index] + shift + err_b[:,0])
+                         / (clip_val[fast_node_index] + shift))
+            up = np.log((clip_val[fast_node_index] + shift + err_b[:,1])
+                        / (clip_val[fast_node_index] + shift))
+            scaled_err_b = np.vstack((low, up)).T
+        else:
+            scaled_err_b = np.array([])
+        return (np.log(clip_val + shift), math.log(fmin + shift), 
+                math.log(fmax + shift), scaled_err_b)
     else:
         raise ValueError('Function scaling "' + settings.function_scaling +
                          '" not implemented')
@@ -1222,7 +1214,8 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
 # -- end function
 
 
-def bulk_transform_domain(settings, var_lower, var_upper, points, reverse = False):
+def bulk_transform_domain(settings, var_lower, var_upper, points, 
+                          reverse = False):
     """Rescale the domain.
 
     Rescale the function domain according to the chosen strategy.
@@ -1472,3 +1465,4 @@ def init_rand_seed(seed):
     """
     np.random.seed(seed)
 # -- end if
+

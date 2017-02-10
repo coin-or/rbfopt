@@ -126,9 +126,6 @@ class OptAlgorithm:
     two_phase_optimization : bool
         Is the fast but noisy objective function is available?
 
-    is_best_fast : bool
-        Was the best known objective function evaluated in fast mode?
-
     current_mode : string
         Evaluation mode for the objective function at a given
         stage. Can be either 'fast' or 'accurate'.
@@ -170,17 +167,30 @@ class OptAlgorithm:
         Variable upper bounds in the transformed space.
 
     fmin_index : int
-        Index of the minimum value among the nodes.
+        Index of the minimum value among the nodes since last restart.
 
     fmin : float
-        Minimum value among the nodes.
+        Minimum value among the nodes since last restart.
 
     fmax : float
-        Maximum value among the nodes.
+        Maximum value among the nodes since last restart.
 
     fmin_cycle_start : float
         Best value function at the beginning of the latest
         optimization cycle.
+
+    fbest_index : int
+        Index in all_node_pos of the minimum value among all nodes.
+
+    fbest : float
+        Minimum value among all nodes.
+
+    is_fmin_fast : bool
+        Was the best known objective function since restart evaluated
+        in fast mode?
+
+    is_fbest_fast : bool
+        Was the best known objective function evaluated in fast mode?
 
     """
     def __init__(self, settings, black_box,
@@ -205,16 +215,16 @@ class OptAlgorithm:
         var_upper = np.array(black_box.get_var_upper(), dtype=np.float_)
         integer_vars = np.array(black_box.get_integer_vars(), dtype=np.int_)
         # Check for fixed variables
-        fixed_vars = np.isclose(var_lower, var_upper, 0, settings.eps_zero).nonzero()[0]
+        fixed_vars = np.isclose(var_lower, var_upper, 0,
+                                settings.eps_zero).nonzero()[0]
 
-        # TODO: perhaps transform in a dictionary?
         self.fixed_vars = [(i, var_lower[i]) for i in fixed_vars]
-        # TODO: test this part if fixed_vars is not empty
         # Adjust basic data if there are fixed vars
         if (fixed_vars):
             var_lower = var_lower[fixed_vars]
             var_upper = var_upper[fixed_vars]
-            integer_vars = np.setdiff1d(integer_vars, fixed_vars, assume_unique=True)
+            integer_vars = np.setdiff1d(integer_vars, fixed_vars,
+                                        assume_unique=True)
             dimension -= len(fixed_vars)
         self.var_lower, self.var_upper = var_lower, var_upper
         self.integer_vars = integer_vars
@@ -266,11 +276,13 @@ class OptAlgorithm:
         # Initialize settings for two-phase optimization.
         if (self.bb.has_evaluate_fast()):
             self.two_phase_optimization = True
-            self.is_best_fast = True
+            self.is_fmin_fast = True
+            self.is_fbest_fast = True
             self.current_mode = 'fast'
         else:
             self.two_phase_optimization = False
-            self.is_best_fast = False
+            self.is_fmin_fast = False
+            self.is_fbest_fast = False
             self.current_mode = 'accurate'
 
         # Round variable bounds to integer if necessary
@@ -282,7 +294,6 @@ class OptAlgorithm:
             for point in self.init_node_pos:
                 ru.round_integer_vars(point, self.integer_vars)
         self.init_node_val = init_node_val
-        # TODO: fix the initialization of arrays
         # Initialize global lists
         self.all_node_pos, self.all_node_val = np.array([]), np.array([])
         self.node_pos, self.node_val = np.array([]), np.array([])
@@ -302,6 +313,9 @@ class OptAlgorithm:
         self.fmin = float('+inf')
         # Current maximum value among the nodes
         self.fmax = float('+inf')
+        # Current best value found
+        self.fbest_index = 0
+        self.fbest = float('+inf')
 
         # Best value function at the beginning of an optimization cycle
         self.fmin_cycle_start = self.fmin
@@ -327,12 +341,11 @@ class OptAlgorithm:
         self.output_stream = output_stream
     # -- end function
 
-    def update_log(self, tag, node_is_fast=None, obj_value=None,
-                   gap=None, is_best=False):
+    def update_log(self, tag, node_is_fast=None, obj_value=None, gap=None):
         """Print a single line in the log.
 
         Update the program's log, writing information about an
-        iteration of the optimization algorith, or a special message.
+        iteration of the optimization algorithm, or a special message.
 
         Parameters
         ----------
@@ -350,17 +363,11 @@ class OptAlgorithm:
         gap : float or None
             Relative distance from the optimum. This will be
             multiplied by 100 before printing.
-
-        """
-        if is_best:
-            show_off = '*'
-        else:
-            show_off = ' '
+        """        
         if (node_is_fast is None or obj_value is None or gap is None):
             print('Iter {:3d}'.format(self.itercount) + 
                   ' {:38s}'.format(tag) +
-                  ' time {:7.2f}'.format(time.time() - self.start_time) +
-                  ' {:s}'.format(show_off),
+                  ' time {:7.2f}'.format(time.time() - self.start_time),
                   file=self.output_stream)
         else:
             print('Iter {:3d}'.format(self.itercount) + 
@@ -369,7 +376,7 @@ class OptAlgorithm:
                   ' {:16.6f}'.format(obj_value) +
                   ' time {:7.2f}'.format(time.time() - self.start_time) +
                   ' gap {:8.2f}'.format(gap*100) +
-                  ' {:s}'.format(show_off),
+                  ' {:s}'.format('*' if self.fbest == obj_value else ' '),
                   file=self.output_stream)
         self.output_stream.flush()
     # -- end function
@@ -393,7 +400,7 @@ class OptAlgorithm:
               ' opt_time {:7.2f}'.format(time.time() - self.start_time) + 
               ' tot_time {:7.2f}'.format(self.elapsed_time) + 
               ' obj{:s}'.format('~' if node_is_fast else ' ') +
-              ' {:15.6f}'.format(self.fmin) + 
+              ' {:15.6f}'.format(self.fbest) + 
               ' gap {:6.2f}'.format(100*gap),
               file=self.output_stream)
         self.output_stream.flush()
@@ -420,9 +427,12 @@ class OptAlgorithm:
         self.node_pos = np.delete(np.atleast_2d(self.node_pos), index, axis=0)
         self.node_val = np.delete(self.node_val, index)
         self.node_is_fast = np.delete(self.node_is_fast, index)
-        self.all_node_pos = np.delete(np.atleast_2d(self.all_node_pos), all_node_shift + index, axis=0)
-        self.all_node_val = np.delete(self.all_node_val, all_node_shift + index)
-        self.all_node_is_fast = np.delete(self.all_node_is_fast, all_node_shift + index)
+        self.all_node_pos = np.delete(np.atleast_2d(self.all_node_pos), 
+                                      all_node_shift + index, axis=0)
+        self.all_node_val = np.delete(self.all_node_val, 
+                                      all_node_shift + index)
+        self.all_node_is_fast = np.delete(self.all_node_is_fast, 
+                                          all_node_shift + index)
     # -- end function
 
     def add_node(self, point, orig_point, value, is_fast):
@@ -445,14 +455,6 @@ class OptAlgorithm:
 
         is_fast : bool
             Is the node evaluated in fast mode?
-
-        Returns
-        -------
-        bool
-            True if there is a significant objective function
-            improvement (significant is determined by the parameter
-            RbfSettings.eps_opt), False otherwise.
-
         """
         if not self.node_pos.size:
             self.node_pos = point.copy()
@@ -467,16 +469,16 @@ class OptAlgorithm:
         self.all_node_val = np.append(self.all_node_val, value)
         self.all_node_is_fast = np.append(self.all_node_is_fast, is_fast)
 
-        improvement = False
         # Update fmin and fmax
         self.fmax = max(self.fmax, value)
         if (value < self.fmin):
-            if (value <= self.fmin - self.l_settings.eps_impr*max(1.0, abs(self.fmin))):
-                improvement = True
             self.fmin_index = len(self.node_pos) - 1
             self.fmin = value
-            self.is_best_fast = is_fast
-        return improvement
+            self.is_fmin_fast = is_fast
+        if (value < self.fbest):
+            self.fbest_index = len(self.all_node_pos) - 1
+            self.fbest = value
+            self.is_fbest_fast = is_fast
     # -- end function
 
     def save_to_file(self, filename):
@@ -580,8 +582,7 @@ class OptAlgorithm:
         start_time_retrieve_min = time.time()
         # Find best point and return it
         i = self.all_node_val.argmin()
-        self.fmin = self.all_node_val[i]
-        gap = ru.compute_gap(self.l_settings, self.fmin,
+        gap = ru.compute_gap(self.l_settings, self.fbest,
                              self.all_node_is_fast[i])
         # Update timer
         self.elapsed_time += time.time() - start_time_retrieve_min
@@ -618,7 +619,7 @@ class OptAlgorithm:
         """
         start_time = time.time()
         # Localize variables that will be used often and that will
-        # never be erased through the algorithm. These are all lists
+        # never be erased through the algorithm. These are all arrays
         # or objects, so the reference points to the original.
         var_lower, var_upper = self.var_lower, self.var_upper
         l_lower, l_upper = self.l_lower, self.l_upper
@@ -633,9 +634,9 @@ class OptAlgorithm:
         if (self.itercount == 0):
             self.restart()
             # We need to update the gap
-            gap = ru.compute_gap(l_settings, self.fmin, self.is_best_fast)
+            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
         else: 
-            gap = ru.compute_gap(l_settings, self.fmin, self.is_best_fast)
+            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
 
         # Main loop
         while (self.itercount - itercount_at_start < pause_after_iters and
@@ -659,23 +660,22 @@ class OptAlgorithm:
                  l_settings.init_strategy != 'all_corners' and
                  l_settings.init_strategy != 'lower_corners')):
                 self.update_log('Restart')
-                self.restart(gap)
+                self.restart()
 
             # Number of nodes at current iteration
             k = len(self.node_pos)
 
-            # TODO: ndarray?
             # Compute indices of fast node evaluations (sparse format)
-            fast_node_index = np.array(([i for (i, val) in enumerate(self.node_is_fast)
-                                         if val] if self.two_phase_optimization
-                                        else list()))
+            fast_node_index = (np.nonzero(self.node_is_fast)[0] 
+                               if self.two_phase_optimization
+                               else np.array([]))
 
             # If function scaling is automatic, determine which one to use
             if (settings.function_scaling == 'auto' and
                         self.current_step <= self.first_step):
                 sorted_node_val = np.sort(self.node_val)
                 if (sorted_node_val[len(sorted_node_val)//2] -
-                        sorted_node_val[0] > l_settings.log_scaling_threshold):
+                    sorted_node_val[0] > l_settings.log_scaling_threshold):
                     l_settings.function_scaling = 'log'
                 else:
                     l_settings.function_scaling = 'off'
@@ -823,23 +823,23 @@ class OptAlgorithm:
                     else:
                         curr_is_fast = True
 
+                impr = (next_val <= self.fmin - self.l_settings.eps_impr * 
+                        max(1.0, abs(self.fmin)))
                 # Add to the lists
-                improved = self.add_node(next_p, next_p_orig, next_val, 
-                                         curr_is_fast)
+                self.add_node(next_p, next_p_orig, next_val, curr_is_fast)
+                gap = ru.compute_gap(l_settings, self.fbest, 
+                                     self.is_fbest_fast)
+                self.update_log(iteration_id, self.node_is_fast[-1], 
+                                next_val, gap)
                 # If we are in local search and there has been sufficient
                 # improvement, repeat it.
-                if (improved and 
-                    (self.current_step == self.local_search_step) and
+                if (impr and (self.current_step == self.local_search_step) and
                     (self.num_cons_ls < 
                      self.l_settings.max_consecutive_local_searches - 1)):
                     self.num_cons_ls += 1
                 else:
                     self.advance_step_counter()
                 self.num_cons_discarded = 0
-                gap = min(ru.compute_gap(l_settings, next_val, 
-                                         self.is_best_fast), gap)
-                self.update_log(iteration_id, self.node_is_fast[-1], 
-                                next_val, gap, improved)
 
             # Update iteration number
             self.itercount += 1
@@ -890,7 +890,7 @@ class OptAlgorithm:
         start_time = time.time()
         
         # Localize variables that will be used often and that will
-        # never be erased through the algorithm. These are all lists
+        # never be erased through the algorithm. These are all arrays
         # or objects, so the reference points to the original.
         var_lower, var_upper = self.var_lower, self.var_upper
         l_lower, l_upper = self.l_lower, self.l_upper
@@ -928,9 +928,9 @@ class OptAlgorithm:
         if (self.itercount == 0):
             self.restart(pool=pool)
             # We need to update the gap
-            gap = ru.compute_gap(l_settings, self.fmin, self.is_best_fast)
+            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
         else: 
-            gap = ru.compute_gap(l_settings, self.fmin, self.is_best_fast)
+            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
 
         # Main loop
         while (self.itercount - itercount_at_start < pause_after_iters and
@@ -950,17 +950,18 @@ class OptAlgorithm:
                     next_p_orig = ru.transform_domain(l_settings, var_lower,
                                                       var_upper, next_p, True)
                     # Add to the lists.
-                    improved = self.add_node(next_p, next_p_orig, next_val, node_is_fast)
-                    gap = min(ru.compute_gap(l_settings, next_val, 
-                                             self.is_best_fast), gap)
-                    self.update_log(iid, self.node_is_fast[-1], next_val, gap, improved)
+                    self.add_node(next_p, next_p_orig, next_val, node_is_fast)
+                    gap = ru.compute_gap(l_settings, self.fbest, 
+                                         self.is_fbest_fast)
+                    self.update_log(iid, node_is_fast, next_val, gap)
                     # Update iteration number
                     self.itercount += 1
                     # Check if we should save the state.
                     if (self.itercount % l_settings.save_state_interval == 0):
                         self.save_to_file(l_settings.save_state_file)
                     # Remove from list of temporary points
-                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), j, axis=0)
+                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), j,
+                                              axis=0)
                     temp_node_val = np.delete(temp_node_val, j)
                     temp_node_is_fast = np.delete(temp_node_is_fast, j)
                     # Perform main updates
@@ -985,10 +986,10 @@ class OptAlgorithm:
                         # Re-evaluate point if necessary
                         if (ind is not None):
                             # Because of parallelism, there is a
-                            # chance that the node position
-                            # changed. Make sure we have the right one.
+                            # chance that the node position changed.
+                            # Make sure we have the right one.
                             if (ru.distance(self.node_pos[ind], next_p) >=
-                                    l_settings.eps_zero):
+                                l_settings.eps_zero):
                                 ind = np.where(self.node_pos == next_p)[0]
                             self.remove_node(ind, 
                                              self.num_nodes_at_restart)
@@ -1039,9 +1040,11 @@ class OptAlgorithm:
                             temp_node_pos = np.vstack((temp_node_pos, next_p))
                         else:
                             temp_node_pos = np.atleast_2d(next_p)
-                        temp_node_val = np.append(temp_node_val, np.clip(val, self.fmin,
-                                                                         self.fmax))
-                        temp_node_is_fast = np.append(temp_node_is_fast, node_is_fast)
+                        temp_node_val = np.append(temp_node_val,
+                                                  np.clip(val, self.fmin,
+                                                          self.fmax))
+                        temp_node_is_fast = np.append(temp_node_is_fast,
+                                                      node_is_fast)
                 # -- end for
             # -- end if
             
@@ -1076,7 +1079,7 @@ class OptAlgorithm:
                 # If there were no results in the pipeline, we should
                 # restart.
                 self.update_log('Restart')
-                self.restart(gap, pool=pool)
+                self.restart(pool=pool)
 
             # Nodes at current iteration, including temporary ones
             if (temp_node_pos.size):
@@ -1088,9 +1091,9 @@ class OptAlgorithm:
             k = len(node_pos)
 
             # Compute indices of fast node evaluations (sparse format)
-            fast_node_index = np.array(([i for (i, val) in enumerate(self.node_is_fast)
-                                         if val] if self.two_phase_optimization
-                                        else list()))
+            fast_node_index = (np.nonzero(self.node_is_fast)[0] 
+                               if self.two_phase_optimization
+                               else np.array([]))
 
             # If function scaling is automatic, determine which one to use
             if (settings.function_scaling == 'auto' and 
@@ -1188,7 +1191,8 @@ class OptAlgorithm:
                 # Remove necessary nodes and move them to the
                 # temporary list
                 for j in reversed(to_remove):
-                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), j, axis=0)
+                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
+                                              j, axis=0)
                     temp_node_val = np.delete(temp_node_val, j)
                     temp_node_is_fast = np.delete(temp_node_is_fast, j)
                     res_removed.append(res_eval.pop(j))
@@ -1235,10 +1239,9 @@ class OptAlgorithm:
             next_p_orig = ru.transform_domain(l_settings, var_lower,
                                               var_upper, next_p, True)
             # Add to the lists.
-            improved = self.add_node(next_p, next_p_orig, next_val, node_is_fast)
-            gap = min(ru.compute_gap(l_settings, next_val, 
-                                     self.is_best_fast), gap)
-            self.update_log(iid, self.node_is_fast[-1], next_val, gap, improved)
+            self.add_node(next_p, next_p_orig, next_val, node_is_fast)
+            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
+            self.update_log(iid, self.node_is_fast[-1], next_val, gap)
             # Update iteration number
             self.itercount += 1
         # -- end for
@@ -1246,7 +1249,7 @@ class OptAlgorithm:
         self.elapsed_time += time.time() - start_time
     # -- end function
 
-    def restart(self, current_gap = float('inf'), pool = None):
+    def restart(self, pool=None):
         """Perform a complete restart of the optimization.
 
         Restart the optimization algorithm, i.e. discard the current
@@ -1256,11 +1259,6 @@ class OptAlgorithm:
 
         Parameters
         ----------
-        current_gap : float
-            The current optimality gap. This is used purely for
-            visualization purposes in the log file, but does not
-            affect the behavior of the function in other ways.
-
         pool : multiprocessing.Pool()
             A pool of workers to evaluate the initialization points in
             parallel. If None, parallel evaluation will not be
@@ -1291,7 +1289,8 @@ class OptAlgorithm:
             self.evalcount += len(node_val)
         else:
             if (pool is None):
-                node_val = np.array([objfun_fast([self.bb, point, self.fixed_vars])
+                node_val = np.array([objfun_fast([self.bb, point, 
+                                                  self.fixed_vars])
                             for point in node_pos])
             else:
                 map_arg = [[self.bb, point, self.fixed_vars] 
@@ -1299,15 +1298,15 @@ class OptAlgorithm:
                 node_val = np.array(pool.map(objfun_fast, map_arg))
             self.fast_evalcount += len(node_val)
         self.node_is_fast = np.array([self.current_mode == 'fast'
-                             for val in node_val])
+                                      for val in node_val])
         # Add user-provided points if this is the first iteration
         if (self.init_node_pos is not None and self.itercount == 0):
             # Determine which points can be added
             dist = ru.bulk_get_min_distance(self.init_node_pos,
                                             node_pos)
             init_node_pos = np.array([self.init_node_pos[i]
-                             for i in range(len(self.init_node_pos)) 
-                             if dist[i] > self.l_settings.min_dist])
+                                      for i in range(len(self.init_node_pos)) 
+                                      if dist[i] > self.l_settings.min_dist])
             if (self.init_node_val is None):
                 if (pool is None):
                     init_node_val = np.array([objfun([self.bb, point,
@@ -1319,27 +1318,31 @@ class OptAlgorithm:
                     init_node_val = np.array(pool.map(objfun, map_arg))
                 self.evalcount += len(init_node_val)
             else:
-                init_node_val = np.array([self.init_node_val[i]
-                                 for i in range(len(self.init_node_pos)) 
-                                 if dist[i] > self.l_settings.min_dist])
+                init_node_val = np.array([self.init_node_val[i] for i in 
+                                          range(len(self.init_node_pos)) 
+                                          if dist[i] > 
+                                          self.l_settings.min_dist])
             if not node_pos.size:
                 node_pos = init_node_pos.copy()
             else:
                 node_pos = np.vstack((node_pos, init_node_pos))
             node_val = np.append(node_val, init_node_val)
 
-            self.node_is_fast = np.append(self.node_is_fast, np.zeros(init_node_val.shape[0], dtype=bool))
+            self.node_is_fast = np.append(self.node_is_fast, 
+                                          np.zeros(init_node_val.shape[0],
+                                                   dtype=bool))
 
         if not self.all_node_pos.size:
             self.all_node_pos = node_pos.copy()
         else:
             self.all_node_pos = np.vstack((self.all_node_pos, node_pos))
         self.all_node_val = np.append(self.all_node_val, node_val)
-        self.all_node_is_fast = np.append(self.all_node_is_fast, self.node_is_fast)
+        self.all_node_is_fast = np.append(self.all_node_is_fast, 
+                                          self.node_is_fast)
 
         # Rescale the domain of the function
         node_pos = ru.bulk_transform_domain(self.l_settings, self.var_lower,
-                                       self.var_upper, node_pos)
+                                            self.var_upper, node_pos)
         # Update references
         self.node_pos, self.node_val = node_pos, node_val
         # Update all counters and values to restart properly
@@ -1349,23 +1352,20 @@ class OptAlgorithm:
         self.fmin_cycle_start = self.fmin
         self.num_stalled_cycles = 0
         self.num_cons_discarded = 0
-        self.is_best_fast = self.node_is_fast[self.fmin_index]
+        self.is_fmin_fast = self.node_is_fast[self.fmin_index]
+        if (self.fmin < self.fbest):
+            self.fbest = self.fmin
+            self.fbest_index = self.fmin_index + self.num_nodes_at_restart
+            self.is_fbest_fast = self.node_is_fast[self.fmin_index]
 
-        gap = min(ru.compute_gap(self.l_settings, self.fmin,
-                                  self.is_best_fast), current_gap)
+        gap = ru.compute_gap(self.l_settings, self.fbest, self.is_fbest_fast)
 
         # Print the initialization points
         for (i, val) in enumerate(self.node_val):
-            # TODO: do we need min_dist?
             min_dist = ru.get_min_distance(self.node_pos[i],
                                            np.vstack((self.node_pos[:i],
                                                       self.node_pos[(i+1):])))
-            if i == self.fmin_index:
-                self.update_log('Initialization', self.node_is_fast[i], val, gap,
-                                is_best=True)
-            else:
-                self.update_log('Initialization', self.node_is_fast[i], val, gap)
-
+            self.update_log('Initialization', self.node_is_fast[i], val, gap)
     # -- end function
 
     def restoration_search(self):
@@ -1403,7 +1403,8 @@ class OptAlgorithm:
                                           self.node_pos, None)
             else:
                 # If that does not work (unlikely), generate a random point
-                next_p = np.random.rand(self.n) * (self.var_upper - self.var_lower) + self.var_lower
+                next_p = (np.random.rand(self.n) * 
+                          (self.var_upper - self.var_lower) + self.var_lower)
 
             ru.round_integer_vars(next_p, self.integer_vars)
             if (ru.get_min_distance(next_p, self.node_pos) >
@@ -1454,14 +1455,16 @@ class OptAlgorithm:
                                   self.n, len(self.node_pos) +
                                   len(temp_node_pos), self.l_lower,
                                   self.l_upper, self.integer_vars,
-                                  np.vstack((self.node_pos, temp_node_pos)), None)
+                                  np.vstack((self.node_pos, temp_node_pos)), 
+                                  None)
         # Loop through all temporary nodes, and try to restore the
         # matrix by substituting the above point.
         i = len(temp_node_pos) - 1
         while (not restoration_done and i >= 0 and
                cons_restoration <  
                self.l_settings.max_consecutive_restoration):
-            red_node_pos = np.vstack((temp_node_pos[:i], temp_node_pos[(i+1):]))
+            red_node_pos = np.vstack((temp_node_pos[:i], 
+                                      temp_node_pos[(i+1):]))
             # Try inverting the RBF matrix to see if
             # nonsingularity is restored
             try:
@@ -1473,12 +1476,11 @@ class OptAlgorithm:
             except np.linalg.LinAlgError:
                 cons_restoration += 1
         # At this point, if the restoration is complete we are done,
-        # otherwise we try to remove all indices
+        # otherwise we try to remove all indices of temporary nodes
         if (not restoration_done):
             try:
                 Amat = ru.get_rbf_matrix(self.l_settings, self.n,
                                          len(self.node_pos), self.node_pos)
-                # TODO: why are we doing this?
                 Amatinv = ru.get_matrix_inverse(self.l_settings, Amat)
                 to_be_removed = [i for i in range(len(temp_node_pos))]
                 restoration_done = True
@@ -1557,7 +1559,7 @@ class OptAlgorithm:
         # In this case, perform a double evaluation.
         best_possible = ((ru.get_fast_error_bounds(self.l_settings,
                                                    self.fmin)[0]
-                          if self.is_best_fast else 0.0) + self.fmin)
+                          if self.is_fmin_fast else 0.0) + self.fmin)
         if ((fast_val <= best_possible -
              self.l_settings.eps_impr*max(1.0, abs(best_possible))) or
             (fast_val <= self.l_settings.target_objval +
@@ -1589,13 +1591,13 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Vector of variable lower bounds.
     
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
@@ -1718,7 +1720,6 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     rbfopt_utils.transform_function_values()
 
     """
-    # TODO: fix with Numpy arrays
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
     assert(isinstance(integer_vars, np.ndarray))
@@ -1761,16 +1762,13 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
         # some sort of local search
         target_val = scaled_fmin - 0.01*max(1.0, abs(scaled_fmin))
         dist_weight = 0.05
-        local_varl = np.array([max(var_lower[i], min_rbf[i] -
-                          settings.local_search_box_scaling * 
-                          0.33 * (var_upper[i] - var_lower[i]))
-                      for i in range(n)])
-        local_varu = np.array([min(var_upper[i], min_rbf[i] +
-                          settings.local_search_box_scaling * 
-                          0.33 * (var_upper[i] - var_lower[i]))
-                      for i in range(n)])
-        ru.round_integer_bounds(local_varl, local_varu, 
-                                integer_vars)
+        local_varl = np.maximum(min_rbf - settings.local_search_box_scaling * 
+                                0.33 * (var_upper - var_lower),
+                                var_lower)
+        local_varu = np.minimum(min_rbf + settings.local_search_box_scaling * 
+                                0.33 * (var_upper - var_lower),
+                                var_upper) 
+        ru.round_integer_bounds(local_varl, local_varu, integer_vars)
         next_p = aux.global_search(settings, n, k, local_varl,
                                    local_varu, integer_vars,
                                    node_pos, rbf_lambda, rbf_h,
@@ -1783,20 +1781,20 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     # if it is better to evaluate a brand new point or re-evaluate
     # a previously known point.
     if ((two_phase_optimization == True) and (current_mode == 'accurate')):
-        (ind, bump) = rb.get_min_bump_node(settings, n, k, Amat,
-                                           scaled_node_val, fast_node_index, 
-                                           node_err_bounds, target_val)
+        (ind, bump) = aux.get_min_bump_node(settings, n, k, Amat,
+                                            scaled_node_val, fast_node_index, 
+                                            node_err_bounds, target_val)
         
         if (ind is not None and next_p is not None):
             # Check if the newly proposed point is very close to an
             # existing one.
             if (ru.get_min_distance(next_p, node_pos) > settings.min_dist):
                 # If not, compute bumpiness of the newly proposed point.
-                n_bump = rb.get_bump_new_node(settings, n, k, node_pos,
-                                              scaled_node_val, next_p,
-                                              fast_node_index, 
-                                              node_err_bounds,
-                                              target_val)
+                n_bump = aux.get_bump_new_node(settings, n, k, node_pos,
+                                               scaled_node_val, next_p,
+                                               fast_node_index, 
+                                               node_err_bounds,
+                                               target_val)
             else:
                 # If yes, we will simply reevaluate the existing point
                 # (if it can be reevaluated).
@@ -1945,14 +1943,12 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     # If the global search is almost a local search, we restrict the
     # search to a box following Regis and Shoemaker (2007)
     if (scaling <= config.LOCAL_SEARCH_THRESHOLD):
-        local_varl = np.array([max(var_lower[i], min_rbf[i] -
-                          settings.local_search_box_scaling * 
-                          math.sqrt(scaling) * (var_upper[i] - var_lower[i]))
-                      for i in range(n)])
-        local_varu = np.array([min(var_upper[i], min_rbf[i] +
-                          settings.local_search_box_scaling * 
-                          math.sqrt(scaling) * (var_upper[i] - var_lower[i]))
-                      for i in range(n)])
+        local_varl = np.maximum(min_rbf - settings.local_search_box_scaling * 
+                                0.33 * (var_upper - var_lower),
+                                var_lower)
+        local_varu = np.minimum(min_rbf + settings.local_search_box_scaling * 
+                                0.33 * (var_upper - var_lower),
+                                var_upper) 
         ru.round_integer_bounds(local_varl, local_varu, integer_vars)
     else:
         # Otherwise, use original bounds

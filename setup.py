@@ -2,6 +2,9 @@ from distutils.core import setup
 from Cython.Build import cythonize
 
 import numpy
+import os
+
+os.chdir('src/')
 
 setup(
     name='Cython RBFOpt Utils',
