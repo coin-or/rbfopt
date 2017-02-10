@@ -32,7 +32,6 @@ except ImportError:
     import rbfopt_aux_problems as aux
 import rbfopt_model_selection as ms
 import rbfopt_config as config
-import rbfopt_bumpiness as rb
 from rbfopt_black_box import BlackBox
 from rbfopt_settings import RbfSettings
 
