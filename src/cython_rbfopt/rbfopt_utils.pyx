@@ -411,15 +411,16 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     Returns
     -------
     2D numpy.ndarray[float]
-        List of at least n+1 corner points, where n is the dimension
-        of the space. The number and position of points depends on the
-        chosen strategy.
+        Matrix containing at least n+1 corner points, one for each
+        row, where n is the dimension of the space. The number and
+        position of points depends on the chosen strategy.
 
     Raises
     ------
     RuntimeError
         If a set of feasible and linearly independent sample points
         cannot be computed within the prescribed number of iterations.
+
     """
     assert(isinstance(settings, RbfSettings))
     assert(isinstance(var_lower, np.ndarray))
@@ -445,8 +446,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
             nodes = get_lhd_corr_points(var_lower, var_upper)
 
         if (integer_vars.size):
-                for i in integer_vars:
-                    np.around(nodes[:,i],out=nodes[:,i])
+            nodes[:, integer_vars] = np.around(nodes[:, integer_vars])
 
         U, s, V = np.linalg.svd(nodes)
         if (min(s) > settings.eps_zero):
@@ -476,7 +476,6 @@ def round_integer_vars(point, integer_vars):
     assert(isinstance(point, np.ndarray))
     assert(isinstance(integer_vars, np.ndarray))
     if (integer_vars.size):
-        assert(np.amax(integer_vars)<len(point))
         point[integer_vars] = np.around(point[integer_vars])
 
 # -- end function
@@ -589,20 +588,20 @@ def get_min_distance(point, other_points):
     """
     assert(isinstance(point, np.ndarray))
     assert(isinstance(other_points, np.ndarray))
-    assert(point is not None and point.size)
-    assert(other_points is not None and other_points.size)
+    assert(point.size)
+    assert(other_points.size)
 
-    distances = map(lambda x : distance(x, point), other_points)
-    return min(distances)
-
+    # Create distance matrix
+    dist = ss.distance.cdist(np.atleast_2d(point), other_points)
+    return np.amin(dist, 1)
 # -- end function
 
 
-def get_min_distance_index(point, other_points):
-    """Compute the index of the point with minimum distance.
+def get_min_distance_and_index(point, other_points):
+    """Compute the distance and index of the point with minimum distance.
 
-    Compute the index of the point in a list that achieves minimum
-    Euclidean distance to a given point.
+    Compute the distance value and the index of the point in a matrix
+    that achieves minimum Euclidean distance to a given point.
 
     Parameters
     ----------
@@ -614,23 +613,25 @@ def get_min_distance_index(point, other_points):
 
     Returns
     -------
-    int
-        The index of the point in other_points that achieved minimum
-        distance from point.
+    (float, int)
+        The distance value and the index of the point in other_points
+        that achieved minimum distance from point.
+
     """
     assert (isinstance(point, np.ndarray))
     assert (isinstance(other_points, np.ndarray))
-    assert(point is not None and point.size)
-    assert(other_points is not None and other_points.size)
+    assert(point.size)
+    assert(other_points.size)
 
-    distances = map(lambda x : distance(x, point), other_points)
-    return distances.index(min(distances))
+    dist = ss.distance.cdist(np.atleast_2d(point), other_points)
+    index = np.argmin(dist, 1)[0]
+    return (dist[0, index], index)
 
 # -- end function
 
 
 def bulk_get_min_distance(points, other_points):
-    """Get the minimum distance between two sets of points.
+    """Get the minimum distances between two sets of points.
 
     Compute the minimum distance of each point in the first set to the
     points in the second set. This is faster than using
@@ -1427,13 +1428,13 @@ def results_ready(results):
     return False
 # -- end if
 
-
-def get_ready_indices(results):
-    """Get indices of results of async computations that are ready.
+def get_one_ready_index(results):
+    """Get index of a single async computation result that is ready.
 
     Given a list containing results of asynchronous computations
-    dispatched to a worker pool, obtain the index of computations that
-    have concluded.
+    dispatched to a worker pool, obtain the index of the last
+    computation that has concluded. (Last is better to use the pop()
+    function in the list.)
 
     Parameters
     ----------
@@ -1445,16 +1446,15 @@ def get_ready_indices(results):
 
     Returns
     -------
-    List[int]
-        List of indices of computations that completed, from the
-        largest to the smallest.
+    int
+        Index of last computation that completed, or len(results) if
+        no computation is ready.
 
     """
-    ready = list()
     for i in reversed(range(len(results))):
         if results[i][0].ready():
-            ready.append(i)
-    return ready
+            return i
+    return len(results)
 # -- end if
 
 
@@ -1469,3 +1469,4 @@ def init_rand_seed(seed):
     """
     np.random.seed(seed)
 # -- end if
+

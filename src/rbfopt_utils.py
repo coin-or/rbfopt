@@ -1454,36 +1454,6 @@ def get_one_ready_index(results):
 # -- end if
 
 
-def get_ready_indices(results):
-    """Get indices of results of async computations that are ready.
-
-    Given a list containing results of asynchronous computations
-    dispatched to a worker pool, obtain the index of computations that
-    have concluded.
-
-    Parameters
-    ----------
-    results : List[(multiprocessing.pool.AsyncResult, any)]
-        A list of tasks, where each task is a list and the first
-        element is the output of a call to apply_async. The other
-        elements of the list will never be scanned by this function,
-        and they could be anything.
-
-    Returns
-    -------
-    List[int]
-        List of indices of computations that completed, from the
-        largest to the smallest.
-
-    """
-    ready = list()
-    for i in reversed(range(len(results))):
-        if results[i][0].ready():
-            ready.append(i)
-    return ready
-# -- end if
-
-
 def init_rand_seed(seed):
     """Initialize the random seed.
 

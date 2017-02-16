@@ -804,15 +804,12 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
             fast_node_err_bounds[pos] = (0.0, 0.0)
             # Compute RBF interpolant.
             # Get coefficients for the exact RBF first
-            (rbf_l, rbf_h) = ru.get_rbf_coefficients(settings, n, k,
-                                                  Amat, node_val)
+            rbf_l, rbf_h = ru.get_rbf_coefficients(settings, n, k,
+                                                     Amat, node_val)
             # And now the noisy version
-            (rbf_l,
-             rbf_h) = get_noisy_rbf_coefficients(settings, n, k, Phimat,
-                                                 Pmat, node_val,
-                                                 fast_node_index,
-                                                 fast_node_err_bounds,
-                                                 rbf_l, rbf_h)
+            rbf_l, rbf_h = get_noisy_rbf_coefficients(
+                settings, n, k, Phimat, Pmat, node_val, fast_node_index, 
+                fast_node_err_bounds, rbf_l, rbf_h)
             # Restore original values
             node_val[i] = orig_node_val
             fast_node_err_bounds[pos] = orig_node_err_bounds
@@ -824,6 +821,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
     return (min_bump_index, min_bump)
 
 # -- end function
+
 
 def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
                       fast_node_index, fast_node_err_bounds, target_val):
@@ -888,22 +886,20 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     Amat = ru.get_rbf_matrix(settings, n, k + 1, n_node_pos)
 
     # Get coefficients for the exact RBF
-    (rbf_l, rbf_h) = ru.get_rbf_coefficients(settings, n, k + 1, Amat,
+    rbf_l, rbf_h = ru.get_rbf_coefficients(settings, n, k + 1, Amat,
                                              n_node_val)
     # Get RBF coefficients for noisy interpolant
-    (rbf_l, rbf_h) = get_noisy_rbf_coefficients(settings, n, k + 1,
-                                                Amat[:(k + 1), :(k + 1)],
-                                                Amat[:(k + 1), (k + 1):],
-                                                n_node_val,
-                                                fast_node_index,
-                                                fast_node_err_bounds,
-                                                rbf_l, rbf_h)
+    rbf_l, rbf_h = get_noisy_rbf_coefficients(
+        settings, n, k + 1, Amat[:(k + 1), :(k + 1)],
+        Amat[:(k + 1), (k + 1):], n_node_val, fast_node_index,
+        fast_node_err_bounds, rbf_l, rbf_h)
 
     bumpiness = np.dot(np.dot(rbf_l, Amat[:(k+1), :(k+1)]), rbf_l)
 
     return bumpiness
 
 # -- end function
+
 
 def set_minlp_solver_options(solver):
     """Set MINLP solver options.
@@ -993,8 +989,8 @@ def generate_sample_points(settings, n, var_lower, var_upper,
                var_lower)
 
     # Round integer vars
-    for col in integer_vars:
-        np.around(samples[:, col], out=samples[:, col])
+    if (integer_vars.size):
+        samples[:, integer_vars] = np.around(samples[:, integer_vars])
 
     return samples
 
