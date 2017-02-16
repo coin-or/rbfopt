@@ -995,8 +995,8 @@ def generate_sample_points(settings, n, var_lower, var_upper,
                var_lower)
 
     # Round integer vars
-    for col in integer_vars:
-        np.around(samples[:, col], out=samples[:, col])
+    if (integer_vars.size):
+        samples[:, integer_vars] = np.around(samples[:, integer_vars])
 
     return samples
 

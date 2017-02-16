@@ -34,13 +34,13 @@ class BlackBox(bb.BlackBox):
     dimension : int
         Dimension of the problem.
         
-    var_lower : 1D numpy.ndarray[float]
+    var_lower : List[float]
         Lower bounds of the decision variables.
 
-    var_upper : 1D numpy.ndarray[float]
+    var_upper : List[float]
         Upper bounds of the decision variables.
 
-    integer_vars : 1D numpy.ndarray[int]
+    integer_vars : List[int]
         A list of indices of the variables that must assume integer
         values.
 
@@ -68,10 +68,10 @@ class BlackBox(bb.BlackBox):
         # Set required data
         self.dimension = 3
 
-        self.var_lower = np.array([0, 0, 0], np.float_)
-        self.var_upper = np.array([10, 10, 10], np.float_)
+        self.var_lower = [0, 0, 0]
+        self.var_upper = [10, 10, 10]
 
-        self.integer_vars = np.array([0, 1], np.int_)
+        self.integer_vars = [0, 1]
     # -- end function
 
     def get_dimension(self):
@@ -90,7 +90,7 @@ class BlackBox(bb.BlackBox):
 
         Returns
         -------
-        1D numpy.ndarray[float]
+        List[float]
             Lower bounds of the decision variables.
         """
         return self.var_lower
@@ -101,7 +101,7 @@ class BlackBox(bb.BlackBox):
 
         Returns
         -------
-        1D numpy.ndarray[float]
+        List[float]
             Upper bounds of the decision variables.
         """
         return self.var_upper
@@ -112,7 +112,7 @@ class BlackBox(bb.BlackBox):
         
         Returns
         -------
-        1D numpy.ndarray[int]
+        List[int]
             A list of indices of the variables that must assume
             integer values. Can be empty.
         """
@@ -125,7 +125,7 @@ class BlackBox(bb.BlackBox):
         
         Parameters
         ----------
-        x : 1D numpy.ndarray[float]
+        x : List[float]
             Value of the decision variables.
 
         Returns
@@ -147,7 +147,7 @@ class BlackBox(bb.BlackBox):
 
         Parameters
         ----------
-        x : 1D numpy.ndarray[float]
+        x : List[float]
             Value of the decision variables.
 
         Returns

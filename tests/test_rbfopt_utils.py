@@ -203,16 +203,17 @@ class TestUtils(unittest.TestCase):
                                              np.array([[i+j for i in range(5)]
                                               for j in range(10)])), 0.0)
     # -- end function
-    def test_get_min_distance_index(self):
+    def test_get_min_distance_and_index(self):
         """Test some extreme cases for get_min_distance_index."""
-        self.assertEqual(ru.get_min_distance_index(np.array([i for i in range(5)]),
-                                                   np.array([[i+j for i in range(5)]
-                                                    for j in range(-2, 3)])),
-                         2)
-        self.assertEqual(ru.get_min_distance_index(np.array([i+0.01 for i in range(5)]),
-                                                   np.array([[i+j for i in range(5)]
-                                                    for j in range(-3, 2)])),
-                         3)
+        d, i = ru.get_min_distance_and_index(np.array([i for i in range(5)]),
+                                             np.array([[i+j for i in range(5)]
+                                                       for j in range(-2, 3)]))
+        self.assertEqual(i, 2)
+        d, i = ru.get_min_distance_and_index(np.array([i+0.01 for 
+                                                       i in range(5)]),
+                                             np.array([[i+j for i in range(5)]
+                                                       for j in range(-3, 2)]))
+        self.assertEqual(i, 3)
     # -- end function
 
     def test_bulk_get_min_distance(self):
@@ -228,7 +229,8 @@ class TestUtils(unittest.TestCase):
             num_points_2 = random.randint(10, 50)
             points = np.array([[random.uniform(-100, 100) for j in range(dim)]
                       for k in range(num_points_1)])
-            other_points = np.array([[random.uniform(-100, 100) for j in range(dim)]
+            other_points = np.array([[random.uniform(-100, 100) 
+                                      for j in range(dim)]
                             for k in range(num_points_2)])
             dist1 = [ru.get_min_distance(point, other_points)
                      for point in points]
