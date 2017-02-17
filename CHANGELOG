@@ -1,3 +1,12 @@
+2017-02-16  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (optimize_serial, optimize_parallel): The
+	algorithm now checks if points generated after restart have been
+	explored before restart. If so, it uses the previously evaluated
+	value.
+	* rbfopt_settings.py (max_consecutive_discarded): This setting is
+	now intended to be per cpu, i.e. the actual value is obtained
+	multiplying by the number of CPUs.
+
 2017-02-09  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Major changes with the introduction of Numpy and Cython.
 	* rbfopt_aux_problems.py (get_min_bump_node, get_bump_new_node):
@@ -5,7 +14,7 @@
 	faster performance using Cython.
 	* rbfopt_utils.pyx, rbfopt_aux_problems.pyx: Hybrid Python/C
 	version of these modules. At the moment only the RBF functions are
-	written in real C, but this already makes a difference.
+	written in real C.
 	* setup.py: Created, for automatic compilation in Cython.
 	
 2016-10-02  Giacomo Nannicini  <nannicini@us.ibm.com>

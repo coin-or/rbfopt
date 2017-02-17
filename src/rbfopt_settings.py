@@ -131,7 +131,7 @@ class RbfSettings:
 
     max_stalled_cycles : int
         Maximum number of consecutive optimization cycles without
-        improvement before we perform a full restart. Default 6.
+        improvement before we perform a full restart. Default 10.
 
     max_stalled_objfun_impr : float
         Maximum relative objective function improvement between
@@ -140,7 +140,9 @@ class RbfSettings:
 
     max_consecutive_discarded : int
         Maximum number of discarded points before a restart is
-        triggered. Default 15.
+        triggered. This number is multiplied by the number of cpus to
+        determine the actual maximum number of consecutive discarded
+        points. Default 15.
 
     max_consecutive_restoration : int
         Maximum number of consecutive nonsingularity restoration

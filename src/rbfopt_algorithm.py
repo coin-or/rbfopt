@@ -1086,7 +1086,7 @@ class OptAlgorithm:
             # Check if we should restart. We only restart if the initial
             # sampling strategy is random, otherwise it makes little sense.
             if ((self.num_cons_discarded >= 
-                 l_settings.max_consecutive_discarded) or 
+                 l_settings.max_consecutive_discarded*l_settings.num_cpus) or 
                 (self.num_stalled_cycles >= l_settings.max_stalled_cycles and
                  self.evalcount + n + 1 < l_settings.max_evaluations and
                  l_settings.init_strategy != 'all_corners' and
