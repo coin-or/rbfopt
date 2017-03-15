@@ -26,7 +26,8 @@ README:
 requirements.txt:
 	List of dependencies for this project.
 setup.py:
-	Setup file, using distuils, to compile some modules with Cython.
+	Setup file, using setuptools, to compile some modules with
+	Cython.
 
 Contents of the src/ directory:
 
@@ -248,6 +249,11 @@ The two packages above are optional.
    install them in src/cython_rbfopt/. If this step is not carried out,
    or the compilation fails, the regular Python modules will be used
    instead.
+
+   To clean compiled modules, run:
+
+   python2.7 setup.py clean --all
+   rm src/cython_rbfopt/*.so src/cython_rbfopt/*.c
 
 
 #--------------------------------------------------------------------------

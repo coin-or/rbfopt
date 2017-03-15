@@ -1,3 +1,8 @@
+2017-03-15  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 2.1 released.
+	* requirements.txt: Updated requirements. 
+	* setup.py: Improved build system on Windows.
+
 2017-02-16  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_algorithm.py (optimize_serial, optimize_parallel): The
 	algorithm now checks if points generated after restart have been

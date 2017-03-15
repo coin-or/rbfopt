@@ -24,11 +24,11 @@ import numpy as np
 from multiprocessing import Pool
 try:
     import cython_rbfopt.rbfopt_utils as ru
-except ImportError:
+except (ImportError, TypeError):
     import rbfopt_utils as ru
 try:
     import cython_rbfopt.rbfopt_aux_problems as aux
-except ImportError:
+except (ImportError, TypeError):
     import rbfopt_aux_problems as aux
 import rbfopt_model_selection as ms
 import rbfopt_config as config
