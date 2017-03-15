@@ -241,12 +241,13 @@ The two packages above are optional.
    using Cython. The procedure is automated in the file setup.py using
    distutils. From the current (main) directory, run:
 
-   python2.7 setup.py build_ext --inplace
+   python2.7 setup.py build_ext --build-lib src
 
-   This will compile and install the hybrid Python/C version of some
-   modules (all those that are available in C) under the src/build/
-   directory. If this step is not carried out, or the compilation
-   fails, the regular Python modules will be used instead.
+   This will compile the hybrid Python/C version of some modules (all
+   those that are available in C) under the build/ directory, and
+   install them in src/cython_rbfopt/. If this step is not carried out,
+   or the compilation fails, the regular Python modules will be used
+   instead.
 
 
 #--------------------------------------------------------------------------

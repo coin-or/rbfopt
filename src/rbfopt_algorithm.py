@@ -184,6 +184,9 @@ class OptAlgorithm:
     fbest : float
         Minimum value among all nodes.
 
+    best_gap_shown : float
+        Best gap shown on the log.
+
     is_fmin_fast : bool
         Was the best known objective function since restart evaluated
         in fast mode?
@@ -319,6 +322,8 @@ class OptAlgorithm:
         # Current best value found
         self.fbest_index = 0
         self.fbest = float('+inf')
+        # Best gap shown on the log so far
+        self.best_gap_shown = float('+inf')
 
         # Best value function at the beginning of an optimization cycle
         self.fmin_cycle_start = self.fmin
@@ -379,8 +384,11 @@ class OptAlgorithm:
                   ' {:16.6f}'.format(obj_value) +
                   ' time {:7.2f}'.format(time.time() - self.start_time) +
                   ' gap {:8.2f}'.format(gap*100) +
-                  ' {:s}'.format('*' if self.fbest == obj_value else ' '),
+                  ' {:s}'.format('*' if (gap < self.best_gap_shown and
+                                         obj_value == self.fbest) else ' '),
                   file=self.output_stream)
+            if (gap < self.best_gap_shown and obj_value == self.fbest):
+                self.best_gap_shown = gap
         self.output_stream.flush()
     # -- end function
 

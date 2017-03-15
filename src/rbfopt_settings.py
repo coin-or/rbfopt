@@ -292,7 +292,7 @@ class RbfSettings:
                  dynamism_clipping = 'auto',
                  dynamism_threshold = 1.0e3,
                  local_search_box_scaling = 0.5,
-                 max_stalled_cycles = 6,
+                 max_stalled_cycles = 10,
                  max_stalled_objfun_impr = 0.05,
                  max_consecutive_discarded = 15,
                  max_consecutive_restoration = 15,
