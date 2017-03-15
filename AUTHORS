@@ -6,3 +6,6 @@ Contributors:
 
 Alberto Costa (National University of Singapore) contributed various
 ideas and numerical testing.
+
+Giorgio Sartor (Singapore University of Technology and Design) did
+most of the work to integrate RBFOpt with Numpy and Cython.

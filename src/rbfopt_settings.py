@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import copy
 import math
+import numpy as np
 
 class RbfSettings:
     """Global and algorithmic settings for RBF method.
@@ -130,7 +131,7 @@ class RbfSettings:
 
     max_stalled_cycles : int
         Maximum number of consecutive optimization cycles without
-        improvement before we perform a full restart. Default 6.
+        improvement before we perform a full restart. Default 10.
 
     max_stalled_objfun_impr : float
         Maximum relative objective function improvement between
@@ -139,7 +140,9 @@ class RbfSettings:
 
     max_consecutive_discarded : int
         Maximum number of discarded points before a restart is
-        triggered. Default 15.
+        triggered. This number is multiplied by the number of cpus to
+        determine the actual maximum number of consecutive discarded
+        points. Default 15.
 
     max_consecutive_restoration : int
         Maximum number of consecutive nonsingularity restoration
@@ -289,7 +292,7 @@ class RbfSettings:
                  dynamism_clipping = 'auto',
                  dynamism_threshold = 1.0e3,
                  local_search_box_scaling = 0.5,
-                 max_stalled_cycles = 6,
+                 max_stalled_cycles = 10,
                  max_stalled_objfun_impr = 0.05,
                  max_consecutive_discarded = 15,
                  max_consecutive_restoration = 15,
@@ -434,13 +437,13 @@ class RbfSettings:
         dimension : int
             The dimension of the problem, i.e. size of the space.
 
-        var_lower : List[float]
+        var_lower : 1D numpy.ndarray[float]
             Vector of variable lower bounds.
 
-        var_upper : List[float]
+        var_upper : 1D numpy.ndarray[float]
             Vector of variable upper bounds.
 
-        integer_vars : List[int]
+        integer_vars : 1D numpy.ndarray[int]
             A list containing the indices of the integrality
             constrained variables. If empty list, all
             variables are assumed to be continuous.
@@ -450,9 +453,12 @@ class RbfSettings:
         RbfSettings
             A copy of the settings, without any 'auto' parameter values.
         """
-        assert(dimension==len(var_lower))
-        assert(dimension==len(var_upper))
-        assert((not integer_vars) or (max(integer_vars) < dimension))
+        assert(isinstance(var_lower, np.ndarray))
+        assert(isinstance(var_upper, np.ndarray))
+        assert(isinstance(integer_vars, np.ndarray))
+        assert(dimension == len(var_lower))
+        assert(dimension == len(var_upper))
+        assert((not integer_vars.any()) or (np.max(integer_vars) < dimension))
 
         l_settings = copy.deepcopy(self)
 
@@ -466,11 +472,11 @@ class RbfSettings:
             l_settings.dynamism_clipping = 'median'
                 
         if (l_settings.domain_scaling == 'auto'):
-            if (integer_vars):
+            if (integer_vars.any()):
                 l_settings.domain_scaling = 'off'
             else:
                 # Compute the length of the domain of each variable
-                size = [var_upper[i]-var_lower[i] for i in range(dimension)]
+                size = var_upper - var_lower
                 size.sort()
                 # If the problem is badly scaled, i.e. a variable has
                 # a domain 5 times as large as anoether, rescale.

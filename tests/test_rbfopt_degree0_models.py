@@ -16,7 +16,10 @@ import numpy as np
 import pyomo.environ
 import test_rbfopt_env
 import rbfopt_degree0_models as d0
-import rbfopt_utils as ru
+try:
+    import cython_rbfopt.rbfopt_utils as ru
+except ImportError:
+    import rbfopt_utils as ru
 from rbfopt_settings import RbfSettings
 
 class TestMultiquadricModels(unittest.TestCase):
@@ -27,11 +30,11 @@ class TestMultiquadricModels(unittest.TestCase):
         self.settings = RbfSettings(rbf = 'multiquadric')
         self.n = 3
         self.k = 5
-        self.var_lower = [i for i in range(self.n)]
-        self.var_upper = [i + 10 for i in range(self.n)]
-        self.node_pos = [self.var_lower, self.var_upper,
-                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]]
-        self.node_val = [2*i for i in range(self.k)]
+        self.var_lower = np.array([i for i in range(self.n)])
+        self.var_upper = np.array([i + 10 for i in range(self.n)])
+        self.node_pos = np.array([self.var_lower, self.var_upper,
+                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
+        self.node_val = np.array([2*i for i in range(self.k)])
         Amat = [[1.0, 17.349351572897476, 1.9999999999999998,
                  12.009995836801943, 12.932517156377562, 1.0],
                 [17.349351572897476, 1.0, 15.620499351813308,
@@ -45,11 +48,11 @@ class TestMultiquadricModels(unittest.TestCase):
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]]
         self.Amat = np.matrix(Amat)
         self.Amatinv = self.Amat.getI()
-        self.rbf_lambda = [1.981366489986409, 0.6262004309283905,
-                           -1.8477896263093248, -0.10028069928913483, 
-                           -0.65949659531634]
-        self.rbf_h = [0.5833631458309435]
-        self.integer_vars = [1]
+        self.rbf_lambda = np.array([1.981366489986409, 0.6262004309283905,
+                                    -1.8477896263093248, -0.10028069928913483,
+                                    -0.65949659531634])
+        self.rbf_h = np.array([0.5833631458309435])
+        self.integer_vars = np.array([1])
     # -- end function        
 
     def test_create_min_rbf_model(self):
@@ -97,9 +100,10 @@ class TestMultiquadricModels(unittest.TestCase):
         """
         Phimat = self.Amat[:self.k, :self.k]
         Pmat = self.Amat[:self.k, self.k:]
-        fast_node_index = [0, 1]
-        fast_node_err_bounds = [(self.node_val[i] - 2, self.node_val[i] + 2)
-                                for i in fast_node_index]
+        fast_node_index = np.array([0, 1])
+        fast_node_err_bounds = np.array([[self.node_val[i] - 2, 
+                                          self.node_val[i] + 2]
+                                         for i in fast_node_index])
         model = d0.create_min_bump_model(self.settings, self.n, self.k, 
                                          Phimat, Pmat, self.node_val,
                                          fast_node_index, fast_node_err_bounds)
@@ -141,11 +145,11 @@ class TestLinearModels(unittest.TestCase):
         self.settings = RbfSettings(rbf = 'linear')
         self.n = 3
         self.k = 5
-        self.var_lower = [i for i in range(self.n)]
-        self.var_upper = [i + 10 for i in range(self.n)]
-        self.node_pos = [self.var_lower, self.var_upper,
-                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]]
-        self.node_val = [2*i for i in range(self.k)]
+        self.var_lower = np.array([i for i in range(self.n)])
+        self.var_upper = np.array([i + 10 for i in range(self.n)])
+        self.node_pos = np.array([self.var_lower, self.var_upper,
+                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
+        self.node_val = np.array([2*i for i in range(self.k)])
         Amat = [[0.0, 17.320508075688775, 1.7320508075688772,
                  11.968291440301744, 12.893796958227627, 1.0],
                 [17.320508075688775, 0.0, 15.588457268119896,
@@ -159,11 +163,11 @@ class TestLinearModels(unittest.TestCase):
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]]
         self.Amat = np.matrix(Amat)
         self.Amatinv = self.Amat.getI()
-        self.rbf_lambda = [1.1704846814048488, 0.5281643269521171,
-                           -0.9920149389974761, -0.1328847504999134, 
-                           -0.5737493188595765]
-        self.rbf_h = [1.5583564301976252]
-        self.integer_vars = [1]
+        self.rbf_lambda = np.array([1.1704846814048488, 0.5281643269521171,
+                                    -0.9920149389974761, -0.1328847504999134,
+                                    -0.5737493188595765])
+        self.rbf_h = np.array([1.5583564301976252])
+        self.integer_vars = np.array([1])
     # -- end function        
 
     def test_create_min_rbf_model(self):
@@ -211,9 +215,10 @@ class TestLinearModels(unittest.TestCase):
         """
         Phimat = self.Amat[:self.k, :self.k]
         Pmat = self.Amat[:self.k, self.k:]
-        fast_node_index = [0, 1]
-        fast_node_err_bounds = [(self.node_val[i] - 2, self.node_val[i] + 2)
-                                for i in fast_node_index]
+        fast_node_index = np.array([0, 1])
+        fast_node_err_bounds = np.array([[self.node_val[i] - 2, 
+                                          self.node_val[i] + 2]
+                                         for i in fast_node_index])
         model = d0.create_min_bump_model(self.settings, self.n, self.k, 
                                          Phimat, Pmat, self.node_val,
                                          fast_node_index, fast_node_err_bounds)

@@ -25,7 +25,10 @@ except ImportError:
     clp_available = False
 import test_rbfopt_env
 import rbfopt_model_selection as ms
-import rbfopt_utils as ru
+try:
+    import cython_rbfopt.rbfopt_utils as ru
+except ImportError:
+    import rbfopt_utils as ru
 from rbfopt_settings import RbfSettings
 
 class TestModelSelection(unittest.TestCase):
@@ -40,13 +43,13 @@ class TestModelSelection(unittest.TestCase):
             self.solver.append('clp')
         self.n = 3
         self.k = 10
-        self.var_lower = [i for i in range(self.n)]
-        self.var_upper = [i + 10 for i in range(self.n)]
-        self.node_pos = [self.var_lower, self.var_upper,
+        self.var_lower = np.array([i for i in range(self.n)])
+        self.var_upper = np.array([i + 10 for i in range(self.n)])
+        self.node_pos = np.array([self.var_lower, self.var_upper,
                          [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12],
                          [3.2, 10.2, 4], [2.1, 1.1, 7.4], [6.6, 9.1, 2.0],
-                         [10, 8.8, 11.1], [7, 7, 7]]
-        self.node_val = [2*i for i in range(self.k)]
+                         [10, 8.8, 11.1], [7, 7, 7]])
+        self.node_val = np.array([2*i for i in range(self.k)])
     # -- end function        
 
     def test_get_best_rbf_model(self):

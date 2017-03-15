@@ -18,6 +18,3 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(os.path.dirname(current_dir) + '/src/')
 # Random seed for testing environment: will be set where appropriate
 rand_seed = 712694123
-
-
-

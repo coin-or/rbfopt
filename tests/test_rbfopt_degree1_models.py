@@ -16,7 +16,10 @@ import numpy as np
 import pyomo.environ
 import test_rbfopt_env
 import rbfopt_degree1_models as d1
-import rbfopt_utils as ru
+try:
+    import cython_rbfopt.rbfopt_utils as ru
+except ImportError:
+    import rbfopt_utils as ru
 from rbfopt_settings import RbfSettings
 
 class TestCubicModels(unittest.TestCase):
@@ -27,11 +30,11 @@ class TestCubicModels(unittest.TestCase):
         self.settings = RbfSettings(rbf = 'cubic')
         self.n = 3
         self.k = 5
-        self.var_lower = [i for i in range(self.n)]
-        self.var_upper = [i + 10 for i in range(self.n)]
-        self.node_pos = [self.var_lower, self.var_upper,
-                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]]
-        self.node_val = [2*i for i in range(self.k)]
+        self.var_lower = np.array([i for i in range(self.n)])
+        self.var_upper = np.array([i + 10 for i in range(self.n)])
+        self.node_pos = np.array([self.var_lower, self.var_upper,
+                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
+        self.node_val = np.array([2*i for i in range(self.k)])
         Amat = [[0.0, 5196.152422706633, 5.196152422706631,
                  1714.338065908822, 2143.593744305343, 0.0, 1.0, 2.0, 1.0],
                 [5196.152422706633, 0.0, 3787.995116153135, 324.6869498824983,
@@ -48,12 +51,12 @@ class TestCubicModels(unittest.TestCase):
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
         self.Amat = np.matrix(Amat)
         self.Amatinv = self.Amat.getI()
-        self.rbf_lambda = [-0.02031417613815348, -0.0022571306820170587, 
-                           0.02257130682017054, 6.74116235140294e-18,
-                           -1.0962407017011667e-18]
-        self.rbf_h = [-0.10953754862932995, 0.6323031632900591,
-                      0.5216788297837124, 9.935450288253636]
-        self.integer_vars = [1]
+        self.rbf_lambda = np.array([-0.02031417613815348, -0.0022571306820170587,
+                                    0.02257130682017054, 6.74116235140294e-18,
+                                    -1.0962407017011667e-18])
+        self.rbf_h = np.array([-0.10953754862932995, 0.6323031632900591,
+                               0.5216788297837124, 9.935450288253636])
+        self.integer_vars = np.array([1])
     # -- end function        
 
     def test_create_min_rbf_model(self):
@@ -101,9 +104,10 @@ class TestCubicModels(unittest.TestCase):
         """
         Phimat = self.Amat[:self.k, :self.k]
         Pmat = self.Amat[:self.k, self.k:]
-        fast_node_index = [0, 1]
-        fast_node_err_bounds = [(self.node_val[i] - 2, self.node_val[i] + 2)
-                                for i in fast_node_index]
+        fast_node_index = np.array([0, 1])
+        fast_node_err_bounds = np.array([[self.node_val[i] - 2, 
+                                          self.node_val[i] + 2]
+                                         for i in fast_node_index])
         model = d1.create_min_bump_model(self.settings, self.n, self.k, 
                                          Phimat, Pmat, self.node_val,
                                          fast_node_index, fast_node_err_bounds)
@@ -145,11 +149,11 @@ class TestThinPlateSplineModels(unittest.TestCase):
         self.settings = RbfSettings(rbf = 'thin_plate_spline')
         self.n = 3
         self.k = 5
-        self.var_lower = [i for i in range(self.n)]
-        self.var_upper = [i + 10 for i in range(self.n)]
-        self.node_pos = [self.var_lower, self.var_upper,
-                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]]
-        self.node_val = [2*i for i in range(self.k)]
+        self.var_lower = np.array([i for i in range(self.n)])
+        self.var_upper = np.array([i + 10 for i in range(self.n)])
+        self.node_pos = np.array([self.var_lower, self.var_upper,
+                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
+        self.node_val = np.array([2*i for i in range(self.k)])
         Amat = [[0.0, 855.5673711984304, 1.6479184330021641,
                  355.55903306222723, 425.059078986427, 0.0, 1.0, 2.0, 1.0],
                 [855.5673711984304, 0.0, 667.4069653658767, 91.06079221519477,
@@ -166,12 +170,12 @@ class TestThinPlateSplineModels(unittest.TestCase):
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
         self.Amat = np.matrix(Amat)
         self.Amatinv = self.Amat.getI()
-        self.rbf_lambda = [-0.1948220562664489, -0.02164689514071656,
-                           0.21646895140716543, 2.4492621453325443e-18,
-                           3.4694803106897584e-17]
-        self.rbf_h = [-0.047916449337864896, -0.42012611088687196,
-                      1.072728018406163, 16.43832406902896]
-        self.integer_vars = [1]
+        self.rbf_lambda = np.array([-0.1948220562664489, -0.02164689514071656,
+                                    0.21646895140716543, 2.4492621453325443e-18,
+                                    3.4694803106897584e-17])
+        self.rbf_h = np.array([-0.047916449337864896, -0.42012611088687196,
+                               1.072728018406163, 16.43832406902896])
+        self.integer_vars = np.array([1])
     # -- end function        
 
     def test_create_min_rbf_model(self):
@@ -219,9 +223,10 @@ class TestThinPlateSplineModels(unittest.TestCase):
         """
         Phimat = self.Amat[:self.k, :self.k]
         Pmat = self.Amat[:self.k, self.k:]
-        fast_node_index = [0, 1]
-        fast_node_err_bounds = [(self.node_val[i] - 2, self.node_val[i] + 2)
-                                for i in fast_node_index]
+        fast_node_index = np.array([0, 1])
+        fast_node_err_bounds = np.array([[self.node_val[i] - 2, 
+                                          self.node_val[i] + 2]
+                                         for i in fast_node_index])
         model = d1.create_min_bump_model(self.settings, self.n, self.k, 
                                          Phimat, Pmat, self.node_val,
                                          fast_node_index, fast_node_err_bounds)

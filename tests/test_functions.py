@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import math
 
+
 class branin:
     """
     Branin function.
@@ -1267,7 +1268,6 @@ class nvs15:
         # - x[0] - x[1] - 2*x[2] + 3 >= 0
         penalty = 0.0
         penalty += 10*max(0, -(-x[0] - x[1] - 2*x[2] + 3))
-        print(penalty)
         return(value + penalty)
 
     dimension = 3

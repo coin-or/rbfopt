@@ -17,6 +17,8 @@ Research partially supported by SUTD-MIT International Design Center.
 """
 
 import rbfopt_black_box as bb
+import numpy as np
+
 
 class BlackBox(bb.BlackBox):
     """Example of a black-box function that can be optimized. 
@@ -57,7 +59,7 @@ class BlackBox(bb.BlackBox):
     :class:`rbfopt_black_box.BlackBox`
     """
 
-    def __init__(self, exponent = 1):
+    def __init__(self, exponent=1):
         """Constructor.
         """
         assert(exponent >= 0)

@@ -1,15 +1,12 @@
 """Utility functions.
 
 This module contains a number of subroutines that are used by the
-other modules. In particular it contains most of the subroutines that
-do the calculations using numpy, as well as utility functions for
-various modules.
+other modules.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
 (C) Copyright International Business Machines Corporation 2017.
 Research partially supported by SUTD-MIT International Design Center.
-
 """
 
 from __future__ import print_function
@@ -24,20 +21,24 @@ import numpy as np
 import scipy.spatial as ss
 import rbfopt_config as config
 from rbfopt_settings import RbfSettings
-from rbfopt_config import GAMMA
 
-def get_rbf_function(settings):
+cimport numpy as np
+from libc.math cimport log, sqrt, floor, ceil
+
+cdef double GAMMA = config.GAMMA
+
+cpdef get_rbf_function(settings):
     """Return a radial basis function.
 
     Return the radial basis function appropriate function as indicated
     by the settings.
-
+    
     Parameters
     ----------
-
+    
     settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
-
+    
     Returns
     ---
     Callable[float]
@@ -55,23 +56,26 @@ def get_rbf_function(settings):
 
 
 # -- List of radial basis functions
-def _cubic(r):
+cpdef double _cubic(double r):
     """Cubic RBF: :math: `f(x) = x^3`"""
     return r*r*r
 
-def _thin_plate_spline(r):
+
+cpdef double _thin_plate_spline(double r):
     """Thin plate spline RBF: :math: `f(x) = x^2 \log x`"""
     if (r == 0.0):
         return 0.0
-    return math.log(r)*r*r
+    return log(r)*r*r
 
-def _linear(r):
+
+cpdef double _linear(double r):
     """Linear RBF: :math: `f(x) = x`"""
     return r
 
-def _multiquadric(r):
+
+cpdef double _multiquadric(double r):
     """Multiquadric RBF: :math: `f(x) = \sqrt{x^2 + \gamma^2}`"""
-    return (r*r + GAMMA*GAMMA)**0.5
+    return sqrt(r*r + GAMMA)
 # -- end list of radial basis functions
 
 

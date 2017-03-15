@@ -26,7 +26,7 @@ class TestGutmann(unittest.TestCase):
     """Test Gutmann's algorithm on a small set of problems."""
 
     rand_seeds = [512319876, 231974198, 908652418]
-    eps_opt = 0.05        
+    eps_opt = 0.05
 
     def test_gutmann_ex8_1_4(self):
         """Check solution of ex8_1_4 with Gutmann's method, genetic."""
@@ -36,7 +36,7 @@ class TestGutmann(unittest.TestCase):
             print()
             print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    global_search_method = 'genetic',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -47,8 +47,8 @@ class TestGutmann(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve ex8_1_4 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -60,7 +60,7 @@ class TestGutmann(unittest.TestCase):
             print()
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    rbf = 'cubic',
                                    global_search_method = 'solver',
                                    target_objval = optimum,
@@ -72,8 +72,8 @@ class TestGutmann(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve prob03 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -89,7 +89,7 @@ class TestGutmann(unittest.TestCase):
             print()
             print('Solving branin with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    rbf = 'multiquadric',
                                    global_search_method = 'sampling',
                                    target_objval = optimum,
@@ -103,8 +103,8 @@ class TestGutmann(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve branin with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -116,7 +116,7 @@ class TestGutmann(unittest.TestCase):
             print()
             print('Solving st_miqp3 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    global_search_method = 'genetic',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -129,8 +129,37 @@ class TestGutmann(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve st_miqp3 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
+            self.assertLessEqual(res[0], target, msg = msg)
+    # -- end function
+
+    def test_gutmann_branin_noisy_with_init(self):
+        """Check solution of noisy braning with Gutmann, solver."""
+        bb = ti.TestNoisyBlackBox('branin', 0.1, 0.01)
+        optimum = bb._function.optimum_value
+        for seed in self.rand_seeds:
+            print()
+            print('Solving branin with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfSettings(algorithm = 'Gutmann',
+                                   global_search_method = 'solver',
+                                   target_objval = optimum,
+                                   eps_opt = self.eps_opt,
+                                   max_iterations = 200,
+                                   max_evaluations = 300,
+                                   fast_objfun_rel_error = 0.1,
+                                   fast_objfun_abs_error = 0.01,
+                                   rand_seed = seed)
+            init_node_pos = [[0, 0], [-2, 2], [5, 10]]
+            init_node_val = [bb._function.evaluate(x) for x in init_node_pos]
+            alg = ra.OptAlgorithm(settings, bb, init_node_pos, init_node_val)
+            res = alg.optimize()
+            msg = ('Could not solve noisy branin with init and ' +
+                   'Gutmann\'s algorithm')
+            target = optimum + (abs(optimum)*self.eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -142,7 +171,7 @@ class TestGutmann(unittest.TestCase):
             print()
             print('Solving hartman6 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    global_search_method = 'solver',
                                    target_objval = optimum,
                                    eps_opt = 0.0,
@@ -161,7 +190,7 @@ class TestGutmannParallel(unittest.TestCase):
     """Test Gutmann's algorithm in parallel on a small set of problems."""
 
     rand_seeds = [512319876, 231974198, 908652418]
-    eps_opt = 0.05        
+    eps_opt = 0.05
 
     def test_gutmann_parallel_ex8_1_4(self):
         """Check solution of ex8_1_4 with Gutmann's method, solver."""
@@ -171,7 +200,7 @@ class TestGutmannParallel(unittest.TestCase):
             print()
             print('Solving goldsteinprice with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    global_search_method = 'solver',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -183,8 +212,8 @@ class TestGutmannParallel(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve ex8_1_4 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -196,7 +225,7 @@ class TestGutmannParallel(unittest.TestCase):
             print()
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    global_search_method = 'sampling',
                                    rbf = 'cubic',
                                    target_objval = optimum,
@@ -209,8 +238,8 @@ class TestGutmannParallel(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve prob03 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -224,7 +253,7 @@ class TestGutmannParallel(unittest.TestCase):
             print()
             print('Solving branin with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    global_search_method = 'genetic',
                                    rbf = 'multiquadric',
                                    target_objval = optimum,
@@ -239,8 +268,8 @@ class TestGutmannParallel(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve branin with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -252,7 +281,7 @@ class TestGutmannParallel(unittest.TestCase):
             print()
             print('Solving st_miqp3 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    global_search_method = 'solver',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -266,8 +295,8 @@ class TestGutmannParallel(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve st_miqp3 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -279,7 +308,7 @@ class TestGutmannParallel(unittest.TestCase):
             print()
             print('Solving hartman6 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'Gutmann', 
+            settings = RbfSettings(algorithm = 'Gutmann',
                                    global_search_method = 'sampling',
                                    num_cpus = 2,
                                    target_objval = optimum,
@@ -309,7 +338,7 @@ class TestMSRSM(unittest.TestCase):
             print()
             print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'MSRSM', 
+            settings = RbfSettings(algorithm = 'MSRSM',
                                    global_search_method = 'sampling',
                                    rbf = 'linear',
                                    target_objval = optimum,
@@ -321,8 +350,8 @@ class TestMSRSM(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve hartman3 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -334,7 +363,7 @@ class TestMSRSM(unittest.TestCase):
             print()
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'MSRSM', 
+            settings = RbfSettings(algorithm = 'MSRSM',
                                    global_search_method = 'genetic',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -345,8 +374,8 @@ class TestMSRSM(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve prob03 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -364,7 +393,7 @@ class TestMSRSM(unittest.TestCase):
                   '{:d}'.format(seed))
             settings = RbfSettings(rbf = 'cubic',
                                    global_search_method = 'solver',
-                                   algorithm = 'MSRSM', 
+                                   algorithm = 'MSRSM',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
@@ -375,8 +404,8 @@ class TestMSRSM(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve prob03 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -401,8 +430,36 @@ class TestMSRSM(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve goldsteinprice with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
+            self.assertLessEqual(res[0], target, msg = msg)
+    # -- end function
+
+    def test_msrsm_branin_noisy_with_init(self):
+        """Check solution of noisy branin with MSRSM, sampling."""
+        bb = ti.TestNoisyBlackBox('branin', 0.1, 0.01)
+        optimum = bb._function.optimum_value
+        for seed in self.rand_seeds:
+            print()
+            print('Solving branin with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfSettings(algorithm = 'MSRSM',
+                                   global_search_method = 'sampling',
+                                   target_objval = optimum,
+                                   eps_opt = self.eps_opt,
+                                   max_iterations = 200,
+                                   max_evaluations = 300,
+                                   fast_objfun_rel_error = 0.1,
+                                   fast_objfun_abs_error = 0.01,
+                                   rand_seed = seed)
+            init_node_pos = [[0, 0], [-2, 2], [5, 10], [-2.5, 1]]
+            alg = ra.OptAlgorithm(settings, bb, init_node_pos)
+            res = alg.optimize()
+            msg = ('Could not solve noisy branin with init and ' +
+                   'MSRSM algorithm')
+            target = optimum + (abs(optimum)*self.eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -414,7 +471,7 @@ class TestMSRSM(unittest.TestCase):
             print()
             print('Solving hartman6 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'MSRSM', 
+            settings = RbfSettings(algorithm = 'MSRSM',
                                    global_search_method = 'solver',
                                    target_objval = optimum,
                                    eps_opt = 0.0,
@@ -443,7 +500,7 @@ class TestMSRSMParallel(unittest.TestCase):
             print()
             print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'MSRSM', 
+            settings = RbfSettings(algorithm = 'MSRSM',
                                    global_search_method = 'sampling',
                                    rbf = 'linear',
                                    target_objval = optimum,
@@ -456,8 +513,8 @@ class TestMSRSMParallel(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve ex8_1_4 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -469,7 +526,7 @@ class TestMSRSMParallel(unittest.TestCase):
             print()
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'MSRSM', 
+            settings = RbfSettings(algorithm = 'MSRSM',
                                    global_search_method = 'genetic',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -481,8 +538,8 @@ class TestMSRSMParallel(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve prob03 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -498,7 +555,7 @@ class TestMSRSMParallel(unittest.TestCase):
                   '{:d}'.format(seed))
             settings = RbfSettings(rbf = 'cubic',
                                    global_search_method = 'genetic',
-                                   algorithm = 'MSRSM', 
+                                   algorithm = 'MSRSM',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
                                    max_iterations = 200,
@@ -510,8 +567,8 @@ class TestMSRSMParallel(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve st_miqp3 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -523,7 +580,7 @@ class TestMSRSMParallel(unittest.TestCase):
             print()
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'MSRSM', 
+            settings = RbfSettings(algorithm = 'MSRSM',
                                    global_search_method = 'sampling',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -537,8 +594,8 @@ class TestMSRSMParallel(unittest.TestCase):
             res = alg.optimize()
             msg = 'Could not solve prob03 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 
@@ -581,7 +638,7 @@ class TestState(unittest.TestCase):
             print()
             print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
-            settings = RbfSettings(algorithm = 'MSRSM', 
+            settings = RbfSettings(algorithm = 'MSRSM',
                                    rbf = 'linear',
                                    target_objval = optimum,
                                    eps_opt = self.eps_opt,
@@ -595,8 +652,8 @@ class TestState(unittest.TestCase):
             res = alg_reload.optimize()
             msg = 'Could not solve ex8_1_4 after reload'
             target = optimum + (abs(optimum)*self.eps_opt if
-                                abs(optimum) > settings.eps_zero 
-                                else self.eps_opt) 
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
             self.assertLessEqual(res[0], target, msg = msg)
         os.close(handle)
         os.remove(filename)
