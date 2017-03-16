@@ -174,7 +174,7 @@ def rbfopt_cl_interface(args, black_box):
             print(type(e), file = output_stream)
             print(e, file = output_stream)
             output_stream.close()
-            exit()
+            sys.exit()
         alg = OptAlgorithm(settings = settings, black_box = black_box,
                            init_node_pos = init_node_pos,
                            init_node_val = init_node_val)
@@ -200,7 +200,7 @@ if (__name__ == "__main__"):
     if (sys.version_info[0] >= 3):
         print('Error: Python 3 is currently not tested.')
         print('Please use Python 2.7')
-        exit()
+        sys.exit()
     # Create command line parsers
     desc = ('Apply the RBF method to an object of class "BlackBox".')
     parser = argparse.ArgumentParser(description = desc)

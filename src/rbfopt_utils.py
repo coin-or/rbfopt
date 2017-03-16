@@ -819,7 +819,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
               file = sys.stderr)
         print('Exception details:', file = sys.stderr)
         print(e, file = sys.stderr)
-        exit()
+        sys.exit()
 
     return (solution[0:k], solution[k:])
 
