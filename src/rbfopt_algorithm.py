@@ -1972,7 +1972,7 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     # where sigma_n is a function described in the paper by Gutmann
     # (2001). If clipping is disabled, we simply take the largest
     # function value.
-    if (settings.targetval_clipping):
+    if (settings.targetval_clipping and settings.algorithm == 'Gutmann'):
         local_fmax = ru.get_fmax_current_iter(settings, n, k,
                                               current_step, scaled_node_val)
     else:
