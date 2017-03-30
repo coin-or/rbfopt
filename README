@@ -2,8 +2,8 @@
 #  Author(s): Giacomo Nannicini
 #             Singapore University of Technology and Design
 #             International Business Machines Corporation
-#             nannicini@sutd.edu.sg, nannicini@us.ibm.com
-#  Last edit: 02/10/17
+#             nannicini@us.ibm.com
+#  Last edit: 03/30/17
 #
 #  (C) Copyright Singapore University of Technology and Design 2015.
 #  (C) Copyright International Business Machines Corporation 2016.
@@ -107,17 +107,16 @@ This package requires the following software:
 Python 2.7.* (latest 2.7.* release recommended)
 NumPy version >= 1.11.0
 SciPy version >= 0.13.3
-Pyomo version 4.3.11388
+Pyomo version >= 4.3.11388
 
 The software has been tested with the versions indicated above. It may
 work with earlier version and should work with subsequent version, if
 they are backward compatible.
 
-Note that Python 3.* is not compatible with Python 2.7. While our
+Note that Python 3 is not compatible with Python 2.7. While our
 library is Python 3 compliant and consistently uses "from __future__
 import [...]", the code has not been tested on Python 3 yet. We
-recommend using Python 2.7. If for some reason you require Python 3,
-it should be very easy to port the code.
+recommend using Python 2.7. 
 
 The easiest way to install all the dependencies is via the Python
 module manager pip, using the command:
