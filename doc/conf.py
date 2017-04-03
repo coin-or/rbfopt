@@ -25,7 +25,7 @@ sys.path.insert(0, os.path.abspath('../src/'))
 # -- Mock modules for autodoc
 
 MOCK_MODULES = ['argparse', 'numpy', 'scipy', 'pyDOE', 'scipy.spatial', 
-                'pyomo.opt', 'pyomo.environ']
+                'pyomo.opt', 'pyomo.environ', 'Cython.Build']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
