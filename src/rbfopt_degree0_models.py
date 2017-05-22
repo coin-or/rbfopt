@@ -983,10 +983,10 @@ def _max_h_k_obj_expression(model):
 
 # Objective function for the "minimize bumpiness with variable nodes"
 # problem. The expression is:
-# lambda^T \Phi lambda.
+# - lambda^T \Phi lambda.
 def _min_bump_obj_expression(model):
-    return (sum(model.Phi[i,j] * model.rbf_lambda[i] * model.rbf_lambda[j]
-                for i in model.K for j in model.K))
+    return (-sum(model.Phi[i,j] * model.rbf_lambda[i] * model.rbf_lambda[j]
+                 for i in model.K for j in model.K))
 
 
 # Objective function for the "minimize MSRSM obj" problem. The expression is:

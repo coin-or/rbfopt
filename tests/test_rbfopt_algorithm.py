@@ -16,10 +16,12 @@ import unittest
 import time
 import tempfile
 import os
+import numpy as np
 import test_rbfopt_env
 from rbfopt_settings import RbfSettings
 import rbfopt_test_interface as ti
 import test_functions
+from rbfopt_black_box import BlackBox
 import rbfopt_algorithm as ra
 
 class TestGutmann(unittest.TestCase):
@@ -657,6 +659,128 @@ class TestState(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg = msg)
         os.close(handle)
         os.remove(filename)
+    # -- end function
+# -- end class
+
+class TestBlackBoxFixed(BlackBox):
+    """A black-box constructed from a known test function.
+
+    Parameters
+    ----------
+    name : string
+        The name of the function to be implemented.
+    """
+    def __init__(self, name, num_fixed_vars):
+        """Constructor.
+        """
+        try:
+            self._function = getattr(test_functions, name.lower())
+        except AttributeError:
+            raise ValueError('Function ' + name + ' not implemented')
+        # Generate lower and upper bounds for fixed variables
+        self.fixed_var_lower = np.random.rand(1, num_fixed_vars)[0]*10 - 5
+        self.fixed_var_upper = self.fixed_var_lower
+        self.num_fixed_vars = num_fixed_vars
+        self.var_pos = np.random.permutation(self._function.dimension +
+                                             num_fixed_vars)
+        
+
+    def get_dimension(self):
+        return self._function.dimension + self.num_fixed_vars
+
+    def get_var_lower(self):
+        return np.array([self._function.var_lower[i] 
+                         if i < self._function.dimension else
+                         self.fixed_var_lower[i - self._function.dimension]
+                         for i in self.var_pos])
+
+    def get_var_upper(self):
+        return np.array([self._function.var_upper[i] 
+                         if i < self._function.dimension else
+                         self.fixed_var_upper[i - self._function.dimension]
+                         for i in self.var_pos])
+
+    def get_integer_vars(self):
+        if (len(self._function.integer_vars)):
+            orig_int_vars = [np.where(self.var_pos == i)[0][0]
+                             for i in self._function.integer_vars]
+            return np.array(sorted(orig_int_vars))
+        else:
+            return self._function.integer_vars
+
+    def evaluate(self, point):
+        # Objective is shifted by the sum of all fixed variables
+        orig_point = np.array([point[np.where(self.var_pos == i)[0][0]] 
+                               for i in range(self._function.dimension)])
+        return (self._function.evaluate(orig_point) + 
+                sum([point[np.where(self.var_pos == i)[0][0]] for i in 
+                     range(self._function.dimension, 
+                           self._function.dimension + self.num_fixed_vars)]))
+        
+    def evaluate_fast(self, point):
+        raise NotImplementedError('evaluate_fast() not implemented')
+
+    def has_evaluate_fast(self):
+        return False
+        
+    def get_obj_shift(self):
+        # We simply sum all fixed variables
+        var_lower = self.get_var_lower()
+        return sum([var_lower[np.where(self.var_pos == i)[0][0]] for i in 
+                    range(self._function.dimension, 
+                          self._function.dimension + self.num_fixed_vars)])    
+# -- end class
+
+
+class TestFixedVariables(unittest.TestCase):
+    """Test problems with fixed variables."""
+    rand_seeds = [512319876, 231974198, 908652418]
+    eps_opt = 0.05
+
+    def test_branin_fixed(self):
+        """Check solution of branin with fixed variables."""
+        for seed in self.rand_seeds:
+            bb = TestBlackBoxFixed('branin', 4)
+            optimum = bb._function.optimum_value + bb.get_obj_shift()
+            print()
+            print('Solving branin with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfSettings(algorithm = 'MSRSM',
+                                   target_objval = optimum,
+                                   eps_opt = self.eps_opt,
+                                   max_iterations = 200,
+                                   max_evaluations = 300,
+                                   rand_seed = seed)
+            alg = ra.OptAlgorithm(settings, bb)
+            res = alg.optimize()
+            msg = 'Could not solve braning with fixed variables'
+            target = optimum + (abs(optimum)*self.eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
+            self.assertLessEqual(res[0], target, msg = msg)
+    # -- end function
+
+    def test_prob03_fixed(self):
+        """Check solution of prob03 with fixed variables."""
+        for seed in self.rand_seeds:
+            bb = TestBlackBoxFixed('prob03', 5)
+            optimum = bb._function.optimum_value + bb.get_obj_shift()
+            print()
+            print('Solving prob03 with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfSettings(algorithm = 'MSRSM',
+                                   target_objval = optimum,
+                                   eps_opt = self.eps_opt,
+                                   max_iterations = 200,
+                                   max_evaluations = 300,
+                                   rand_seed = seed)
+            alg = ra.OptAlgorithm(settings, bb)
+            res = alg.optimize()
+            msg = 'Could not solve prob03 with fixed variables'
+            target = optimum + (abs(optimum)*self.eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
+            self.assertLessEqual(res[0], target, msg = msg)
     # -- end function
 # -- end class
 

@@ -976,8 +976,8 @@ def _min_rbf_obj_expression(model):
 # Objective function for the "maximize 1/\mu" problem. The expression is:
 # max -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j;
 def _max_one_over_mu_obj_expression(model):
-    return (-1.0*sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
-                     for i in model.Q for j in model.Q) + model.phi_0)
+    return (-sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
+                 for i in model.Q for j in model.Q) + model.phi_0)
 
 
 # Objective function for the "maximize h_k" problem. The expression is:

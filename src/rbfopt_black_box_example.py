@@ -34,13 +34,13 @@ class BlackBox(bb.BlackBox):
     dimension : int
         Dimension of the problem.
         
-    var_lower : List[float]
+    var_lower : 1D numpy.ndarray[float]
         Lower bounds of the decision variables.
 
-    var_upper : List[float]
+    var_upper : 1D numpy.ndarray[float]
         Upper bounds of the decision variables.
 
-    integer_vars : List[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list of indices of the variables that must assume integer
         values.
 
@@ -68,10 +68,10 @@ class BlackBox(bb.BlackBox):
         # Set required data
         self.dimension = 3
 
-        self.var_lower = [0, 0, 0]
-        self.var_upper = [10, 10, 10]
+        self.var_lower = np.array([0, 0, 0])
+        self.var_upper = np.array([10, 10, 10])
 
-        self.integer_vars = [0, 1]
+        self.integer_vars = np.array([0, 1])
     # -- end function
 
     def get_dimension(self):
@@ -134,7 +134,7 @@ class BlackBox(bb.BlackBox):
             Value of the function at x.
 
         """
-        return (x[0] + x[1] + x[2])**self.exponent        
+        return np.sum(x)**self.exponent        
     # -- end function
     
     def evaluate_fast(self, x):

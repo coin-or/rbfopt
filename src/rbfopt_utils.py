@@ -283,7 +283,7 @@ def get_uniform_lhs(n, num_samples):
 # -- end function
 
 
-def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
+def get_lhd_maximin_points(var_lower, var_upper, num_trials=50):
     """Compute a latin hypercube design with maximin distance.
 
     Compute an array of (n+1) points in the given box, where n is the
@@ -332,7 +332,7 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials = 50):
 # -- end function
 
 
-def get_lhd_corr_points(var_lower, var_upper, num_trials = 50):
+def get_lhd_corr_points(var_lower, var_upper, num_trials=50):
 
     """Compute a latin hypercube design with min correlation.
 
@@ -885,7 +885,7 @@ def evaluate_rbf(settings, point, n, k, node_pos, rbf_lambda, rbf_h):
 # -- end function
 
 def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
-                      return_distances = 'no'):
+                      return_distances='no'):
     """Evaluate the RBF interpolant at all points in a given list.
 
     Evaluate the RBF interpolant at all points in a given list. This
@@ -1156,7 +1156,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
 # -- end function
 
 
-def transform_domain(settings, var_lower, var_upper, point, reverse = False):
+def transform_domain(settings, var_lower, var_upper, point, reverse=False):
     """Rescale the domain.
 
     Rescale the function domain according to the chosen strategy.
@@ -1216,7 +1216,7 @@ def transform_domain(settings, var_lower, var_upper, point, reverse = False):
 
 
 def bulk_transform_domain(settings, var_lower, var_upper, points, 
-                          reverse = False):
+                          reverse=False):
     """Rescale the domain.
 
     Rescale the function domain according to the chosen strategy.

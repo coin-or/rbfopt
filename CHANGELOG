@@ -1,3 +1,6 @@
+2017-05-22  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Upgraded code to support Python 3.
+
 2017-03-15  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 2.1 released.
 	* requirements.txt: Updated requirements. 

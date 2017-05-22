@@ -112,9 +112,8 @@ class TestNoisyBlackBox(BlackBox):
 # -- end class
 
 if (__name__ == "__main__"):
-    if (sys.version_info[0] >= 3):
-        print('Error: Python 3 is currently not tested.')
-        print('Please use Python 2.7')
+    if (sys.version_info[0] < 3):
+        print('Error: this software requires Python 3.')
         exit()
     # Create command line parsers
     parser = argparse.ArgumentParser(description = 'Test RBF method')

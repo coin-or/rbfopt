@@ -75,9 +75,10 @@ class TestUtils(unittest.TestCase):
         var_lower = np.array([-1, 0, 1])
         var_upper = np.array([1, 2, 3])
         corners = ru.get_all_corners(var_lower, var_upper)
-        self.assertItemsEqual([[-1, 0, 1], [-1, 0, 3], [-1, 2, 1], [-1, 2, 3],
-                               [1, 0, 1], [1, 0, 3], [1, 2, 1], [1, 2, 3]],
-                              corners.tolist())
+        self.assertTrue(sorted([[-1, 0, 1], [-1, 0, 3], [-1, 2, 1], 
+                                [-1, 2, 3], [1, 0, 1], [1, 0, 3], 
+                                [1, 2, 1], [1, 2, 3]]) ==
+                        sorted(corners.tolist()))
     # -- end function
 
     def test_get_lower_corners(self):
@@ -85,8 +86,9 @@ class TestUtils(unittest.TestCase):
         var_lower = np.array([-1, 0, 1])
         var_upper = np.array([1, 2, 3])
         corners = ru.get_lower_corners(var_lower, var_upper)
-        self.assertItemsEqual([[-1, 0, 1], [-1, 0, 3], [-1, 2, 1], 
-                               [1, 0, 1]], corners.tolist())
+        self.assertTrue(sorted([[-1, 0, 1], [-1, 0, 3], 
+                                [-1, 2, 1], [1, 0, 1]]) == 
+                        sorted(corners.tolist()))
     # -- end function
 
     def test_get_random_corners(self):

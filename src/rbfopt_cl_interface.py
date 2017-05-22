@@ -82,7 +82,7 @@ def register_options(parser):
                         metavar = 'LOG_FILE_NAME', dest = 'output_stream',
                         help = 'Name of log file for output redirection')
     intset.add_argument('--pause', '-p', action = 'store', dest = 'pause',
-                        default = sys.maxint, type = int,
+                        default = sys.maxsize, type = int,
                         help = 'Number of iterations after which ' +
                         'the optimization process should be paused')
     intset.add_argument('--points_from_file', '-f', action = 'store',
@@ -192,14 +192,13 @@ def rbfopt_cl_interface(args, black_box):
         alg.save_to_file(args['dump_state'])
         print('Dumped state to file {:s}'.format(args['dump_state']),
               file = output_stream)
-    #output_stream.close()
+    output_stream.close()
 
 # -- end function
 
 if (__name__ == "__main__"):
-    if (sys.version_info[0] >= 3):
-        print('Error: Python 3 is currently not tested.')
-        print('Please use Python 2.7')
+    if (sys.version_info[0] < 3):
+        print('Error: this software requires Python 3.')
         exit()
     # Create command line parsers
     desc = ('Apply the RBF method to an object of class "BlackBox".')

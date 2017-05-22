@@ -43,7 +43,7 @@ class BlackBox:
 
         Returns
         -------
-        List[float]
+        1D numpy.ndarray[float]
             Lower bounds of the decision variables.
         """
         pass
@@ -55,7 +55,7 @@ class BlackBox:
 
         Returns
         -------
-        List[float]
+        1D numpy.ndarray[float]
             Upper bounds of the decision variables.
         """
         pass
@@ -66,7 +66,7 @@ class BlackBox:
         
         Returns
         -------
-        List[int]
+        1D numpy.ndarray[int]
             A list of indices of the variables that must assume
             integer values. Can be empty.
         """
@@ -80,7 +80,7 @@ class BlackBox:
         
         Parameters
         ----------
-        x : List[float]
+        x : 1D numpy.ndarray[float]
             Value of the decision variables.
 
         Returns
@@ -103,7 +103,7 @@ class BlackBox:
 
         Parameters
         ----------
-        x : List[float]
+        x : 1D numpy.ndarray[float]
             Value of the decision variables.
 
         Returns

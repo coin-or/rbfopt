@@ -104,7 +104,7 @@ make.bat:
 
 This package requires the following software:
 
-Python 2.7.* (latest 2.7.* release recommended)
+Python version >= 2.7 
 NumPy version >= 1.11.0
 SciPy version >= 0.13.3
 Pyomo version 4.3.11388
@@ -113,11 +113,8 @@ The software has been tested with the versions indicated above. It may
 work with earlier version and should work with subsequent version, if
 they are backward compatible.
 
-Note that Python 3.* is not compatible with Python 2.7. While our
-library is Python 3 compliant and consistently uses "from __future__
-import [...]", the code has not been tested on Python 3 yet. We
-recommend using Python 2.7. If for some reason you require Python 3,
-it should be very easy to port the code.
+The code is mainly developed for Python 3, but it is backward
+compatible with Python 2.7. We recommend using Python 3 if possible.
 
 The easiest way to install all the dependencies is via the Python
 module manager pip, using the command:
@@ -193,10 +190,10 @@ The two packages above are optional.
 3) Enjoy!
 
 4) You can test the installation by running:
-   python2.7 tests/rbfopt_test_interface.py branin
+   python tests/rbfopt_test_interface.py branin
    
    See:
-   python2.7 tests/rbfopt_test_interface.py --help
+   python tests/rbfopt_test_interface.py --help
    for more details on command-line options for the testing utility.
 
    Many more test functions, with different characteristics, are
@@ -205,7 +202,7 @@ The two packages above are optional.
 
 5) Unit tests for the library can be executed by running:
 
-   python2.7 -m unittest discover -s tests/
+   python -m unittest discover -s tests/
 
    from the current (main) directory. This may take some time. If some
    of the tests fail, the library may or may not work correctly. Some
@@ -219,10 +216,10 @@ The two packages above are optional.
    say in a file called my_black_box.py, and the alorithm can be
    executed on it by running:
 
-   python2.7 src/rbfopt_cl_interface.py -m my_black_box.py
+   python src/rbfopt_cl_interface.py -m my_black_box.py
 
    See:
-   python2.7 src/rbfopt_cl_interface.py --help
+   python src/rbfopt_cl_interface.py --help
    for more details on command-line options.
 
    (If no module is specified with the -m option, the algorithm will
@@ -242,7 +239,7 @@ The two packages above are optional.
    using Cython. The procedure is automated in the file setup.py using
    distutils. From the current (main) directory, run:
 
-   python2.7 setup.py build_ext --build-lib src
+   python setup.py build_ext --build-lib src
 
    This will compile the hybrid Python/C version of some modules (all
    those that are available in C) under the build/ directory, and
@@ -252,7 +249,7 @@ The two packages above are optional.
 
    To clean compiled modules, run:
 
-   python2.7 setup.py clean --all
+   python setup.py clean --all
    rm src/cython_rbfopt/*.so src/cython_rbfopt/*.c
 
 

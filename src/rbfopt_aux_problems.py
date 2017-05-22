@@ -1076,7 +1076,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
         # Crossover: select how mating is done, then create offspring
         father = np.random.permutation(best_individuals)
         mother = np.random.permutation(best_individuals)
-        offspring = map(ga_mate, father, mother)
+        offspring = np.array([v for v in map(ga_mate, father, mother)])
         # New individuals
         new_individuals = generate_sample_points(settings, n, var_lower,
                                                  var_upper, integer_vars,
@@ -1277,7 +1277,7 @@ class MetricSRSMObj:
         # Store useful parameters
         self.max_dist = max_dist
         self.min_obj = min_obj
-        return np.array(map(self.evaluate, dist, obj))
+        return np.array([v for v in map(self.evaluate, dist, obj)])
     # -- end function
 
     def evaluate(self, distance, objfun):
@@ -1467,8 +1467,8 @@ class GutmannHkObj:
         # Create distance matrix
         dist_mat = ss.distance.cdist(points, self.node_pos)
         # Evaluate radial basis function on each distance
-        rbf_vec = map(rbf_function, dist_mat.ravel())
-        u_mat = np.reshape(np.array(rbf_vec), (len(points), -1))
+        rbf_vec = np.array([v for v in map(rbf_function, dist_mat.ravel())])
+        u_mat = np.reshape(rbf_vec, (len(points), -1))
         # Contributions to the RBF interpolant value s_k: the u part,
         # the pi part, and the nonhomogenous part. At the same time,
         # build the matrix with the vectors u_pi.
@@ -1568,8 +1568,8 @@ class GutmannMukObj:
         # Create distance matrix
         dist_mat = ss.distance.cdist(points, self.node_pos)
         # Evaluate radial basis function on each distance
-        rbf_vec = map(rbf_function, dist_mat.ravel())
-        u_mat = np.reshape(np.array(rbf_vec), (len(points), -1))
+        rbf_vec = np.array([v for v in map(rbf_function, dist_mat.ravel())])
+        u_mat = np.reshape(rbf_vec, (len(points), -1))
         # Build the matrix with the vectors u_pi.
         if (ru.get_degree_polynomial(self.settings) == 1):
             u_pi_mat = np.concatenate((u_mat, points,
