@@ -559,7 +559,7 @@ class OptAlgorithm:
         alg.output_stream = sys.stdout
         return alg
     # -- end function
-	
+
     def optimize(self, pause_after_iters=sys.maxsize):
         """Optimize a black-box function.
 
