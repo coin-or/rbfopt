@@ -93,11 +93,6 @@ class RbfSettings:
     num_global_searches : int
         Number of steps in the global search phase. Default 5.
 
-    max_consecutive_local_searches : int
-        Maximum number of consecutive local searches during the
-        optimization phase. This parameter is ignored by the parallel
-        optimizer. Default 1.
-
     init_strategy : str
         Strategy to select initial points. Choice of 'all_corners',
         'lower_corners', 'rand_corners', 'lhd_maximin',
@@ -214,6 +209,50 @@ class RbfSettings:
         improving the objective function value, compared to the
         original MSRSM score function. Default True.
 
+    max_cons_refinement : int
+        Maximum number of consecutive refinement steps. Default 5.
+
+    thresh_unlimited_refinement : float
+        Lower threshold for the amounf of search budget depleted,
+        after which the maximum limit on consecutive refinement is
+        ignored. The search budget here is in terms of number of
+        iterations, number of evaluations, wall clock time. Default
+        0.9.
+
+    refinement_frequency : int
+        Number of full global search cycles after which the refinement
+        step can be performed (in case a better solution has been
+        found in the meantime). Default 3.
+
+    num_tr_integer_candidates : int
+        Number of integer candidates per dimension of the problem that
+        are considered when rounding the (fractional) point computed
+        during the refinement step. Default 10.
+
+    tr_acceptable_decrease_shrink : float
+        Maximum ratio between real decrease and trust region model
+        decrease for which the radius of the trust region gets
+        shrunk. Default 0.2.
+
+    tr_acceptable_decrease_enlarge : float
+        Minimum ratio between real decrease and trust region model
+        decrease for which the radius of the trust region gets
+        enlarged. Default 0.6.
+
+    tr_acceptable_decrease_move : float
+        Minimum ratio between real decrease and trust region model
+        decrease for which the new candidate point is accepted as the
+        new iterate. Default 0.1.
+
+    min_tr_radius : float
+        Minimum radius of the trust region for the refinement
+        step. Default 1.0e-3.
+
+    min_tr_grad_norm : float
+        Minimum norm of the gradient for the trust region method in
+        the refinement step, before we assume that we converged to a
+        stationary point. Default 1.0e-2.
+
     save_state_interval : int 
         Number of iterations after which the state of the algorithm
         should be dumped to file. The algorithm can be resumed from a
@@ -284,7 +323,6 @@ class RbfSettings:
                  min_dist = 1.0e-5,
                  do_infstep = False,
                  num_global_searches = 5,
-                 max_consecutive_local_searches = 1,
                  init_strategy = 'lhd_maximin',
                  function_scaling = 'auto',
                  log_scaling_threshold = 1.0e6,
@@ -308,6 +346,15 @@ class RbfSettings:
                  ga_num_generations = 20,
                  num_samples_aux_problems = 1000,
                  modified_msrsm_score = True,
+                 max_cons_refinement = 5,
+                 thresh_unlimited_refinement = 0.9,
+                 refinement_frequency = 3,
+                 num_tr_integer_candidates = 10,
+                 tr_acceptable_decrease_shrink = 0.2,
+                 tr_acceptable_decrease_enlarge = 0.6,
+                 tr_acceptable_decrease_move = 0.1,
+                 min_tr_radius = 1.0e-3,
+                 min_tr_grad_norm = 1.0e-2,
                  print_solver_output = False,
                  save_state_interval = 100000,
                  save_state_file = 'optalgorithm_state.dat',
@@ -328,7 +375,6 @@ class RbfSettings:
         self.min_dist = min_dist
         self.do_infstep = do_infstep
         self.num_global_searches = num_global_searches
-        self.max_consecutive_local_searches = max_consecutive_local_searches
         self.init_strategy = init_strategy
         self.function_scaling = function_scaling
         self.log_scaling_threshold = log_scaling_threshold
@@ -352,6 +398,15 @@ class RbfSettings:
         self.ga_num_generations = ga_num_generations
         self.num_samples_aux_problems = num_samples_aux_problems
         self.modified_msrsm_score = modified_msrsm_score
+        self.max_cons_refinement = max_cons_refinement
+        self.thresh_unlimited_refinement = thresh_unlimited_refinement
+        self.refinement_frequency = refinement_frequency
+        self.num_tr_integer_candidates = num_tr_integer_candidates
+        self.tr_acceptable_decrease_shrink = tr_acceptable_decrease_shrink
+        self.tr_acceptable_decrease_enlarge = tr_acceptable_decrease_enlarge
+        self.tr_acceptable_decrease_move = tr_acceptable_decrease_move
+        self.min_tr_radius = min_tr_radius
+        self.min_tr_grad_norm = min_tr_grad_norm
         self.print_solver_output = print_solver_output
         self.save_state_interval = save_state_interval
         self.save_state_file = save_state_file

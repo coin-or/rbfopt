@@ -32,6 +32,7 @@ except (ImportError, TypeError):
     import rbfopt_aux_problems as aux
 import rbfopt_model_selection as ms
 import rbfopt_config as config
+import rbfopt_refinement as ref
 from rbfopt_black_box import BlackBox
 from rbfopt_settings import RbfSettings
 
@@ -95,8 +96,8 @@ class OptAlgorithm:
         Identifier of the current step within the cyclic optimization
         strategy counter.
 
-    num_con_ls : int
-        Current number of consecutive local searches.
+    num_cons_refinement : int
+        Current number of consecutive refinement steps.
 
     num_stalled_cycles : int
         Number of consecutive cycles without improvement.
@@ -113,6 +114,9 @@ class OptAlgorithm:
     local_search_step : int
         Identifier of the LocalSearchStep.
 
+    refinement_step : int
+        Identifier of the Step.
+
     cycle_length : int
         Length of an optimization cycle.
 
@@ -125,7 +129,7 @@ class OptAlgorithm:
     two_phase_optimization : bool
         Is the fast but noisy objective function is available?
 
-    current_mode : string
+    eval_mode : string
         Evaluation mode for the objective function at a given
         stage. Can be either 'fast' or 'accurate'.
 
@@ -175,8 +179,11 @@ class OptAlgorithm:
         Maximum value among the nodes since last restart.
 
     fmin_cycle_start : float
-        Best value function at the beginning of the latest
+        Best function value at the beginning of the latest
         optimization cycle.
+
+    fmin_last_refine : float
+        Best function value at the latest refinement step.
 
     fbest_index : int
         Index in all_node_pos of the minimum value among all nodes.
@@ -269,7 +276,7 @@ class OptAlgorithm:
         self.evalcount = 0
         self.fast_evalcount = 0
         self.current_step = 0
-        self.num_cons_ls = 0
+        self.num_cons_refinement = 0
         self.num_stalled_cycles = 0
         self.num_cons_discarded = 0
         self.num_fast_restarts = 0
@@ -278,6 +285,7 @@ class OptAlgorithm:
         self.inf_step = 0
         self.local_search_step = (l_settings.num_global_searches + 1)
         self.cycle_length = (l_settings.num_global_searches + 2)
+        self.refinement_step = (l_settings.num_global_searches + 2)
         self.restoration_step = (l_settings.num_global_searches + 3)
         # Determine which step is the first of each loop
         self.first_step = (self.inf_step if l_settings.do_infstep 
@@ -288,12 +296,12 @@ class OptAlgorithm:
             self.two_phase_optimization = True
             self.is_fmin_fast = True
             self.is_fbest_fast = True
-            self.current_mode = 'fast'
+            self.eval_mode = 'fast'
         else:
             self.two_phase_optimization = False
             self.is_fmin_fast = False
             self.is_fbest_fast = False
-            self.current_mode = 'accurate'
+            self.eval_mode = 'accurate'
 
         # Round variable bounds to integer if necessary
         ru.round_integer_bounds(var_lower, var_upper, integer_vars)
@@ -335,6 +343,7 @@ class OptAlgorithm:
 
         # Best value function at the beginning of an optimization cycle
         self.fmin_cycle_start = self.fmin
+        self.fmin_last_refine = self.fmin
 
         # Set default output stream
         self.output_stream = sys.stdout
@@ -680,7 +689,7 @@ class OptAlgorithm:
 
             # If function scaling is automatic, determine which one to use
             if (settings.function_scaling == 'auto' and
-                        self.current_step <= self.first_step):
+                self.current_step <= self.first_step):
                 sorted_node_val = np.sort(self.node_val)
                 if (sorted_node_val[len(sorted_node_val)//2] -
                     sorted_node_val[0] > l_settings.log_scaling_threshold):
@@ -692,7 +701,8 @@ class OptAlgorithm:
             tfv = ru.transform_function_values(l_settings, self.node_val,
                                                self.fmin, self.fmax,
                                                fast_node_index)
-            scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
+            (scaled_node_val, scaled_fmin, scaled_fmax, 
+             node_err_bounds, rescale_function) = tfv
 
             # If RBF selection is automatic, at the beginning of each
             # cycle check if a different RBF yields a better model
@@ -716,30 +726,51 @@ class OptAlgorithm:
             else:
                 l_settings.rbf = self.best_global_rbf
 
-            try:
-                # Compute the matrices necessary for the algorithm
-                Amat = ru.get_rbf_matrix(l_settings, n, k, self.node_pos)
-                Amatinv = ru.get_matrix_inverse(l_settings, Amat)
+            if (self.current_step <= self.local_search_step):
+                try:
+                    # Compute the matrices necessary for the algorithm
+                    Amat = ru.get_rbf_matrix(l_settings, n, k, self.node_pos)
+                    Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
-                # Compute RBF interpolant at current stage
-                if (fast_node_index.size):
-                    # Get coefficients for the exact RBF
-                    rc = ru.get_rbf_coefficients(l_settings, n, k, 
-                                                 Amat, scaled_node_val)
-                    # RBF with some fast function evaluations
-                    rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
-                        l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
-                        scaled_node_val, fast_node_index,
-                        node_err_bounds, rc[0], rc[1])
-                else:
-                    # Fully accurate RBF
-                    rbf_l, rbf_h = ru.get_rbf_coefficients(
-                        l_settings, n, k, Amat, scaled_node_val)
+                    # Compute RBF interpolant at current stage
+                    if (fast_node_index.size):
+                        # Get coefficients for the exact RBF
+                        rc = ru.get_rbf_coefficients(l_settings, n, k, 
+                                                     Amat, scaled_node_val)
+                        # RBF with some fast function evaluations
+                        rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
+                            l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
+                            scaled_node_val, fast_node_index,
+                            node_err_bounds, rc[0], rc[1])
+                    else:
+                        # Fully accurate RBF
+                        rbf_l, rbf_h = ru.get_rbf_coefficients(
+                            l_settings, n, k, Amat, scaled_node_val)
                 
-            except np.linalg.LinAlgError:
-                # Error in the solution of the linear system. We must
-                # switch to a restoration phase.
-                self.current_step = self.restoration_step
+                except np.linalg.LinAlgError:
+                    # Error in the solution of the linear system. We must
+                    # switch to a restoration phase.
+                    self.current_step = self.restoration_step
+            elif (self.current_step == self.refinement_step):
+                if (self.num_cons_refinement == 0):
+                    # For the first refinement step iteration, some data
+                    # has to be computed                    
+                    self.tr_model_set, self.tr_radius = ref.init_trust_region(
+                        settings, n, k, self.node_pos, 
+                        self.node_pos[self.fmin_index])
+                    self.tr_iterate_index = self.fmin_index
+
+                # Compute quadratic model for trust region method
+                try:
+                    h, b = ref.get_linear_model(
+                        settings, n, k, self.node_pos, 
+                        scaled_node_val, self.tr_model_set)
+                except np.linalg.LinAlgError:
+                    # Error in the solution of the linear system. We
+                    # go back to the usual search.
+                    self.current_step = self.first_step
+                    continue
+                
 
             # For displaying purposes, record what type of iteration
             # we are performing
@@ -767,14 +798,11 @@ class OptAlgorithm:
             
             elif (self.current_step == self.local_search_step):
                 # Local search
-                (adj, next_p, ind) = local_step(l_settings, n, k, l_lower, 
-                                                l_upper, integer_vars,
-                                                self.node_pos, rbf_l, rbf_h, 
-                                                tfv, fast_node_index, Amat,
-                                                Amatinv, self.fmin_index,
-                                                self.two_phase_optimization,
-                                                self.current_mode,
-                                                self.node_is_fast)
+                (adj, next_p, ind) = local_step(
+                    l_settings, n, k, l_lower, l_upper, integer_vars,
+                    self.node_pos, rbf_l, rbf_h, tfv, fast_node_index, Amat,
+                    Amatinv, self.fmin_index, self.two_phase_optimization,
+                    self.eval_mode, self.node_is_fast)
 
                 # Re-evaluate point if necessary
                 if (ind is not None):
@@ -785,7 +813,15 @@ class OptAlgorithm:
                 if (adj):
                     iteration_id = 'AdjLocalStep'
                 else:
-                    iteration_id = 'LocalStep'                    
+                    iteration_id = 'LocalStep'
+                    
+            elif (self.current_step == self.refinement_step):
+                # Refinement
+                next_p, model_impr = refinement_step(
+                    l_settings, n, k, l_lower, l_upper, integer_vars, 
+                    h, b, self.node_pos[self.tr_iterate_index], 
+                    self.tr_radius)
+                iteration_id = 'RefinementStep'
 
             else:
                 # Global search
@@ -803,6 +839,7 @@ class OptAlgorithm:
                  l_settings.min_dist)):
                 self.advance_step_counter()
                 self.num_cons_discarded += 1
+                self.num_cons_refinement = 0
                 self.update_log('Discarded')
             else:
                 # Transform back to original space if necessary
@@ -813,7 +850,7 @@ class OptAlgorithm:
                 # same node was evaluated before the restart happened,
                 # to make sure we do not evaluate it twice.
                 next_val = None
-                if (self.current_mode == 'accurate'):
+                if (self.eval_mode == 'accurate'):
                     if (self.num_nodes_at_restart):
                         min_dist, i = ru.get_min_distance_and_index(
                             next_p_orig, 
@@ -847,26 +884,31 @@ class OptAlgorithm:
                         self.evalcount += 1
                         curr_is_fast = False
 
-                impr = (next_val <= self.fmin - self.l_settings.eps_impr * 
-                        max(1.0, abs(self.fmin)))
                 # Add to the lists
                 self.add_node(next_p, next_p_orig, next_val, curr_is_fast)
                 gap = ru.compute_gap(l_settings, self.fbest, 
                                      self.is_fbest_fast)
                 self.update_log(iteration_id, self.node_is_fast[-1], 
                                 next_val, gap)
-                # If we are in local search and there has been sufficient
-                # improvement, repeat it.
-                if (impr and (self.current_step == self.local_search_step) and
-                    (self.num_cons_ls < 
-                     self.l_settings.max_consecutive_local_searches - 1)):
-                    self.num_cons_ls += 1
+                if (self.current_step == self.refinement_step):
+                    real_impr = (scaled_node_val[self.tr_iterate_index] - 
+                                 rescale_function(next_val))
+                    self.refinement_update(model_impr, real_impr)
+                elif (self.current_step == self.local_search_step and
+                      self.fmin <= (self.fmin_last_refine -
+                                    self.l_settings.eps_impr *
+                                    max(1.0, abs(self.fmin_last_refine)))):
+                    self.current_step = self.refinement_step
                 else:
                     self.advance_step_counter()
                 self.num_cons_discarded = 0
 
             # Update iteration number
             self.itercount += 1
+
+            # TODO: ugly hack to test trust regions
+            #if (self.itercount == 10):
+            #    self.current_step = self.refinement_step
 
             # At the beginning of each loop of the cyclic optimization
             # strategy, check if the main loop is stalling
@@ -1145,7 +1187,8 @@ class OptAlgorithm:
             tfv = ru.transform_function_values(l_settings, node_val,
                                                self.fmin, self.fmax,
                                                fast_node_index)
-            scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
+            (scaled_node_val, scaled_fmin, scaled_fmax, 
+             node_err_bounds, rescale_function) = tfv
 
             # If RBF selection is automatic, at the beginning of each
             # cycle check if a different RBF yields a better model
@@ -1200,7 +1243,7 @@ class OptAlgorithm:
         
             # Initialize the new point to None
             next_p = None
-            curr_is_fast = (self.current_mode == 'fast')
+            curr_is_fast = (self.eval_mode == 'fast')
 
             if (self.current_step == self.inf_step):
                 # Infstep: explore the parameter space
@@ -1238,7 +1281,7 @@ class OptAlgorithm:
                                             fast_node_index, Amat,
                                             Amatinv, self.fmin_index,
                                             self.two_phase_optimization,
-                                            self.current_mode, 
+                                            self.eval_mode, 
                                             node_is_fast))
                 iteration_id = 'LocalStep'
                 res_search.append([new_res, curr_is_fast, iteration_id])
@@ -1298,8 +1341,8 @@ class OptAlgorithm:
         # We update the number of fast restarts here, so that if
         # we hit the limit on fast restarts, we can evaluate
         # points in accurate mode after restarting (even if
-        # current_mode is updated in a subsequent block of code)
-        self.num_fast_restarts += (1 if self.current_mode == 'fast' 
+        # eval_mode is updated in a subsequent block of code)
+        self.num_fast_restarts += (1 if self.eval_mode == 'fast' 
                                    else 0)
         # Store the current number of nodes
         self.num_nodes_at_restart = len(self.all_node_pos)
@@ -1319,14 +1362,14 @@ class OptAlgorithm:
             for i in reversed(sorted(indices)):
                 val, j = ru.get_min_distance_and_index(
                     node_pos[i], self.all_node_pos[:self.num_nodes_at_restart])
-                if (self.current_mode == 'fast' or 
+                if (self.eval_mode == 'fast' or 
                     not self.all_node_is_fast[j]):
                     prev_node_pos.append(self.all_node_pos[j])
                     prev_node_val.append(self.all_node_val[j])
                     prev_node_is_fast.append(self.all_node_is_fast[j])
                     node_pos = np.delete(np.atleast_2d(node_pos), i, axis=0)
         # Evaluate new points
-        if (self.current_mode == 'accurate' or
+        if (self.eval_mode == 'accurate' or
             self.num_fast_restarts > self.l_settings.max_fast_restarts or
             (self.fast_evalcount + self.n + 1 >=
              self.l_settings.max_fast_evaluations)):
@@ -1348,7 +1391,7 @@ class OptAlgorithm:
                            for point in node_pos]
                 node_val = np.array(pool.map(objfun_fast, map_arg))
             self.fast_evalcount += len(node_val)
-        node_is_fast = np.array([self.current_mode == 'fast'
+        node_is_fast = np.array([self.eval_mode == 'fast'
                                  for val in node_val])
         # Add previously evaluated points, if any
         if (self.num_nodes_at_restart and prev_node_pos):
@@ -1409,6 +1452,7 @@ class OptAlgorithm:
         self.fmin = node_val[self.fmin_index]
         self.fmax = np.max(node_val)
         self.fmin_cycle_start = self.fmin
+        self.fmin_last_refine = self.fmin
         self.num_stalled_cycles = 0
         self.num_cons_discarded = 0
         self.is_fmin_fast = self.node_is_fast[self.fmin_index]
@@ -1559,24 +1603,71 @@ class OptAlgorithm:
         If both are met, the switch is performed.
         """
         if ((self.two_phase_optimization == True) and 
-            (self.current_mode == 'fast') and
+            (self.eval_mode == 'fast') and
             ((self.num_fast_restarts > self.l_settings.max_fast_restarts) or
              (self.itercount >= self.l_settings.max_fast_iterations) or
              (self.fast_evalcount >= self.l_settings.max_fast_evaluations))):
             self.update_log('Switching to accurate mode')
-            self.current_mode = 'accurate'            
+            self.eval_mode = 'accurate'            
     # -- end function
 
+    def refinement_update(self, model_impr, real_impr):
+        """Perform updates to refinement step and decide if continue.
+
+        Update the radius of the trust region and the iterate for the
+        refinement step. Also, decide if the next step should be
+        another refinement step, or if we should go back to global
+        search.
+
+        Parameters
+        ----------
+        model_impr : float
+            Improvement in quadratic model value.
+
+        real_impr : float
+            Improvement in the real function value.
+
+        """
+        # Update trust region information
+        self.tr_radius, tr_move = ref.update_trust_region_radius(
+            self.l_settings, self.tr_radius, model_impr, real_impr)
+        if (tr_move):
+            # Accept new iterate
+            self.tr_iterate_index = len(self.node_pos) - 1
+        if (self.tr_radius < self.l_settings.min_tr_radius or
+            ((self.num_cons_refinement >= 
+             self.l_settings.max_cons_refinement) and
+             (self.itercount <= self.l_settings.max_iterations * 
+              self.l_settings.thresh_unlimited_refinement) and
+             (self.evalcount <= self.l_settings.max_evaluations * 
+              self.l_settings.thresh_unlimited_refinement) and
+             (self.elapsed_time <= self.l_settings.max_clock_time * 
+              self.l_settings.thresh_unlimited_refinement))):
+            # Do no continue refinement
+            self.num_cons_refinement = 0
+            self.current_step = self.first_step
+        else:
+            # Continue refinement. Update set of points
+            # used to build model.
+            to_replace = np.argmax(self.node_val[self.tr_model_set])
+            self.tr_model_set[to_replace] = len(self.node_pos) - 1
+            self.num_cons_refinement += 1
+        if (self.num_cons_refinement < self.l_settings.max_cons_refinement):
+            # Update value at last refinement, unless we stopped
+            # refinement because of limit of iterations reached
+            self.fmin_last_refine = self.fmin
+    # -- end function 
+
     def advance_step_counter(self):
+
         """Advance the step counter of the optimization algorithm.
 
-        Advance the step counter of the optimization algorithm, and
-        reset the number of consecutive local searches.
+        Advance the step counter of the optimization algorithm if
+        necessary.
+
         """
         # Advance to next step.
-        self.current_step = ((self.current_step + 1) % 
-                             self.cycle_length)
-        self.num_cons_ls = 0                    
+        self.current_step = (self.current_step + 1) % self.cycle_length
     # -- end function
 
     def stalling_update(self):
@@ -1585,7 +1676,6 @@ class OptAlgorithm:
         Check if the algorithm is stalling, and perform the
         corresponding updates.
         """
-        # if (self.current_step <= self.first_step): 
         if (self.itercount % (self.cycle_length - self.first_step) == 0):
             if (self.fmin <= (self.fmin_cycle_start - 
                               self.l_settings.max_stalled_objfun_impr
@@ -1693,7 +1783,7 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
 def local_step(settings, n, k, var_lower, var_upper, integer_vars, 
                node_pos, rbf_lambda, rbf_h, tfv, fast_node_index,
                Amat, Amatinv, fmin_index, two_phase_optimization, 
-               current_mode, node_is_fast):
+               eval_mode, node_is_fast):
     """Perform local search step, possibly adjusted.
     
     Perform a local search step. This typically accepts the
@@ -1737,9 +1827,10 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
-    tfv : (List[float], float, float, List[(float, float)])
+    tfv : (1D numpy.ndarray[float], float, float, List[(float, float)], 
+           Callable[float])
         Transformed function values: scaled node values, scaled
-        minimum, scaled maximum, and node error bounds.
+        minimum, scaled maximum, node error bounds, rescaling function.
 
     fast_node_index : 1D numpy.ndarray[int]
         List of indices of nodes whose function value should be
@@ -1757,7 +1848,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     two_phase_optimization : bool
         Is the fast but noisy objective function is available?
 
-    current_mode : string
+    eval_mode : string
         Evaluation mode for the objective function at a given
         stage. Can be either 'fast' or 'accurate'.
 
@@ -1767,7 +1858,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
 
     Returns
     -------
-    (bool, List[float] or None, int or None)
+    (bool, 1D numpy.ndarray[float] or None, int or None)
         A triple (adjusted, point, index) where adjusted is True if
         the local search was adjusted rather than a pure local search,
         point is the point to be evaluated next (or None if errors
@@ -1791,11 +1882,12 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(node_pos)==k)
     assert(len(node_is_fast)==k)
     assert(0 <= fmin_index < k)
-    assert((current_mode=='fast') or (current_mode=='accurate'))
+    assert((eval_mode=='fast') or (eval_mode=='accurate'))
     assert(isinstance(settings, RbfSettings))
     assert(isinstance(Amat, np.matrix))
     assert(isinstance(Amatinv, np.matrix))
-    scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
+    (scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds,
+     rescale_function) = tfv
     # Local search: compute the minimum of the RBF.
     min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper,
                                integer_vars, node_pos, rbf_lambda, rbf_h)
@@ -1839,7 +1931,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     # now in high-quality local search mode, then we should verify
     # if it is better to evaluate a brand new point or re-evaluate
     # a previously known point.
-    if ((two_phase_optimization == True) and (current_mode == 'accurate')):
+    if ((two_phase_optimization == True) and (eval_mode == 'accurate')):
         ind, bump = aux.get_min_bump_node(settings, n, k, Amat,
                                           scaled_node_val, fast_node_index, 
                                           node_err_bounds, target_val)
@@ -1868,6 +1960,75 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     # -- end if
     sys.stdout.flush()
     return (adjusted, next_p, None)
+# -- end function
+
+def refinement_step(settings, n, k, var_lower, var_upper, integer_vars, 
+                    h, b, start_point, tr_radius):
+    """Perform a refinement step.
+
+    Perform a refinement step to locally improve the solution.
+    
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfSettings`
+        Global and algorithmic settings.
+
+    n : int
+        The dimension of the problem, i.e. size of the space.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    var_lower : 1D numpy.ndarray[float]
+        Vector of variable lower bounds.
+
+    var_upper : 1D numpy.ndarray[float]
+        Vector of variable upper bounds.
+
+    integer_vars: 1D numpy.ndarray[int]
+        A list containing the indices of the integrality constrained
+        variables. If empty list, all variables are assumed to be
+        continuous.
+
+    h : 1D numpy.ndarray[float]
+        Linear coefficients of the quadratic model.
+
+    b : float
+        Constant term of the quadratic model.
+
+    start_point : 1D numpy.ndarray[float]
+        Starting point for the descent.
+
+    tr_radius : float
+        Radius of the trust region.
+
+    Returns
+    -------
+    (1D numpy.ndarray[float], float)
+        Next candidate point for the search, and the corresponding
+        model value difference.
+    """
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(start_point, np.ndarray))
+    assert(isinstance(h, np.ndarray))
+    assert(len(var_lower)==n)
+    assert(len(var_upper)==n)
+    assert(len(start_point)==n)
+    assert(len(h)==n)
+    assert(tr_radius>=0)
+    assert(isinstance(settings, RbfSettings))
+    point, model_impr, grad_norm =  ref.get_candidate_point(
+        settings, n, k, var_lower, var_upper, h, start_point, tr_radius)
+    if (len(integer_vars)):
+        # Get a rounding of the point
+        point, model_impr_adj = ref.get_integer_candidate(
+            settings, n, k, h, point, integer_vars)
+        model_impr += model_impr_adj
+    if (grad_norm <= settings.min_tr_grad_norm):
+        return None, model_impr
+    return point, model_impr
+
 # -- end function
 
 def global_step(settings, n, k, var_lower, var_upper, integer_vars,
@@ -1948,7 +2109,8 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(isinstance(settings, RbfSettings))
     assert(0 <= current_step <= settings.num_global_searches)
 
-    scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
+    (scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds, 
+     rescale_function) = tfv
 
     assert (isinstance(scaled_node_val, np.ndarray))
 

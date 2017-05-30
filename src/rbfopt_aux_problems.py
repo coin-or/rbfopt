@@ -989,7 +989,7 @@ def generate_sample_points(settings, n, var_lower, var_upper,
                var_lower)
 
     # Round integer vars
-    if (integer_vars.size):
+    if (len(integer_vars)):
         samples[:, integer_vars] = np.around(samples[:, integer_vars])
 
     return samples
@@ -1055,7 +1055,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
 
     # Generate boolean vector of integer variables for convenience
     is_integer = np.empty(n, dtype=bool)
-    if len(integer_vars) > 0:
+    if (len(integer_vars)):
         is_integer[integer_vars] = True
 
     # Compute initial population

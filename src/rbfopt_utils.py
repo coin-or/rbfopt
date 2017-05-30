@@ -63,7 +63,7 @@ def _thin_plate_spline(r):
     """Thin plate spline RBF: :math: `f(x) = x^2 \log x`"""
     if (r == 0.0):
         return 0.0
-    return math.log(r)*r*r
+    return np.log(r)*r*r
 
 def _linear(r):
     """Linear RBF: :math: `f(x) = x`"""
@@ -441,7 +441,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         elif (settings.init_strategy == 'lhd_corr'):
             nodes = get_lhd_corr_points(var_lower, var_upper)
 
-        if (integer_vars.size):
+        if (len(integer_vars)):
             nodes[:, integer_vars] = np.around(nodes[:, integer_vars])
 
         U, s, V = np.linalg.svd(nodes)
@@ -471,7 +471,7 @@ def round_integer_vars(point, integer_vars):
     """
     assert(isinstance(point, np.ndarray))
     assert(isinstance(integer_vars, np.ndarray))
-    if (integer_vars.size):
+    if (len(integer_vars)):
         point[integer_vars] = np.around(point[integer_vars])
 
 # -- end function
@@ -500,15 +500,11 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
     assert (isinstance(var_lower, np.ndarray))
     assert (isinstance(var_upper, np.ndarray))
     assert (isinstance(integer_vars, np.ndarray))
-    if (integer_vars.size):
+    if (len(integer_vars)):
         assert(len(var_lower)==len(var_upper))
         assert(max(integer_vars)<len(var_lower))
-        for i in integer_vars:
-            var_lower[i] = math.floor(var_lower[i])
-            var_upper[i] = math.ceil(var_upper[i])
-            if (var_upper[i] < var_lower[i]):
-                # Swap the two bounds
-                var_lower[i], var_upper[i] = var_upper[i], var_lower[i]
+        var_lower[integer_vars] = np.floor(var_lower[integer_vars])
+        var_upper[integer_vars] = np.ceil(var_upper[integer_vars])
 
 # -- end function
 
@@ -530,7 +526,7 @@ def norm(p):
     """
     assert(isinstance(p, np.ndarray))
 
-    return math.sqrt(np.dot(p, p))
+    return np.sqrt(np.dot(p, p))
 
 # -- end function
 
@@ -558,7 +554,7 @@ def distance(p1, p2):
 
     p = p1 - p2
 
-    return math.sqrt(np.dot(p, p))
+    return np.sqrt(np.dot(p, p))
 
 # -- end function
 
@@ -967,11 +963,10 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
 
 # -- end function
 
-
-def get_fast_error_bounds(settings, value):
+def get_fast_error_bounds(settings, values):
     """Compute error bounds for fast interpolation nodes.
 
-    Compute the interval that contains the true value of a fast
+    Compute the interval that contains the true value of fast
     function evaluation, according to the specified relative and
     absolute error tolerances.
 
@@ -980,51 +975,30 @@ def get_fast_error_bounds(settings, value):
 
     settings : :class:`rbfopt_settings.RbfSettings`
         Global and algorithmic settings.
-    value : float
-        The value for which the error interval should be computed.
+    values : 1D numpy.ndarray or float
+        The values for which the error interval should be computed, or
+        a single value.
 
     Returns
     -------
-    1D numpy.ndarray 
-        A tuple (lower_variation, upper_variation) indicating the
-        possible deviation to the left (given as a negative number)
-        and to the right of the current value.
-    """
-    return np.array([-abs(value)*settings.fast_objfun_rel_error -
-                     settings.fast_objfun_abs_error,
-                     abs(value)*settings.fast_objfun_rel_error +
-                     settings.fast_objfun_abs_error])
-
-# -- end function
-
-def bulk_get_fast_error_bounds(settings, values):
-    """Bulk version to compute error bounds for fast interpolation nodes.
-
-    Compute the interval that contains the true value of multiple fast
-    function evaluation, according to the specified relative and
-    absolute error tolerances.
-
-    Parameters
-    ----------
-
-    settings : :class:`rbfopt_settings.RbfSettings`
-        Global and algorithmic settings.
-    values : 1D numpy.ndarray
-        The values for which the error interval should be computed.
-
-    Returns
-    -------
-    2D numpy.ndarray 
+    2D numpy.ndarray or 1D numpy.ndarray
         A 2D matrix (lower_variation, upper_variation) indicating the
         possible deviation to the left (given as a negative number)
         and to the right of each of the values, stacked by columns.
+        Alternatively, if the input contained a single value, we
+        return a single 1D array containing the possible deviation to
+        the left and to the right.
 
     """
-    return np.vstack((-np.absolute(values)*settings.fast_objfun_rel_error -
-                      settings.fast_objfun_abs_error,
-                      np.absolute(values)*settings.fast_objfun_rel_error +
-                      settings.fast_objfun_abs_error)).T
-
+    assert(values)
+    res = np.vstack((-np.absolute(values)*settings.fast_objfun_rel_error -
+                     settings.fast_objfun_abs_error,
+                     np.absolute(values)*settings.fast_objfun_rel_error +
+                     settings.fast_objfun_abs_error)).T
+    if (res.shape[0] == 1):
+        return res[0]
+    else:
+        return res
 # -- end function
 
 
@@ -1080,16 +1054,20 @@ def transform_function_values(settings, node_val, fmin, fmax,
 
     Returns
     -------
-    (1D numpy.ndarray[float], float, float, List[(float, float)])
-        A quadruple (scaled_function_values, scaled_fmin, scaled_fmax,
-        fast_error_bounds) containing a list of rescaled function
-        values, the rescaled minimum, the rescaled maximum, the
-        rescaled error bounds for function evaluations in 'fast' mode.
+    (1D numpy.ndarray[float], float, float, List[(float, float)], 
+     Callable[float])
+        A tuple (scaled_function_values, scaled_fmin, scaled_fmax,
+        fast_error_bounds, rescale_function) containing a list of
+        rescaled function values, the rescaled minimum, the rescaled
+        maximum, the rescaled error bounds for function evaluations in
+        'fast' mode, and a callable function to apply the same scaling
+        to further function values if needed.
 
     Raises
     ------
     ValueError
         If the function scaling strategy requested is not implemented.
+
     """
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(fast_node_index, np.ndarray))
@@ -1117,9 +1095,9 @@ def transform_function_values(settings, node_val, fmin, fmax,
     if (settings.function_scaling == 'off'):
         # We make a copy because the caller may assume that
         return (clip_val, fmin, fmax, 
-                bulk_get_fast_error_bounds(settings, 
-                                           clip_val[fast_node_index])
-                if len(fast_node_index) else np.array([]))
+                get_fast_error_bounds(settings, clip_val[fast_node_index])
+                if len(fast_node_index) else np.array([]),
+                lambda x : x)
     elif (settings.function_scaling == 'affine'):
         # Compute denominator separately to make sure that it is not
         # zero. This may happen if the surface is "flat" after median
@@ -1127,9 +1105,10 @@ def transform_function_values(settings, node_val, fmin, fmax,
         denom = (fmax - fmin) if (fmax - fmin > settings.eps_zero) else 1.0
         return ((clip_val - fmin)/denom, 0.0,
                 1.0 if (fmax - fmin > settings.eps_zero) else 0.0,
-                bulk_get_fast_error_bounds(settings, 
+                get_fast_error_bounds(settings, 
                                            clip_val[fast_node_index])/denom
-                if len(fast_node_index) else np.array([]))
+                if len(fast_node_index) else np.array([]),
+                lambda x : (x - fmin)/denom)
     elif (settings.function_scaling == 'log'):
         # Compute by how much we should translate to make all points >= 1
         shift = (max(0.0, 1.0 - fmin) if not fast_node_index.size
@@ -1138,7 +1117,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
         # Get the lower bound and the upper bound of the transformed
         # error bounds
         if (len(fast_node_index)):
-            err_b = bulk_get_fast_error_bounds(settings, 
+            err_b = get_fast_error_bounds(settings, 
                                                clip_val[fast_node_index])
             low = np.log((clip_val[fast_node_index] + shift + err_b[:,0])
                          / (clip_val[fast_node_index] + shift))
@@ -1147,8 +1126,9 @@ def transform_function_values(settings, node_val, fmin, fmax,
             scaled_err_b = np.vstack((low, up)).T
         else:
             scaled_err_b = np.array([])
-        return (np.log(clip_val + shift), math.log(fmin + shift), 
-                math.log(fmax + shift), scaled_err_b)
+        return (np.log(clip_val + shift), np.log(fmin + shift), 
+                np.log(fmax + shift), scaled_err_b,
+                lambda x : np.log(x + shift) if (x + shift > 0) else x)
     else:
         raise ValueError('Function scaling "' + settings.function_scaling +
                          '" not implemented')
@@ -1347,7 +1327,7 @@ def get_sigma_n(k, current_step, num_global_searches, num_initial_points):
         return k - 1
     return (get_sigma_n(k, current_step - 1, num_global_searches,
                         num_initial_points) -
-            int(math.floor((k - num_initial_points)/num_global_searches)))
+            int(np.floor((k - num_initial_points)/num_global_searches)))
 
 # -- end function
 

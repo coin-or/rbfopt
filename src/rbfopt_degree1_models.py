@@ -141,7 +141,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
                                          rule=_nonhomo_constraint_rule)
 
     # Add integer variables if necessary
-    if (len(integer_vars) > 0):
+    if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
     return model
@@ -279,7 +279,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
                                          rule=_nonhomo_constraint_rule)
 
     # Add integer variables if necessary
-    if (len(integer_vars) > 0):
+    if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
     return model
@@ -445,7 +445,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     model.MukdefConstraint = Constraint(rule=_mukdef_constraint_rule)
 
     # Add integer variables if necessary
-    if (len(integer_vars) > 0):
+    if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
     return model
@@ -662,7 +662,7 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
                                           rule=_mdistdef_constraint_rule)
 
     # Add integer variables if necessary
-    if (len(integer_vars) > 0):
+    if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
     return model
@@ -841,7 +841,7 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
                                           rule=_mdistdef_constraint_rule)
 
     # Add integer variables if necessary
-    if (len(integer_vars) > 0):
+    if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
     return model
@@ -865,7 +865,7 @@ def add_integrality_constraints(model, integer_vars):
         List of indices of integer variables.
     """
     assert(isinstance(integer_vars, np.ndarray))
-    assert(len(integer_vars) > 0)
+    assert(len(integer_vars))
 
     ni = len(integer_vars)
     
