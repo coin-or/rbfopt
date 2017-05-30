@@ -308,6 +308,26 @@ ReadTheDocs at the following URLs:
 http://rbfopt.readthedocs.org/en/latest/
 http://rbfopt.readthedocs.org/en/stable/
 
+#--------------------------------------------------------------------------
+# Citing RBFOpt
+#--------------------------------------------------------------------------
+
+If you use RBFOpt in one of your projects or papers, it would be great
+if you could cite the following paper:
+
+A. Costa and G. Nannicini. RBFOpt: an open-source library for
+black-box optimization with costly function evaluations. Optimization
+Online paper 4538. 
+http://www.optimization-online.org/DB_HTML/2014/09/4538.html
+
+The paper above describes version 1.0 of RBFOpt. Some of the
+improvements introduced for version 2.0 are described in the following
+paper.
+
+A. Fokoue, G. Diaz, G. Nannicini, H. Samulowitz. An effective
+algorithm for hyperparameter optimization of neural networks. IBM
+Journal of Research and Development, 61(4-5), 2017, to appear.
+
 
 #--------------------------------------------------------------------------
 # Support
