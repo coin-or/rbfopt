@@ -22,6 +22,7 @@ import math
 import itertools
 import numpy as np
 import scipy.spatial as ss
+from scipy.special import xlogy
 import rbfopt_config as config
 from rbfopt_settings import RbfoptSettings
 from rbfopt_config import GAMMA
@@ -34,14 +35,15 @@ def get_rbf_function(settings):
 
     Parameters
     ----------
-
     settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     Returns
     ---
-    Callable[float]
-        A callable radial basis function.
+    Callable[numpy.ndarray]
+        A callable radial basis function that can be applied on floats
+        and numpy.ndarray.
+
     """
     assert(isinstance(settings, RbfoptSettings))
     if (settings.rbf == 'cubic'):
@@ -61,9 +63,7 @@ def _cubic(r):
 
 def _thin_plate_spline(r):
     """Thin plate spline RBF: :math: `f(x) = x^2 \log x`"""
-    if (r == 0.0):
-        return 0.0
-    return np.log(r)*r*r
+    return xlogy(np.sign(r), r) / np.log(2)
 
 def _linear(r):
     """Linear RBF: :math: `f(x) = x`"""
@@ -711,7 +711,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
 
     # Now create matrix Phi. Phi is ((k) x (k))
     dist = ss.distance.cdist(node_pos, node_pos)
-    Phi = np.vectorize(rbf)(dist)
+    Phi = rbf(dist)
 
     # Put together to obtain [Phi P; P^T 0].
     A = np.vstack((np.hstack((Phi, P)), np.hstack((PTr, np.zeros((p, p))))))
@@ -948,7 +948,7 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     # Create distance matrix
     dist_mat = ss.distance.cdist(points, node_pos)
     # Evaluate radial basis function on each distance
-    part1 = np.dot(np.vectorize(rbf_function)(dist_mat), rbf_lambda)
+    part1 = np.dot(rbf_function(dist_mat), rbf_lambda)
     if (get_degree_polynomial(settings) == 1):
         part2 = np.dot(points, rbf_h[:-1])
     else:

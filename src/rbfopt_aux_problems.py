@@ -1432,7 +1432,6 @@ class GutmannHkObj:
         assert(isinstance(points, np.ndarray))
 
         rbf_function = ru.get_rbf_function(self.settings)
-        rbf_vectorized = np.vectorize(rbf_function)
         p = ru.get_size_P_matrix(self.settings, self.n)
         # Formula:
         # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
@@ -1440,7 +1439,7 @@ class GutmannHkObj:
         # Create distance matrix
         dist_mat = ss.distance.cdist(points, self.node_pos)
         # Evaluate radial basis function on each distance
-        rbf_vec = rbf_vectorized(dist_mat.ravel())
+        rbf_vec = rbf_function(dist_mat.ravel())
         u_mat = np.reshape(rbf_vec, (len(points), -1))
         # Contributions to the RBF interpolant value s_k: the u part,
         # the pi part, and the nonhomogenous part. At the same time,
@@ -1534,7 +1533,6 @@ class GutmannMukObj:
         assert(isinstance(points, np.ndarray))
 
         rbf_function = ru.get_rbf_function(self.settings)
-        rbf_vectorized = np.vectorize(rbf_function)
         p = ru.get_size_P_matrix(self.settings, self.n)
         # Formula:
         # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
@@ -1542,7 +1540,7 @@ class GutmannMukObj:
         # Create distance matrix
         dist_mat = ss.distance.cdist(points, self.node_pos)
         # Evaluate radial basis function on each distance
-        rbf_vec = rbf_vectorized(dist_mat.ravel())
+        rbf_vec = rbf_function(dist_mat.ravel())
         u_mat = np.reshape(rbf_vec, (len(points), -1))
         # Build the matrix with the vectors u_pi.
         if (ru.get_degree_polynomial(self.settings) == 1):
