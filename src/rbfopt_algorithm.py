@@ -34,9 +34,9 @@ import rbfopt_model_selection as ms
 import rbfopt_config as config
 import rbfopt_refinement as ref
 from rbfopt_black_box import BlackBox
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 
-class OptAlgorithm:
+class RbfoptAlgorithm:
     """Optimization algorithm.
 
     Implements the main optimization algorithm, and contains all its
@@ -48,7 +48,7 @@ class OptAlgorithm:
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     black_box : :class:`rbfopt_black_box.BlackBox`
@@ -179,11 +179,14 @@ class OptAlgorithm:
         Maximum value among the nodes since last restart.
 
     fmin_cycle_start : float
-        Best function value at the beginning of the latest
+        Best function value at the beginning of the most recent
         optimization cycle.
 
     fmin_last_refine : float
-        Best function value at the latest refinement step.
+        Best function value at the most recent refinement step.
+
+    iter_last_refine : int
+        Iteration number of the most recent refinement step.
 
     fbest_index : int
         Index in all_node_pos of the minimum value among all nodes.
@@ -205,6 +208,17 @@ class OptAlgorithm:
         Indices and values of fixed variables. The indices are with
         respect to the vector of all variables.
 
+    tr_model_set : 1D numpy.ndarray[int]
+        Indices of nodes (in node_pos) that are used to build the
+        linear model for the trust region refinement phase.
+
+    tr_radius : float
+        Radius of the trust region.
+    
+    tr_iterate_index : int
+        Index of the node (in node_pos) that is the current iterate
+        for the trust region refinement method.
+
     """
     def __init__(self, settings, black_box,
                  init_node_pos=None, init_node_val=None):
@@ -212,7 +226,7 @@ class OptAlgorithm:
         
         """
         assert(isinstance(black_box, BlackBox))
-        assert(isinstance(settings, RbfSettings))
+        assert(isinstance(settings, RbfoptSettings))
 
         # Start timing
         self.elapsed_time = 0.0
@@ -341,9 +355,16 @@ class OptAlgorithm:
         # Best gap shown on the log so far
         self.best_gap_shown = float('+inf')
 
-        # Best value function at the beginning of an optimization cycle
+        # Best function value at the beginning of an optimization cycle
         self.fmin_cycle_start = self.fmin
+        # Best function value and itercount at the most recent refinement
         self.fmin_last_refine = self.fmin
+        self.iter_last_refine = 0
+        
+        # Trust region information
+        self.tr_model_set = np.array([])
+        self.tr_radius = float('inf')
+        self.tr_iterate_index = None
 
         # Set default output stream
         self.output_stream = sys.stdout
@@ -531,7 +552,8 @@ class OptAlgorithm:
         output_stream = self.output_stream
         self.output_stream = None
         # Dump to file
-        pickle.dump(self, open(filename, 'wb'), pickle.HIGHEST_PROTOCOL)
+        with open(filename, 'wb') as pickle_file:
+            pickle.dump(self, pickle_file, pickle.HIGHEST_PROTOCOL)
         # Restore erased attribute
         self.output_stream = output_stream
     # -- end function
@@ -555,12 +577,13 @@ class OptAlgorithm:
         
         Returns
         -------
-        OptAlgorithm
+        RbfoptAlgorithm
             An object of this class.
 
         """
         assert(os.path.isfile(filename))
-        alg = pickle.load(open(filename, 'rb'))
+        with open(filename, 'rb') as pickle_file:
+            alg = pickle.load(pickle_file)
         np.random.set_state(alg.random_state)
         # Set default output stream
         alg.output_stream = sys.stdout
@@ -668,14 +691,12 @@ class OptAlgorithm:
                 self.advance_step_counter()
                 continue
 
-            # Check if we should restart. We only restart if the initial
-            # sampling strategy is random, otherwise it makes little sense.
-            if ((self.num_cons_discarded >= 
+            # Check if we should restart. 
+            if (self.current_step <= self.first_step and
+                (self.num_cons_discarded >= 
                  l_settings.max_consecutive_discarded) or 
                 (self.num_stalled_cycles >= l_settings.max_stalled_cycles and
-                 self.evalcount + n + 1 < l_settings.max_evaluations and
-                 l_settings.init_strategy != 'all_corners' and
-                 l_settings.init_strategy != 'lower_corners')):
+                 self.evalcount + n + 1 < l_settings.max_evaluations)):
                 self.update_log('Restart')
                 self.restart()
 
@@ -800,9 +821,10 @@ class OptAlgorithm:
                 # Local search
                 (adj, next_p, ind) = local_step(
                     l_settings, n, k, l_lower, l_upper, integer_vars,
-                    self.node_pos, rbf_l, rbf_h, tfv, fast_node_index, Amat,
-                    Amatinv, self.fmin_index, self.two_phase_optimization,
-                    self.eval_mode, self.node_is_fast)
+                    self.node_pos, rbf_l, rbf_h, tfv[:4], fast_node_index, 
+                    Amat, Amatinv, self.fmin_index, 
+                    self.two_phase_optimization, self.eval_mode, 
+                    self.node_is_fast)
 
                 # Re-evaluate point if necessary
                 if (ind is not None):
@@ -827,7 +849,7 @@ class OptAlgorithm:
                 # Global search
                 next_p = global_step(l_settings, n, k, l_lower, l_upper,
                                      integer_vars, self.node_pos, rbf_l, 
-                                     rbf_h, tfv, Amatinv,
+                                     rbf_h, tfv[:4], Amatinv,
                                      self.fmin_index, self.current_step)
                 iteration_id = 'GlobalStep'
             # -- end if
@@ -894,21 +916,21 @@ class OptAlgorithm:
                     real_impr = (scaled_node_val[self.tr_iterate_index] - 
                                  rescale_function(next_val))
                     self.refinement_update(model_impr, real_impr)
-                elif (self.current_step == self.local_search_step and
-                      self.fmin <= (self.fmin_last_refine -
-                                    self.l_settings.eps_impr *
-                                    max(1.0, abs(self.fmin_last_refine)))):
+                elif ((self.current_step == self.local_search_step) and
+                      (self.itercount >= self.iter_last_refine +
+                       self.l_settings.refinement_frequency *
+                       self.cycle_length) and
+                      (self.fmin <= self.fmin_last_refine -
+                       self.l_settings.eps_impr *
+                       max(1.0, abs(self.fmin_last_refine)))):
                     self.current_step = self.refinement_step
+                    self.iter_last_refine = self.itercount
                 else:
                     self.advance_step_counter()
                 self.num_cons_discarded = 0
 
             # Update iteration number
             self.itercount += 1
-
-            # TODO: ugly hack to test trust regions
-            #if (self.itercount == 10):
-            #    self.current_step = self.refinement_step
 
             # At the beginning of each loop of the cyclic optimization
             # strategy, check if the main loop is stalling
@@ -1141,14 +1163,12 @@ class OptAlgorithm:
                 self.advance_step_counter()
                 continue
 
-            # Check if we should restart. We only restart if the initial
-            # sampling strategy is random, otherwise it makes little sense.
-            if ((self.num_cons_discarded >= 
+            # Check if we should restart. 
+            if (self.current_step <= self.first_step and 
+                (self.num_cons_discarded >= 
                  l_settings.max_consecutive_discarded*l_settings.num_cpus) or 
                 (self.num_stalled_cycles >= l_settings.max_stalled_cycles and
-                 self.evalcount + n + 1 < l_settings.max_evaluations and
-                 l_settings.init_strategy != 'all_corners' and
-                 l_settings.init_strategy != 'lower_corners')):
+                 self.evalcount + n + 1 < l_settings.max_evaluations)):
                 # If there are still results in the pipeline, wait for
                 # them, then try again.
                 if (res_eval or res_search):
@@ -1277,7 +1297,7 @@ class OptAlgorithm:
                 new_res = pool.apply_async(local_step,
                                            (l_settings, n, k, l_lower, 
                                             l_upper, integer_vars, 
-                                            node_pos, rbf_l, rbf_h, tfv,
+                                            node_pos, rbf_l, rbf_h, tfv[:4],
                                             fast_node_index, Amat,
                                             Amatinv, self.fmin_index,
                                             self.two_phase_optimization,
@@ -1290,7 +1310,7 @@ class OptAlgorithm:
                 new_res = pool.apply_async(global_step,
                                            (l_settings, n, k, l_lower, 
                                             l_upper, integer_vars, 
-                                            node_pos, rbf_l, rbf_h, tfv, 
+                                            node_pos, rbf_l, rbf_h, tfv[:4], 
                                             Amatinv, self.fmin_index, 
                                             self.current_step))
                 iteration_id = 'GlobalStep'
@@ -1453,8 +1473,10 @@ class OptAlgorithm:
         self.fmax = np.max(node_val)
         self.fmin_cycle_start = self.fmin
         self.fmin_last_refine = self.fmin
+        self.iter_last_refine = self.itercount
         self.num_stalled_cycles = 0
         self.num_cons_discarded = 0
+        self.num_cons_refinement = 0
         self.is_fmin_fast = self.node_is_fast[self.fmin_index]
         if (self.fmin < self.fbest):
             self.fbest = self.fmin
@@ -1469,6 +1491,7 @@ class OptAlgorithm:
                                            np.vstack((self.node_pos[:i],
                                                       self.node_pos[(i+1):])))
             self.update_log('Initialization', self.node_is_fast[i], val, gap)
+        self.current_step = self.first_step
     # -- end function
 
     def restoration_search(self):
@@ -1497,7 +1520,7 @@ class OptAlgorithm:
                 # First, try to get the next point through something
                 # similar to a global search, using the MSRSM
                 # algorithm with default settings for speed
-                temp_settings = RbfSettings(algorithm = 'MSRSM',
+                temp_settings = RbfoptSettings(algorithm = 'MSRSM',
                                             global_search_method = 'genetic')
                 next_p = pure_global_step(temp_settings, 
                                           self.n, len(self.node_pos),
@@ -1554,7 +1577,7 @@ class OptAlgorithm:
         cons_restoration = 0
         to_be_removed = list()
         # Get a point far from all current nodes
-        next_p = pure_global_step(RbfSettings(algorithm = 'MSRSM'),
+        next_p = pure_global_step(RbfoptSettings(algorithm = 'MSRSM'),
                                   self.n, len(self.node_pos) +
                                   len(temp_node_pos), self.l_lower,
                                   self.l_upper, self.integer_vars,
@@ -1628,6 +1651,7 @@ class OptAlgorithm:
             Improvement in the real function value.
 
         """
+        self.num_cons_refinement += 1
         # Update trust region information
         self.tr_radius, tr_move = ref.update_trust_region_radius(
             self.l_settings, self.tr_radius, model_impr, real_impr)
@@ -1636,7 +1660,7 @@ class OptAlgorithm:
             self.tr_iterate_index = len(self.node_pos) - 1
         if (self.tr_radius < self.l_settings.min_tr_radius or
             ((self.num_cons_refinement >= 
-             self.l_settings.max_cons_refinement) and
+              self.l_settings.max_cons_refinement) and
              (self.itercount <= self.l_settings.max_iterations * 
               self.l_settings.thresh_unlimited_refinement) and
              (self.evalcount <= self.l_settings.max_evaluations * 
@@ -1651,7 +1675,6 @@ class OptAlgorithm:
             # used to build model.
             to_replace = np.argmax(self.node_val[self.tr_model_set])
             self.tr_model_set[to_replace] = len(self.node_pos) - 1
-            self.num_cons_refinement += 1
         if (self.num_cons_refinement < self.l_settings.max_cons_refinement):
             # Update value at last refinement, unless we stopped
             # refinement because of limit of iterations reached
@@ -1707,13 +1730,13 @@ class OptAlgorithm:
         # or if it could be optimal according to tolerances. 
         # In this case, perform a double evaluation.
         best_possible = ((ru.get_fast_error_bounds(self.l_settings,
-                                                   self.fmin)[0]
+                                                   [self.fmin])[0, 0]
                           if self.is_fmin_fast else 0.0) + self.fmin)
         if ((fast_val <= best_possible -
              self.l_settings.eps_impr*max(1.0, abs(best_possible))) or
             (fast_val <= self.l_settings.target_objval +
              self.l_settings.eps_opt*abs(self.l_settings.target_objval) -
-             ru.get_fast_error_bounds(self.l_settings, fast_val)[0])):
+             ru.get_fast_error_bounds(self.l_settings, [fast_val])[0, 0])):
             return True
         else:
             return False
@@ -1731,7 +1754,7 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
         of the matrix [Phi P; P^T 0]. Must be a square numpy.matrix of
         appropriate dimension.
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1770,7 +1793,7 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(node_pos)==k)
     assert((mat is None and settings.algorithm == 'MSRSM') or 
            isinstance(mat, np.matrix))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
     assert(isinstance(integer_vars, np.ndarray))
@@ -1796,7 +1819,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1827,10 +1850,10 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
-    tfv : (1D numpy.ndarray[float], float, float, List[(float, float)], 
-           Callable[float])
+    tfv : (1D numpy.ndarray[float], float, float, List[(float, float)])
+
         Transformed function values: scaled node values, scaled
-        minimum, scaled maximum, node error bounds, rescaling function.
+        minimum, scaled maximum, node error bounds.
 
     fast_node_index : 1D numpy.ndarray[int]
         List of indices of nodes whose function value should be
@@ -1883,11 +1906,10 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(node_is_fast)==k)
     assert(0 <= fmin_index < k)
     assert((eval_mode=='fast') or (eval_mode=='accurate'))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(Amat, np.matrix))
     assert(isinstance(Amatinv, np.matrix))
-    (scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds,
-     rescale_function) = tfv
+    scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
     # Local search: compute the minimum of the RBF.
     min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper,
                                integer_vars, node_pos, rbf_lambda, rbf_h)
@@ -1958,7 +1980,6 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
                 return (True, node_pos[ind], ind)
         # -- end if
     # -- end if
-    sys.stdout.flush()
     return (adjusted, next_p, None)
 # -- end function
 
@@ -1970,7 +1991,7 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
     
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -2017,7 +2038,7 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(start_point)==n)
     assert(len(h)==n)
     assert(tr_radius>=0)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     point, model_impr, grad_norm =  ref.get_candidate_point(
         settings, n, k, var_lower, var_upper, h, start_point, tr_radius)
     if (len(integer_vars)):
@@ -2041,7 +2062,7 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -2106,11 +2127,10 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(node_pos)==k)
     assert(0 <= fmin_index < k)
     assert(isinstance(Amatinv, np.matrix))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(0 <= current_step <= settings.num_global_searches)
 
-    (scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds, 
-     rescale_function) = tfv
+    scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
 
     assert (isinstance(scaled_node_val, np.ndarray))
 
@@ -2176,10 +2196,11 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         local_varl = var_lower
         local_varu = var_upper
 
-    return aux.global_search(settings, n, k, local_varl, local_varu,
+    next_p = aux.global_search(settings, n, k, local_varl, local_varu,
                              integer_vars, node_pos, rbf_lambda,
                              rbf_h, Amatinv, target_val, dist_weight,
                              scaled_fmin, scaled_fmax)
+    return next_p
 # -- end function
 
 def objfun(data):
@@ -2193,6 +2214,7 @@ def objfun(data):
     ----------
     data : (rbfopt_black_box.BlackBox, 1D numpy.ndarray[float], 
             List[(int, float)])
+
         A triple or list with three elements (black_box, point,
         fixed_vars) containing an object derived from class BlackBox,
         that describes the problem, the point at which we want to
@@ -2228,6 +2250,7 @@ def objfun_fast(data):
     ----------
     data : (rbfopt_black_box.BlackBox, 1D numpy.array[float], 
             List[(int, float)])
+
         A triple or list with three elements (black_box, point,
         fixed_vars) containing an object derived from class BlackBox,
         that describes the problem, the point at which we want to

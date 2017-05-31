@@ -16,7 +16,7 @@ import copy
 import math
 import numpy as np
 
-class RbfSettings:
+class RbfoptSettings:
     """Global and algorithmic settings for RBF method.
 
     Class containing algorithmic settings for the enhanced RBF method,
@@ -224,11 +224,6 @@ class RbfSettings:
         step can be performed (in case a better solution has been
         found in the meantime). Default 3.
 
-    num_tr_integer_candidates : int
-        Number of integer candidates per dimension of the problem that
-        are considered when rounding the (fractional) point computed
-        during the refinement step. Default 10.
-
     tr_acceptable_decrease_shrink : float
         Maximum ratio between real decrease and trust region model
         decrease for which the radius of the trust region gets
@@ -262,7 +257,7 @@ class RbfSettings:
     save_state_file : string
         Name of the file in which the state of the algorithm will be
         saved at regular intervals, see save_state_interval. Default
-        'optalgorithm_state.dat'.
+        'rbfopt_algorithm_state.dat'.
     
     print_solver_output : bool
         Print the output of the solvers to screen? Note that this
@@ -349,7 +344,6 @@ class RbfSettings:
                  max_cons_refinement = 5,
                  thresh_unlimited_refinement = 0.9,
                  refinement_frequency = 3,
-                 num_tr_integer_candidates = 10,
                  tr_acceptable_decrease_shrink = 0.2,
                  tr_acceptable_decrease_enlarge = 0.6,
                  tr_acceptable_decrease_move = 0.1,
@@ -357,7 +351,7 @@ class RbfSettings:
                  min_tr_grad_norm = 1.0e-2,
                  print_solver_output = False,
                  save_state_interval = 100000,
-                 save_state_file = 'optalgorithm_state.dat',
+                 save_state_file = 'rbfopt_algorithm_state.dat',
                  rand_seed = 937627691):
         """Class constructor with default values. 
         """
@@ -401,7 +395,6 @@ class RbfSettings:
         self.max_cons_refinement = max_cons_refinement
         self.thresh_unlimited_refinement = thresh_unlimited_refinement
         self.refinement_frequency = refinement_frequency
-        self.num_tr_integer_candidates = num_tr_integer_candidates
         self.tr_acceptable_decrease_shrink = tr_acceptable_decrease_shrink
         self.tr_acceptable_decrease_enlarge = tr_acceptable_decrease_enlarge
         self.tr_acceptable_decrease_move = tr_acceptable_decrease_move
@@ -412,33 +405,33 @@ class RbfSettings:
         self.save_state_file = save_state_file
         self.rand_seed = rand_seed
 
-        if (self.rbf not in RbfSettings._allowed_rbf):
+        if (self.rbf not in RbfoptSettings._allowed_rbf):
             raise ValueError('settings.rbf = ' + 
                              str(self.rbf) + ' not supported')
-        if (self.init_strategy not in RbfSettings._allowed_init_strategy):
+        if (self.init_strategy not in RbfoptSettings._allowed_init_strategy):
             raise ValueError('settings.init_strategy = ' + 
                              str(self.init_strategy) + ' not supported')
         if (self.function_scaling not in 
-            RbfSettings._allowed_function_scaling):
+            RbfoptSettings._allowed_function_scaling):
             raise ValueError('settings.function_scaling = ' + 
                              str(self.function_scaling) + ' not supported')
-        if (self.domain_scaling not in RbfSettings._allowed_domain_scaling):
+        if (self.domain_scaling not in RbfoptSettings._allowed_domain_scaling):
             raise ValueError('settings.domain_scaling = ' + 
                              str(self.domain_scaling) + ' not supported')
         if (self.dynamism_clipping not in 
-            RbfSettings._allowed_dynamism_clipping):
+            RbfoptSettings._allowed_dynamism_clipping):
             raise ValueError('settings.dynamism_clipping = ' + 
                              str(self.dynamism_clipping) + ' not supported')
         if (self.model_selection_solver not in 
-            RbfSettings._allowed_model_selection_solver):
+            RbfoptSettings._allowed_model_selection_solver):
             raise ValueError('settings.model_selection_solver = ' + 
                              str(self.model_selection_solver) + 
                              ' not supported')
-        if (self.algorithm not in RbfSettings._allowed_algorithm):
+        if (self.algorithm not in RbfoptSettings._allowed_algorithm):
             raise ValueError('settings.algorithm = ' + 
                              str(self.algorithm) + ' not supported')
         if (self.global_search_method not in 
-            RbfSettings._allowed_global_search_method):
+            RbfoptSettings._allowed_global_search_method):
             raise ValueError('settings.global_search_method = ' + 
                              str(self.global_search_method) + 
                              ' not supported')
@@ -448,7 +441,7 @@ class RbfSettings:
     def from_dictionary(cls, args):
         """Construct settings from dictionary containing parameter values.
     
-        Construct an instance of RbfSettings by looking up the value
+        Construct an instance of RbfoptSettings by looking up the value
         of the parameters from a given dictionary. The dictionary must
         contain only parameter values in the form args['name'] =
         value. Anything else present in the dictionary will raise an
@@ -463,7 +456,7 @@ class RbfSettings:
 
         Returns
         -------
-        RbfSettings
+        RbfoptSettings
             An instance of the object of the class.
 
         Raises
@@ -505,7 +498,7 @@ class RbfSettings:
 
         Returns
         -------
-        RbfSettings
+        RbfoptSettings
             A copy of the settings, without any 'auto' parameter values.
         """
         assert(isinstance(var_lower, np.ndarray))
@@ -555,7 +548,7 @@ class RbfSettings:
         output_stream : file
             The stream on which messages are printed.
         """
-        print('RbfSettings:', file = output_stream)
+        print('RbfoptSettings:', file = output_stream)
         attrs = vars(self)
         print(', '.join('{:s}: {:s}'.format(str(item[0]), str(item[1])) 
                         for item in sorted(attrs.items())),
@@ -563,4 +556,4 @@ class RbfSettings:
         print(file = output_stream)
         output_stream.flush()
 
-# -- end of class RbfSettings
+# -- end of class RbfoptSettings

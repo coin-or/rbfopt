@@ -18,9 +18,9 @@ import sys
 import argparse
 import ast
 import importlib
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 from rbfopt_black_box import BlackBox
-from rbfopt_algorithm import OptAlgorithm
+from rbfopt_algorithm import RbfoptAlgorithm
 
 
 def register_options(parser):
@@ -35,13 +35,13 @@ def register_options(parser):
 
     See also
     --------   
-    :class:`rbfopt_settings.RbfSettings` for a detailed description of
+    :class:`rbfopt_settings.RbfoptSettings` for a detailed description of
     all the command line options.
     """
     # Algorithmic settings
     algset = parser.add_argument_group('Algorithmic settings')
     # Get default values from here
-    default = RbfSettings()
+    default = RbfoptSettings()
     attrs = vars(default)
     docstring = default.__doc__
     param_docstring = docstring[docstring.find('Parameters'):
@@ -141,7 +141,7 @@ def rbfopt_cl_interface(args, black_box):
             print(e, file = sys.stderr)
 
     # Make a copy of parameters and adjust them, deleting keys
-    # that are not recognized as valid by RbfSettings.
+    # that are not recognized as valid by RbfoptSettings.
     local_args = args.copy()
     del local_args['black_box_module']
     del local_args['output_stream']
@@ -151,10 +151,10 @@ def rbfopt_cl_interface(args, black_box):
     del local_args['pause']
     del local_args['print_solution']
 
-    settings = RbfSettings.from_dictionary(local_args)
+    settings = RbfoptSettings.from_dictionary(local_args)
     settings.print(output_stream = output_stream)
     if (args['load_state'] is not None):
-        alg = OptAlgorithm.load_from_file(args['load_state'])
+        alg = RbfoptAlgorithm.load_from_file(args['load_state'])
     elif (args['points_file'] is not None):
         try:
             init_node_pos = list()
@@ -175,14 +175,14 @@ def rbfopt_cl_interface(args, black_box):
             print(e, file = output_stream)
             output_stream.close()
             exit()
-        alg = OptAlgorithm(settings = settings, black_box = black_box,
+        alg = RbfoptAlgorithm(settings = settings, black_box = black_box,
                            init_node_pos = init_node_pos,
                            init_node_val = init_node_val)
     else:
-        alg = OptAlgorithm(settings = settings, black_box = black_box)
+        alg = RbfoptAlgorithm(settings = settings, black_box = black_box)
     alg.set_output_stream(output_stream)
     result = alg.optimize(args['pause'])
-    print('OptAlgorithm.optimize() returned ' + 
+    print('RbfoptAlgorithm.optimize() returned ' + 
           'function value {:.15f}'.format(result[0]),
           file = output_stream)
     if (args['print_solution']):

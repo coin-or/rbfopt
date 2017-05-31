@@ -16,7 +16,7 @@ from __future__ import absolute_import
 import numpy as np
 import scipy.spatial as ss
 import rbfopt_config as config
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 
 
 def init_trust_region(settings, n, k, node_pos, center):
@@ -28,7 +28,7 @@ def init_trust_region(settings, n, k, node_pos, center):
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`.
+    settings : :class:`rbfopt_settings.RbfoptSettings`.
         Global and algorithmic settings.
 
     n : int
@@ -57,9 +57,10 @@ def init_trust_region(settings, n, k, node_pos, center):
     """
     assert(isinstance(node_pos, np.ndarray))
     assert(len(node_pos)==k)
+    assert(k >= 2)
     assert(isinstance(center, np.ndarray))
     assert(len(np.atleast_1d(center))==n)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     # Find points closest to the given point
     dist = ss.distance.cdist(np.atleast_2d(center), node_pos)
     dist_order = np.lexsort((dist[0],))
@@ -82,7 +83,7 @@ def get_linear_model(settings, n, k, node_pos, node_val, model_set):
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`.
+    settings : :class:`rbfopt_settings.RbfoptSettings`.
         Global and algorithmic settings.
 
     n : int
@@ -116,7 +117,7 @@ def get_linear_model(settings, n, k, node_pos, node_val, model_set):
     assert(isinstance(node_val, np.ndarray))
     assert(len(node_val)==k)
     assert(isinstance(model_set, np.ndarray))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     model_size = len(model_set)
     # Determine the coefficients of the underdetermined linear system.
     lstsq_mat = np.hstack((node_pos[model_set], np.ones((model_size, 1))))
@@ -143,7 +144,7 @@ def get_candidate_point(settings, n, k, var_lower, var_upper, h,
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`.
+    settings : :class:`rbfopt_settings.RbfoptSettings`.
         Global and algorithmic settings.
 
     n : int
@@ -184,7 +185,7 @@ def get_candidate_point(settings, n, k, var_lower, var_upper, h,
     assert(len(start_point)==n)
     assert(len(h)==n)
     assert(tr_radius>=0)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     # Compute gradient
     # Determine maximum (smallest) t for line search before we exceed bounds
     max_t = tr_radius/np.sqrt(np.dot(h, h))
@@ -204,12 +205,12 @@ def get_candidate_point(settings, n, k, var_lower, var_upper, h,
 def get_integer_candidate(settings, n, k, h, point, integer_vars):
     """Get integer candidate point from a fractional point.
 
-    Look for integer points around the given fractional point, trying
-    to find one with a good value of the quadratic model.
+    Round a fractional point to an integer point, taking into account
+    gradient information to find the best rounding.
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`.
+    settings : :class:`rbfopt_settings.RbfoptSettings`.
         Global and algorithmic settings.
 
     n : int
@@ -232,30 +233,21 @@ def get_integer_candidate(settings, n, k, h, point, integer_vars):
     (1D numpy.ndarray[float], float)
         Next candidate point for the search, and the corresponding
         change in model value compared to the given point.
+
     """
     assert(isinstance(point, np.ndarray))
     assert(len(point)==n)
     assert(isinstance(h, np.ndarray))
     assert(len(h)==n)
     assert(isinstance(integer_vars, np.ndarray))
-    assert(isinstance(settings, RbfSettings))
-    # Compute the rounding down and up
-    floor = np.floor(point[integer_vars])
-    ceil = np.ceil(point[integer_vars])
-    curr_point = np.copy(point)
-    best_value = float('+inf')
-    best_point = curr_point
-    for i in range(n * settings.num_tr_integer_candidates):
-        # We round each integer variable up or down depending on its
-        # fractional value and a uniform random number
-        curr_point[integer_vars] = np.where(
-            np.random.uniform(size=len(integer_vars)) < 
-            point[integer_vars] - floor, ceil, floor)
-        curr_value = np.dot(h, curr_point) 
-        if (curr_value < best_value):
-            best_value = curr_value
-            best_point = curr_point
-    return (best_point, np.dot(h, point) - best_value)
+    assert(isinstance(settings, RbfoptSettings))
+    # To find the best point, simply round up or down based on the
+    # sign of the gradient
+    rounded = np.copy(point)
+    rounded[integer_vars] = np.where(h[integer_vars] >= 0, 
+                                     np.floor(point[integer_vars]), 
+                                     np.ceil(point[integer_vars]))
+    return (rounded, np.dot(h, point - rounded))
 # -- end function
 
 def update_trust_region_radius(settings, tr_radius, model_obj_diff,
@@ -269,7 +261,7 @@ def update_trust_region_radius(settings, tr_radius, model_obj_diff,
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`.
+    settings : :class:`rbfopt_settings.RbfoptSettings`.
         Global and algorithmic settings.
 
     tr_radius : float
@@ -290,7 +282,7 @@ def update_trust_region_radius(settings, tr_radius, model_obj_diff,
 
     """
     assert(tr_radius >= 0)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     decrease = real_obj_diff / model_obj_diff
     if (decrease <= settings.tr_acceptable_decrease_shrink):
         tr_radius *= 0.5

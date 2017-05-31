@@ -32,7 +32,7 @@ try:
     import cython_rbfopt.rbfopt_utils as ru
 except ImportError:
     import rbfopt_utils as ru
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 
 def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
     """Compute an estimate of model quality.
@@ -43,7 +43,7 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -66,7 +66,7 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
     """
     assert(isinstance(node_pos, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(len(node_val) == k)
     assert(len(node_pos) == k)
     # We cannot find a leave-one-out interpolant if the following
@@ -125,7 +125,7 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -151,7 +151,7 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
     """
     assert(isinstance(node_pos, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(len(node_val) == k)
     assert(len(node_pos) == k)
     assert(num_iterations <= k)
@@ -210,7 +210,7 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -244,7 +244,7 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
     """
     assert(isinstance(node_pos, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(len(node_val) == k)
     assert(len(node_pos) == k)
     assert(num_iterations <= k)
@@ -356,7 +356,7 @@ def get_model_quality_estimate_clp(settings, n, k, node_pos, node_val,
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -390,7 +390,7 @@ def get_model_quality_estimate_clp(settings, n, k, node_pos, node_val,
     """
     assert(isinstance(node_pos, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(len(node_val) == k)
     assert(len(node_pos) == k)
     assert(num_iterations <= k)
@@ -508,7 +508,7 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -535,7 +535,7 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val, num_iter):
     """
     assert(isinstance(node_pos, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(len(node_val) == k)
     assert(len(node_pos) == k)
     assert(num_iter <= k)

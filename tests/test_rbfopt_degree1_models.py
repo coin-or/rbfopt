@@ -20,14 +20,14 @@ try:
     import cython_rbfopt.rbfopt_utils as ru
 except ImportError:
     import rbfopt_utils as ru
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 
 class TestCubicModels(unittest.TestCase):
     """Test the rbfopt_degree1_models module using cubic RBF."""
 
     def setUp(self):
         """Generate data to simulate an optimization problem."""
-        self.settings = RbfSettings(rbf = 'cubic')
+        self.settings = RbfoptSettings(rbf = 'cubic')
         self.n = 3
         self.k = 5
         self.var_lower = np.array([i for i in range(self.n)])
@@ -146,7 +146,7 @@ class TestThinPlateSplineModels(unittest.TestCase):
 
     def setUp(self):
         """Generate data to simulate an optimization problem."""
-        self.settings = RbfSettings(rbf = 'thin_plate_spline')
+        self.settings = RbfoptSettings(rbf = 'thin_plate_spline')
         self.n = 3
         self.k = 5
         self.var_lower = np.array([i for i in range(self.n)])

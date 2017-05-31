@@ -25,7 +25,7 @@ import rbfopt_utils as ru
 import rbfopt_config as config
 import rbfopt_degree1_models
 import rbfopt_degree0_models
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 
 
 def pure_global_search(settings, n, k, var_lower, var_upper,
@@ -42,7 +42,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -93,7 +93,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
     assert(len(node_pos) == k)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
@@ -118,7 +118,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
         point = ga_optimize(settings, n, var_lower, var_upper,
-                            integer_vars, fitness.bulk_evaluate)
+                            integer_vars, fitness.evaluate)
     elif (settings.global_search_method == 'sampling'):
         # Sample random points, and rank according to fitness
         if (settings.algorithm == 'Gutmann'):
@@ -131,7 +131,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         num_samples = n * settings.num_samples_aux_problems
         samples = generate_sample_points(settings, n, var_lower, var_upper,
                                          integer_vars, num_samples)
-        scores = fitness.bulk_evaluate(samples)
+        scores = fitness.evaluate(samples)
         point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
         # Optimize using Pyomo
@@ -194,7 +194,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -249,11 +249,11 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(var_upper) == n)
     assert(len(rbf_lambda) == k)
     assert(len(node_pos) == k)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
-    assert(len(rbf_h)==p)
+    assert(len(rbf_h) == p)
 
     # Instantiate model
     if (ru.get_degree_polynomial(settings) == 1):
@@ -313,7 +313,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -392,13 +392,13 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(node_pos) == k)
     assert(0 <= dist_weight <= 1)
     assert(fmin <= fmax)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
     assert((mat is None and settings.algorithm == 'MSRSM' )
            or (isinstance(mat, np.matrix) and mat.shape == (k + p, k + p)))
-    assert(len(rbf_h)==p)
+    assert(len(rbf_h) == p)
 
     # Instantiate model
     if (ru.get_degree_polynomial(settings) == 1):
@@ -420,7 +420,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
         point = ga_optimize(settings, n, var_lower, var_upper,
-                            integer_vars, fitness.bulk_evaluate)
+                            integer_vars, fitness.evaluate)
     elif (settings.global_search_method == 'sampling'):
         # Sample random points, and rank according to fitness
         if (settings.algorithm == 'Gutmann'):
@@ -435,7 +435,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         num_samples = n * settings.num_samples_aux_problems
         samples = generate_sample_points(settings, n, var_lower, var_upper,
                                          integer_vars, num_samples)
-        scores = fitness.bulk_evaluate(samples)
+        scores = fitness.evaluate(samples)
         point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
         # Optimize using Pyomo
@@ -450,7 +450,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         elif (settings.algorithm == 'MSRSM'):
             # Compute minimum and maximum distances between
             # points. This computation could be avoided if
-            # OptAlgorithm keeps track of them, but in the grand
+            # RbfoptAlgorithm keeps track of them, but in the grand
             # scheme of things the computation is rarely performed and
             # is not as expensive as the subsequent optimization.
             dist_mat = ss.distance.cdist(node_pos, node_pos)
@@ -511,7 +511,7 @@ def initialize_instance_variables(settings, instance, init_u_pi=True):
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     instance : pyomo.ConcreteModel
@@ -520,7 +520,7 @@ def initialize_instance_variables(settings, instance, init_u_pi=True):
     init_u_pi : bool
         Whether or not the u_pi variables should be initialized.
     """
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
 
     # Obtain radial basis function
     rbf = ru.get_rbf_function(settings)
@@ -555,13 +555,13 @@ def initialize_h_k_aux_variables(settings, instance):
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     instance : pyomo.ConcreteModel
         A concrete instance of mathematical optimization model.
     """
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
 
     instance.rbfval = math.fsum(instance.lambda_h[i] * instance.u_pi[i].value
                                 for i in instance.Q)
@@ -583,13 +583,13 @@ def initialize_msrsm_aux_variables(settings, instance):
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     instance : pyomo.ConcreteModel
         A concrete instance of mathematical optimization model.
     """
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
 
     instance.rbfval = math.fsum(instance.lambda_h[i] * instance.u_pi[i].value
                                 for i in instance.Q)
@@ -613,7 +613,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -664,7 +664,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     RuntimeError
         If the solver cannot be found.
     """
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(node_val, np.ndarray))
     assert(len(node_val) == k)
     assert(isinstance(Phimat, np.matrix))
@@ -746,7 +746,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -782,7 +782,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
     """
     assert (isinstance(node_val, np.ndarray))
     assert (isinstance(fast_node_index, np.ndarray))
-    assert (isinstance(settings, RbfSettings))
+    assert (isinstance(settings, RbfoptSettings))
     assert (len(node_val) == k)
     assert (isinstance(Amat, np.matrix))
     assert (len(fast_node_index) == len(fast_node_err_bounds))
@@ -832,7 +832,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -872,7 +872,7 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(new_node, np.ndarray))
     assert(isinstance(fast_node_index, np.ndarray))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(len(node_val) == k)
     assert(len(node_pos) == k)
     assert(len(fast_node_index) == len(fast_node_err_bounds))
@@ -951,7 +951,7 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -982,7 +982,7 @@ def generate_sample_points(settings, n, var_lower, var_upper,
 
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
 
     # Generate samples
     samples = (np.random.rand(num_samples, n) * (var_upper - var_lower) + 
@@ -996,7 +996,6 @@ def generate_sample_points(settings, n, var_lower, var_upper,
 
 # -- end function
 
-
 def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     """Compute and optimize a fitness function.
 
@@ -1006,7 +1005,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1040,7 +1039,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     assert(isinstance(integer_vars, np.ndarray))
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
 
     # Define parameters here, for now. Will move them to
     # rbfopt_settings later if it seems that the user should be able
@@ -1054,7 +1053,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     num_new = population_size - 2*num_surviving - 1
 
     # Generate boolean vector of integer variables for convenience
-    is_integer = np.empty(n, dtype=bool)
+    is_integer = np.zeros(n, dtype=bool)
     if (len(integer_vars)):
         is_integer[integer_vars] = True
 
@@ -1076,7 +1075,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
         # Crossover: select how mating is done, then create offspring
         father = np.random.permutation(best_individuals)
         mother = np.random.permutation(best_individuals)
-        offspring = np.array([v for v in map(ga_mate, father, mother)])
+        offspring = ga_mate(father, mother)
         # New individuals
         new_individuals = generate_sample_points(settings, n, var_lower,
                                                  var_upper, integer_vars,
@@ -1093,6 +1092,7 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
         # Generate new population
         population = np.vstack((best_individuals, offspring, new_individuals,
                                 best_mutated))
+    # dump.close()
     # Determine ranking of last generation.
     # Compute fitness score to determine remaining individuals
     fitness_val = objfun(population)
@@ -1111,23 +1111,23 @@ def ga_mate(father, mother):
 
     Parameters
     ----------
-    father : 1D numpy.ndarray[float]
-        First individual for mating.
+    father : 2D numpy.ndarray[float]
+        First set of individuals for mating.
 
-    mother : 1D numpy.ndarray[float]
-        Second individual for mating.
+    mother : 2D numpy.ndarray[float]
+        Second set of individuals for mating.
 
     Returns
     -------
-    List[float]
+    2D numpy.ndarray(float)
         The offspring. Same size as mother and father.
     """
     assert(isinstance(mother, np.ndarray))
     assert(isinstance(father, np.ndarray))
-    assert(len(father) == len(mother))
+    assert(father.shape == mother.shape)
 
     # Take elements from father or mother, depending on coin toss
-    return np.where(np.random.uniform(size=len(father)) < 0.5,
+    return np.where(np.random.uniform(size=father.shape) < 0.5,
                     father, mother)
 
 # -- end function
@@ -1175,7 +1175,7 @@ def ga_mutate(n, var_lower, var_upper, is_integer, individual,
     size_pert = np.random.randint(max_size_pert)
     perturbed = np.random.choice(np.arange(n), size_pert, replace=False)
     new = (var_lower[perturbed] + np.random.rand(size_pert) * 
-                  (var_upper[perturbed] - var_lower[perturbed]))
+           (var_upper[perturbed] - var_lower[perturbed]))
     new[is_integer[perturbed]] = np.around(new[is_integer[perturbed]])
     individual[perturbed] = new
 
@@ -1193,7 +1193,7 @@ class MetricSRSMObj:
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1232,7 +1232,7 @@ class MetricSRSMObj:
         assert(len(node_pos) == k)
         assert(len(rbf_lambda) == k)
         assert(0 <= dist_weight <= 1)
-        assert(isinstance(settings, RbfSettings))
+        assert(isinstance(settings, RbfoptSettings))
         p = ru.get_size_P_matrix(settings, n)
         assert(len(rbf_h) == p)
         self.settings = settings
@@ -1246,7 +1246,7 @@ class MetricSRSMObj:
                            else (1 - dist_weight))
     # -- end function
 
-    def bulk_evaluate(self, points):
+    def evaluate(self, points):
         """Evaluate the objective for Metric SRSM.
 
         Evaluate the score of a set of points.
@@ -1270,44 +1270,16 @@ class MetricSRSMObj:
         # Determine scaling factors
         min_dist, max_dist = min(dist), max(dist)
         min_obj, max_obj = min(obj), max(obj)
-        self.dist_denom = (max_dist - min_dist if max_dist > min_dist +
-                           self.settings.eps_zero else 1.0)
-        self.obj_denom = (max_obj - min_obj if max_obj > min_obj +
-                          self.settings.eps_zero else 1.0)
-        # Store useful parameters
-        self.max_dist = max_dist
-        self.min_obj = min_obj
-        return np.array([v for v in map(self.evaluate, dist, obj)])
+        dist_denom = (max_dist - min_dist if max_dist > min_dist +
+                      self.settings.eps_zero else 1.0)
+        obj_denom = (max_obj - min_obj if max_obj > min_obj +
+                     self.settings.eps_zero else 1.0)
+        res = (self.dist_weight * (max_dist - dist) / dist_denom + 
+               self.obj_weight * (obj - min_obj) / obj_denom)
+        res[dist <= self.settings.min_dist] = float('+inf')
+        return res
     # -- end function
 
-    def evaluate(self, distance, objfun):
-        """Evaluate the objective for Metric SRSM.
-
-        Evaluate the score of a single point, given its distance value
-        and its RBF interpolant value.
-
-        Parameters
-        ----------
-        distance : float
-            Minimum distance of the point w.r.t. the interpolation
-            points.
-
-        objfun : float
-            Value of the RBF interpolant at this point.
-
-        Returns
-        -------
-        float
-            The score for the Metric SRSM algorithm (lower is better).
-
-        """
-        if (distance <= self.settings.min_dist):
-            return float('inf')
-        dist_score = (self.max_dist - distance)/self.dist_denom
-        obj_score = (objfun - self.min_obj)/self.obj_denom
-        return (self.obj_weight * obj_score +
-                self.dist_weight * dist_score)
-    # -- end function
 # -- end class MetricSRSMObj
 
 
@@ -1322,7 +1294,7 @@ class MaximinDistanceObj:
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1339,14 +1311,14 @@ class MaximinDistanceObj:
         """
         assert (isinstance(node_pos, np.ndarray))
         assert(len(node_pos) == k)
-        assert(isinstance(settings, RbfSettings))
+        assert(isinstance(settings, RbfoptSettings))
         self.settings = settings
         self.n = n
         self.k = k
         self.node_pos = node_pos
     # -- end function
 
-    def bulk_evaluate(self, points):
+    def evaluate(self, points):
         """Evaluate the objective for Maximin Distance.
 
         Evaluate the score of a set of points.
@@ -1378,7 +1350,7 @@ class GutmannHkObj:
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1421,7 +1393,7 @@ class GutmannHkObj:
         assert(isinstance(rbf_h, np.ndarray))
         assert(len(rbf_lambda) == k)
         assert(len(node_pos) == k)
-        assert(isinstance(settings, RbfSettings))
+        assert(isinstance(settings, RbfoptSettings))
         # Determine the size of the P matrix
         p = ru.get_size_P_matrix(settings, n)
         assert(isinstance(Amatinv, np.matrix) and
@@ -1438,7 +1410,7 @@ class GutmannHkObj:
         self.target_val = target_val
     # -- end function
 
-    def bulk_evaluate(self, points):
+    def evaluate(self, points):
         """Evaluate the objective for the Gutmann h_k objective.
 
         Compute -1/(\mu_k(x) [s_k(x) - f^\ast]^2)), where s_k is
@@ -1460,6 +1432,7 @@ class GutmannHkObj:
         assert(isinstance(points, np.ndarray))
 
         rbf_function = ru.get_rbf_function(self.settings)
+        rbf_vectorized = np.vectorize(rbf_function)
         p = ru.get_size_P_matrix(self.settings, self.n)
         # Formula:
         # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
@@ -1467,7 +1440,7 @@ class GutmannHkObj:
         # Create distance matrix
         dist_mat = ss.distance.cdist(points, self.node_pos)
         # Evaluate radial basis function on each distance
-        rbf_vec = np.array([v for v in map(rbf_function, dist_mat.ravel())])
+        rbf_vec = rbf_vectorized(dist_mat.ravel())
         u_mat = np.reshape(rbf_vec, (len(points), -1))
         # Contributions to the RBF interpolant value s_k: the u part,
         # the pi part, and the nonhomogenous part. At the same time,
@@ -1505,7 +1478,7 @@ class GutmannMukObj:
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -1528,7 +1501,7 @@ class GutmannMukObj:
         """
         assert(isinstance(node_pos, np.ndarray))
         assert(len(node_pos) == k)
-        assert(isinstance(settings, RbfSettings))
+        assert(isinstance(settings, RbfoptSettings))
         # Determine the size of the P matrix
         p = ru.get_size_P_matrix(settings, n)
         assert(isinstance(Amatinv, np.matrix) and
@@ -1541,7 +1514,7 @@ class GutmannMukObj:
         self.Amatinv = Amatinv
     # -- end function
 
-    def bulk_evaluate(self, points):
+    def evaluate(self, points):
         """Evaluate the objective for the Gutmann \mu objective.
 
         Compute -1/\mu_k(x), which we want to minimize.
@@ -1561,6 +1534,7 @@ class GutmannMukObj:
         assert(isinstance(points, np.ndarray))
 
         rbf_function = ru.get_rbf_function(self.settings)
+        rbf_vectorized = np.vectorize(rbf_function)
         p = ru.get_size_P_matrix(self.settings, self.n)
         # Formula:
         # \sum_{i=1}^k \lambda_i \phi(\|x - x_i\|) + h^T (x 1)
@@ -1568,7 +1542,7 @@ class GutmannMukObj:
         # Create distance matrix
         dist_mat = ss.distance.cdist(points, self.node_pos)
         # Evaluate radial basis function on each distance
-        rbf_vec = np.array([v for v in map(rbf_function, dist_mat.ravel())])
+        rbf_vec = rbf_vectorized(dist_mat.ravel())
         u_mat = np.reshape(rbf_vec, (len(points), -1))
         # Build the matrix with the vectors u_pi.
         if (ru.get_degree_polynomial(self.settings) == 1):

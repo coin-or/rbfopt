@@ -20,6 +20,7 @@ Contents:
    rbfopt_degree0_models
    rbfopt_degree1_models
    rbfopt_model_selection
+   rbfopt_refinement
    rbfopt_settings
    rbfopt_utils
 

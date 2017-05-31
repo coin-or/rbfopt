@@ -21,20 +21,20 @@ try:
 except ImportError:
     import rbfopt_utils as ru
 import rbfopt_config as config
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 
 class TestUtils(unittest.TestCase):
     """Test the rbfopt_utils module."""
 
     def setUp(self):
         """Initialize data used by several functions."""
-        self.rbf_types = [rbf_type for rbf_type in RbfSettings._allowed_rbf
+        self.rbf_types = [rbf_type for rbf_type in RbfoptSettings._allowed_rbf
                           if rbf_type != 'auto']
     # -- end function
 
     def test_get_rbf_function(self):
         """Check that all RBFs are properly computed at 0 and at 1."""
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         # Set up values of the RBF at 0 and at 1
         rbf_values = dict()
         rbf_values['linear'] = (0.0, 1.0)
@@ -53,7 +53,7 @@ class TestUtils(unittest.TestCase):
 
     def test_get_degree_polynomial(self):
         """Verify that the degree is always between 0 and 1."""
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         for rbf_type in self.rbf_types:
             settings.rbf = rbf_type
             degree = ru.get_degree_polynomial(settings)
@@ -62,7 +62,7 @@ class TestUtils(unittest.TestCase):
 
     def test_get_size_P_matrix(self):
         """Verify that the size is always between 0 and n+1."""
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         for rbf_type in self.rbf_types:
             settings.rbf = rbf_type
             for n in range(20):
@@ -123,8 +123,8 @@ class TestUtils(unittest.TestCase):
         var_lower = np.array([-1, 0, 1])
         var_upper = np.array([1, 2, 3])
         integer_vars = np.array([1, 2])
-        for method in RbfSettings._allowed_init_strategy:
-            settings = RbfSettings(init_strategy = method)
+        for method in RbfoptSettings._allowed_init_strategy:
+            settings = RbfoptSettings(init_strategy = method)
             points = ru.initialize_nodes(settings, var_lower, var_upper,
                                          integer_vars)
             msg = ('Number of points returned by {:s}'.format(method) +
@@ -248,7 +248,7 @@ class TestUtils(unittest.TestCase):
         Verify that the RBF matrix is symmetric and it has the correct
         size for all types of RBF.
         """
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         for i in range(50):
             dim = random.randint(1, 20)
             num_points = random.randint(10, 50)
@@ -277,12 +277,13 @@ class TestUtils(unittest.TestCase):
         This will verify that the transformation strategies always
         produce valid results and can handle extreme cases.
         """
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         settings.fast_objfun_rel_error = 0.01
         settings.fast_objfun_abs_error = 0.01
-        list_scaling = [val for val in RbfSettings._allowed_function_scaling
+        list_scaling = [val for val in RbfoptSettings._allowed_function_scaling
                         if val != 'auto']
-        list_clipping = [val for val in RbfSettings._allowed_dynamism_clipping
+        list_clipping = [val for val in 
+                         RbfoptSettings._allowed_dynamism_clipping
                          if val != 'auto']
         transf = ru.transform_function_values
         # Create list of values to test: node_val and corresponding
@@ -303,9 +304,9 @@ class TestUtils(unittest.TestCase):
                 for (node_val, fast_node_index) in to_test:
                     settings.function_scaling = scaling
                     settings.dynamism_clipping = clipping
-                    (scaled, minval, maxval,
-                     errbounds) = transf(settings, node_val, min(node_val),
-                                         max(node_val), fast_node_index)
+                    (scaled, minval, maxval, errbounds,
+                     rescale_func) = transf(settings, node_val, min(node_val),
+                                            max(node_val), fast_node_index)
                     # Check that the number of scaled values is the
                     # same as the number of input values
                     msg = 'Number of output values is different from input'
@@ -335,7 +336,7 @@ class TestUtils(unittest.TestCase):
         Further check that 'off' transformation returns the point as
         is, and unimplemented strategies raise a ValueError.
         """
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         settings.domain_scaling = 'affine'
         var_lower = np.array([i for i in range(5)] + [i for i in range(5)])
         var_upper = np.array([i for i in range(5)] + [i + 10 for i in range(5)])
@@ -367,10 +368,10 @@ class TestUtils(unittest.TestCase):
 
     def test_transform_domain_bounds(self):
         """Check that domain bounds are consistent."""
-        list_scaling = [val for val in RbfSettings._allowed_domain_scaling 
+        list_scaling = [val for val in RbfoptSettings._allowed_domain_scaling 
                         if val != 'auto']
         for scaling in list_scaling:
-            settings = RbfSettings(domain_scaling = scaling)
+            settings = RbfoptSettings(domain_scaling = scaling)
             # Test limit case with empty bounds
             vl, vu = ru.transform_domain_bounds(settings, np.array([]), np.array([]))
             msg = 'Failed transform_domain_bounds on empty bounds'
@@ -410,7 +411,7 @@ class TestUtils(unittest.TestCase):
         there is a single-element list of node values, and when the
         list of node values is exactly the minimum required k + 1.
         """
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         fun = ru.get_fmax_current_iter
         self.assertEqual(fun(settings, 0, 1, 1, np.array([1])), 1,
                          msg = 'Failed on single-element list')

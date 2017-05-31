@@ -29,7 +29,7 @@ try:
     import cython_rbfopt.rbfopt_utils as ru
 except ImportError:
     import rbfopt_utils as ru
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 
 class TestModelSelection(unittest.TestCase):
     """Test the rbfopt_model_selection module using available solvers."""
@@ -60,7 +60,7 @@ class TestModelSelection(unittest.TestCase):
         verify that we get the expected response.
         """
         for solver in self.solver:
-            settings = RbfSettings(model_selection_solver = solver)
+            settings = RbfoptSettings(model_selection_solver = solver)
             res = ms.get_best_rbf_model(settings, self.n, self.k, 
                                         self.node_pos, self.node_val,
                                         self.k)
@@ -71,7 +71,7 @@ class TestModelSelection(unittest.TestCase):
         """Test the get_model_quality_estimate_clp function.
         """
         if clp_available:
-            settings = RbfSettings(model_selection_solver = 'clp')
+            settings = RbfoptSettings(model_selection_solver = 'clp')
             res = ms.get_model_quality_estimate_clp(settings, self.n, self.k, 
                                                     self.node_pos, 
                                                     self.node_val, self.k)
@@ -82,7 +82,7 @@ class TestModelSelection(unittest.TestCase):
         """Test the get_model_quality_estimate_cpx function.
         """
         if cpx_available:
-            settings = RbfSettings(model_selection_solver = 'cplex')
+            settings = RbfoptSettings(model_selection_solver = 'cplex')
             res = ms.get_model_quality_estimate_cpx(settings, self.n, self.k, 
                                                     self.node_pos, 
                                                     self.node_val, self.k)
@@ -92,7 +92,7 @@ class TestModelSelection(unittest.TestCase):
     def test_get_model_quality_estimate(self):
         """Test the get_model_quality_estimate function.
         """
-        settings = RbfSettings(model_selection_solver = 'numpy')
+        settings = RbfoptSettings(model_selection_solver = 'numpy')
         res = ms.get_model_quality_estimate(settings, self.n, self.k,
                                             self.node_pos, self.node_val,
                                             self.k)

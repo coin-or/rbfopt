@@ -1,3 +1,14 @@
+2017-05-31  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_refinement.py: The module provides functions to
+	periodically run a trust-region based refinement phase. This is
+	only supported for the serial search engine, at the moment.
+	* rbfopt_settings.py (max_consecutive_local_searches): This
+	parameter has been removed.
+	* rbfopt_settings.py (RbfoptSettings): The class RbfSettings was
+	renamed RbfoptSettings.
+	* rbfopt_algorithm.py (RbfoptAlgorithm): The class OptAlgorithm
+	was renamed RbfoptAlgorithm.
+
 2017-05-22  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Upgraded code to support Python 3.
 

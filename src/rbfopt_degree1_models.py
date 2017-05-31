@@ -21,7 +21,7 @@ except ImportError:
     import rbfopt_utils as ru
 import numpy as np
 import rbfopt_config as config
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
@@ -33,7 +33,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -78,7 +78,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     assert(len(rbf_lambda) == k)
     assert(len(rbf_h) == (n+1))
     assert(len(node_pos) == k)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(ru.get_degree_polynomial(settings) == 1)
 
     model = ConcreteModel()
@@ -162,7 +162,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -202,7 +202,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     assert(len(node_pos) == k)
     assert(isinstance(mat, np.matrix))
     assert(mat.shape == (n+k+1, n+k+1))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(ru.get_degree_polynomial(settings) == 1)
 
     model = ConcreteModel()
@@ -296,7 +296,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -352,7 +352,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(node_pos) == k)
     assert(isinstance(mat, np.matrix))
     assert(mat.shape == (n+k+1,n+k+1))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(ru.get_degree_polynomial(settings) == 1)
 
     model = ConcreteModel()
@@ -464,7 +464,7 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -498,7 +498,7 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     """
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(fast_node_index, np.ndarray))
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(len(node_val) == k)
     assert(isinstance(Phimat, np.matrix))
     assert(isinstance(Pmat, np.matrix))
@@ -588,7 +588,7 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -622,7 +622,7 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
     assert(len(node_pos) == k)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
 
     model = ConcreteModel()
 
@@ -683,7 +683,7 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     Parameters
     ----------
 
-    settings : :class:`rbfopt_settings.RbfSettings`
+    settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
     n : int
@@ -746,7 +746,7 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     assert(len(rbf_lambda) == k)
     assert(len(rbf_h) == (n+1))
     assert(len(node_pos) == k)
-    assert(isinstance(settings, RbfSettings))
+    assert(isinstance(settings, RbfoptSettings))
     assert(ru.get_degree_polynomial(settings) == 1)
     assert(0 <= dist_weight <= 1)
     assert(dist_max >= dist_min >= 0)
