@@ -1,3 +1,9 @@
+2017-06-03  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_utils.py: Major optimizations in the computation of
+	radial basis functions.
+	* setup.py: File removed, since there is no longer a speed
+	advantage using Cython and compilation is therefore not necessary.
+	
 2017-05-31  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_refinement.py: The module provides functions to
 	periodically run a trust-region based refinement phase. This is

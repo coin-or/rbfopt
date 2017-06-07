@@ -73,9 +73,6 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
     # condition is not met.
     assert(k > n + 1)
 
-
-    # sorted_list = sorted([(node_val[i], node_pos[i]) for i in range(k)])
-
     # Create a copy of the interpolation nodes and values
     cv_node_pos = node_pos[:(k - 1)]
     cv_node_val = node_val[:(k - 1)]
@@ -86,8 +83,6 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
 
     # Estimate of the model error
     loo_error = 0.0
-    # Variance
-    loo_error_var = 0.0
     
     for i in range(k):
         # Compute the RBF interpolant with one node left out
@@ -101,7 +96,6 @@ def get_model_quality_estimate_full(settings, n, k, node_pos, node_val):
 
         # Update leave-one-out error
         loo_error += abs(predicted_val - rm_node_val)
-        loo_error_var += (abs(predicted_val - rm_node_val))**2
 
         # Update the node left out, unless we are at the last iteration
         if (i < k - 1):
@@ -176,14 +170,15 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
     for i in range(num_iterations):
         # Compute the RBF interpolant with one node left out
         Amat = ru.get_rbf_matrix(settings, n, k-1, cv_node_pos)
-        (rbf_l, rbf_h) = ru.get_rbf_coefficients(settings, n, k-1, 
-                                                 Amat, cv_node_val)
+        rbf_l, rbf_h = ru.get_rbf_coefficients(settings, n, k-1, 
+                                               Amat, cv_node_val)
         # Compute value of the interpolant at the removed node
         predicted_val = ru.evaluate_rbf(settings, rm_node_pos, n, k-1,
                                         cv_node_pos, rbf_l, rbf_h)
 
         # Update leave-one-out error
-        loo_error += abs(predicted_val - rm_node_val)
+        loc = np.searchsorted(cv_node_val, predicted_val)
+        loo_error += abs(loc - i)
 
         # Update the node left out
         if (i < k - 1):
@@ -268,11 +263,11 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
     sorted_idx = node_val.argsort()
 
     # Initialize the arrays used for the cross-validation
-    cv_node_pos = node_pos[sorted_idx]
-    cv_node_val = node_val[sorted_idx]
+    cv_node_pos = node_pos[sorted_idx].astype(float)
+    cv_node_val = node_val[sorted_idx].astype(float)
 
     # Compute the RBF matrix
-    Amat = ru.get_rbf_matrix(settings, n, k, cv_node_pos)
+    Amat = ru.get_rbf_matrix(settings, n, k, cv_node_pos).astype(float)
 
     # Instantiate model and suppress output
     lp = cpx.Cplex()
@@ -285,7 +280,7 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
     # lp.parameters.simplex.display.set(2)
 
     # Add variables: lambda, h, slacks
-    lp.variables.add(obj = [sign*val for val in node_val],
+    lp.variables.add(obj = [sign*val for val in node_val.astype(float)],
                      lb = [-cpx.infinity] * k,
                      ub = [cpx.infinity] * k)
     lp.variables.add(lb = [-cpx.infinity] * p,
@@ -295,7 +290,8 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
 
     # Add constraints: interpolation conditions, unisolvence
     expr = [cpx.SparsePair(ind = [j for j in range(k + p)] + [k + p + i],
-                           val = [Amat[i, j] for j in range(k + p)] + [1.0])
+                           val = [Amat[i, j] for j in range(k + p)] + 
+                           [1.0])
             for i in range(k)]
     lp.linear_constraints.add(lin_expr = expr, senses = ['E'] * k,
                               rhs = cv_node_val)
@@ -329,7 +325,8 @@ def get_model_quality_estimate_cpx(settings, n, k, node_pos, node_val,
                                         cv_node_pos, rbf_l, rbf_h)
 
         # Update leave-one-out error
-        loo_error += abs(predicted_val - cv_node_val[i])
+        loc = np.searchsorted(cv_node_val, predicted_val)
+        loo_error += abs(loc - i)
 
         # Fix lambda[i] to zero
         lp.variables.set_lower_bounds(i, -cpx.infinity)
@@ -485,7 +482,8 @@ def get_model_quality_estimate_clp(settings, n, k, node_pos, node_val,
                                         cv_node_pos, lambda_sol, h_sol)
 
         # Update leave-one-out error
-        loo_error += abs(predicted_val - cv_node_val[i])
+        loc = np.searchsorted(cv_node_val, predicted_val)
+        loo_error += abs(loc - i)
 
         # Fix lambda[i] to zero
         lp.setColumnLower(i, -infinity)

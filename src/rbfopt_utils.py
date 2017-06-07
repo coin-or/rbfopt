@@ -63,7 +63,7 @@ def _cubic(r):
 
 def _thin_plate_spline(r):
     """Thin plate spline RBF: :math: `f(x) = x^2 \log x`"""
-    return xlogy(np.sign(r), r) / np.log(2)
+    return r*r*xlogy(np.sign(r), r)
 
 def _linear(r):
     """Linear RBF: :math: `f(x) = x`"""
@@ -1424,7 +1424,6 @@ def get_one_ready_index(results):
             return i
     return len(results)
 # -- end if
-
 
 def init_rand_seed(seed):
     """Initialize the random seed.

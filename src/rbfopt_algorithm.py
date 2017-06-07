@@ -696,7 +696,8 @@ class RbfoptAlgorithm:
                 (self.num_cons_discarded >= 
                  l_settings.max_consecutive_discarded) or 
                 (self.num_stalled_cycles >= l_settings.max_stalled_cycles and
-                 self.evalcount + n + 1 < l_settings.max_evaluations)):
+                 self.evalcount + 2*(n + 1 + self.cycle_length) < 
+                 l_settings.max_evaluations)):
                 self.update_log('Restart')
                 self.restart()
 
@@ -777,14 +778,14 @@ class RbfoptAlgorithm:
                     # For the first refinement step iteration, some data
                     # has to be computed                    
                     self.tr_model_set, self.tr_radius = ref.init_trust_region(
-                        settings, n, k, self.node_pos, 
+                        l_settings, n, k, self.node_pos, 
                         self.node_pos[self.fmin_index])
                     self.tr_iterate_index = self.fmin_index
 
                 # Compute quadratic model for trust region method
                 try:
                     h, b = ref.get_linear_model(
-                        settings, n, k, self.node_pos, 
+                        l_settings, n, k, self.node_pos, 
                         scaled_node_val, self.tr_model_set)
                 except np.linalg.LinAlgError:
                     # Error in the solution of the linear system. We
@@ -1000,6 +1001,12 @@ class RbfoptAlgorithm:
         temp_node_pos = np.array([])
         temp_node_val = np.array([])
         temp_node_is_fast = np.array([])
+        
+        # Number of iterations spent in refinement. We used this
+        # strange initialization statement to make sure that the
+        # number is consistent (if not accurate) in case the algorithm
+        # is stopped and restarted.
+        refinement_itercount = self.itercount/l_settings.refinement_frequency
 
         # If this is the first iteration, initialize the algorithm
         if (self.itercount == 0):
@@ -1020,7 +1027,7 @@ class RbfoptAlgorithm:
             while (ru.results_ready(res_eval)):
                 # Obtain one point evaluation that is ready
                 j = ru.get_one_ready_index(res_eval)
-                (res, next_p, node_is_fast, iid) = res_eval.pop(j)
+                res, next_p, node_is_fast, iid = res_eval.pop(j)
                 next_val = res.get()
                 min_dist = ru.get_min_distance(next_p, self.node_pos)
                 # Transform back to original space if necessary
@@ -1031,6 +1038,13 @@ class RbfoptAlgorithm:
                 gap = ru.compute_gap(l_settings, self.fbest, 
                                      self.is_fbest_fast)
                 self.update_log(iid, node_is_fast, next_val, gap)
+                # Perform refinement updates if necessary
+                if (iid == 'RefinementStep'):
+                    real_impr = (ref_rescale_function(
+                        node_val[self.tr_iterate_index]) - 
+                                 ref_rescale_function(next_val))
+                    self.refinement_update_parallel(model_impr, real_impr)
+                    refinement_itercount += 1
                 # Update iteration number
                 self.itercount += 1
                 # Check if we should save the state.
@@ -1059,7 +1073,7 @@ class RbfoptAlgorithm:
                 # Local search is treated differently, because it
                 # may require re-evaluation of previous points
                 if (iteration_id == 'LocalStep'):
-                    (adj, next_p, ind) = res.get()
+                    adj, next_p, ind = res.get()
                     # Re-evaluate point if necessary
                     if (ind is not None):
                         # Because of parallelism, there is a chance
@@ -1076,7 +1090,9 @@ class RbfoptAlgorithm:
                     if (adj):
                         iteration_id = 'AdjLocalStep'
                     else:
-                        iteration_id = 'LocalStep'                    
+                        iteration_id = 'LocalStep'
+                elif (iteration_id == 'RefinementStep'):
+                    next_p, model_impr = res.get()
                 else:
                     next_p = res.get()
                 # Verify that we have an actual point available
@@ -1087,6 +1103,8 @@ class RbfoptAlgorithm:
                      (ru.get_min_distance(next_p, temp_node_pos) <= 
                       l_settings.min_dist))):
                     self.num_cons_discarded += 1
+                    if (iteration_id == 'RefinementStep'):
+                        self.num_cons_refinement = 0
                     self.update_log('Discarded')
                 else:
                     # Transform back to original space if necessary
@@ -1141,9 +1159,8 @@ class RbfoptAlgorithm:
                             temp_node_pos = np.vstack((temp_node_pos, next_p))
                         else:
                             temp_node_pos = np.atleast_2d(next_p)
-                        temp_node_val = np.append(temp_node_val,
-                                                  np.clip(val, self.fmin,
-                                                          self.fmax))
+                        temp_node_val = np.append(
+                            temp_node_val, np.clip(val, self.fmin, self.fmax))
                         temp_node_is_fast = np.append(temp_node_is_fast,
                                                       node_is_fast)
             # -- end while
@@ -1168,7 +1185,8 @@ class RbfoptAlgorithm:
                 (self.num_cons_discarded >= 
                  l_settings.max_consecutive_discarded*l_settings.num_cpus) or 
                 (self.num_stalled_cycles >= l_settings.max_stalled_cycles and
-                 self.evalcount + n + 1 < l_settings.max_evaluations)):
+                 self.evalcount + 2*(n + 1 + self.cycle_length) < 
+                 l_settings.max_evaluations)):
                 # If there are still results in the pipeline, wait for
                 # them, then try again.
                 if (res_eval or res_search):
@@ -1265,12 +1283,46 @@ class RbfoptAlgorithm:
             next_p = None
             curr_is_fast = (self.eval_mode == 'fast')
 
-            if (self.current_step == self.inf_step):
+            # If no refinement is in progress, and the frequency is
+            # not excessive, start it or keep it going
+            if ((refinement_itercount <= self.itercount / 
+                 l_settings.refinement_frequency) and
+                ('RefinementStep' not in [v[-1] for v in res_eval]) and
+                ('RefinementStep' not in [v[-1] for v in res_search])):
+                if (self.num_cons_refinement == 0 or
+                    (self.fmin <= node_val[self.tr_iterate_index] -
+                     settings.eps_impr * 
+                     max(1.0, abs(node_val[self.tr_iterate_index])))):
+                    # For the first refinement step iteration, some data
+                    # has to be computed
+                    self.tr_model_set, self.tr_radius = ref.init_trust_region(
+                        l_settings, n, k, node_pos, 
+                        node_pos[self.fmin_index])
+                    self.tr_iterate_index = self.fmin_index
+                try:
+                    # Compute linear model for trust region method
+                    h, b = ref.get_linear_model(
+                        l_settings, n, k, node_pos, 
+                        scaled_node_val, self.tr_model_set)
+                    new_res = pool.apply_async(
+                        refinement_step,
+                        (l_settings, n, k, l_lower, l_upper, integer_vars, 
+                         h, b, self.node_pos[self.tr_iterate_index], 
+                         self.tr_radius))
+                    iteration_id = 'RefinementStep'
+                    ref_rescale_function = rescale_function
+                    res_search.append([new_res, curr_is_fast, iteration_id])
+                except np.linalg.LinAlgError:
+                    # Error in the solution of the linear system. We
+                    # ignore and continue the search.
+                    pass
+
+            elif (self.current_step == self.inf_step):
                 # Infstep: explore the parameter space
-                new_res = pool.apply_async(pure_global_step,
-                                           (l_settings, n, k, l_lower,
-                                            l_upper, integer_vars, 
-                                            node_pos, Amatinv))
+                new_res = pool.apply_async(
+                    pure_global_step,
+                    (l_settings, n, k, l_lower, l_upper, integer_vars, 
+                     node_pos, Amatinv))
                 iteration_id = 'InfStep'
                 res_search.append([new_res, curr_is_fast, iteration_id])
 
@@ -1294,31 +1346,29 @@ class RbfoptAlgorithm:
             
             elif (self.current_step == self.local_search_step):
                 # Local search
-                new_res = pool.apply_async(local_step,
-                                           (l_settings, n, k, l_lower, 
-                                            l_upper, integer_vars, 
-                                            node_pos, rbf_l, rbf_h, tfv[:4],
-                                            fast_node_index, Amat,
-                                            Amatinv, self.fmin_index,
-                                            self.two_phase_optimization,
-                                            self.eval_mode, 
-                                            node_is_fast))
+                new_res = pool.apply_async(
+                    local_step,
+                    (l_settings, n, k, l_lower, l_upper, integer_vars, 
+                     node_pos, rbf_l, rbf_h, tfv[:4], fast_node_index, 
+                     Amat, Amatinv, self.fmin_index, 
+                     self.two_phase_optimization, self.eval_mode, 
+                     node_is_fast))
                 iteration_id = 'LocalStep'
                 res_search.append([new_res, curr_is_fast, iteration_id])
             else:
                 # Global search
-                new_res = pool.apply_async(global_step,
-                                           (l_settings, n, k, l_lower, 
-                                            l_upper, integer_vars, 
-                                            node_pos, rbf_l, rbf_h, tfv[:4], 
-                                            Amatinv, self.fmin_index, 
-                                            self.current_step))
+                new_res = pool.apply_async(
+                    global_step,
+                    (l_settings, n, k, l_lower, l_upper, integer_vars, 
+                     node_pos, rbf_l, rbf_h, tfv[:4], Amatinv, 
+                     self.fmin_index, self.current_step))
                 iteration_id = 'GlobalStep'
                 res_search.append([new_res, curr_is_fast, iteration_id])
             # -- end if
 
             # Move forward, without waiting for results
-            self.advance_step_counter()
+            if (iteration_id != 'RefinementStep'):
+                self.advance_step_counter()
 
         # -- end while
         
@@ -1670,6 +1720,43 @@ class RbfoptAlgorithm:
             # Do no continue refinement
             self.num_cons_refinement = 0
             self.current_step = self.first_step
+        else:
+            # Continue refinement. Update set of points
+            # used to build model.
+            to_replace = np.argmax(self.node_val[self.tr_model_set])
+            self.tr_model_set[to_replace] = len(self.node_pos) - 1
+        if (self.num_cons_refinement < self.l_settings.max_cons_refinement):
+            # Update value at last refinement, unless we stopped
+            # refinement because of limit of iterations reached
+            self.fmin_last_refine = self.fmin
+    # -- end function 
+
+    def refinement_update_parallel(self, model_impr, real_impr):
+        """Perform updates to refinement step and decide if continue.
+
+        Update the radius of the trust region and the iterate for the
+        refinement step. This is the version that should be used for
+        parallel computation, because the update phase is different.
+
+        Parameters
+        ----------
+        model_impr : float
+            Improvement in quadratic model value.
+
+        real_impr : float
+            Improvement in the real function value.
+
+        """
+        self.num_cons_refinement += 1
+        # Update trust region information
+        self.tr_radius, tr_move = ref.update_trust_region_radius(
+            self.l_settings, self.tr_radius, model_impr, real_impr)
+        if (tr_move):
+            # Accept new iterate
+            self.tr_iterate_index = len(self.node_pos) - 1
+        if (self.tr_radius < self.l_settings.min_tr_radius):
+            # Do no continue refinement
+            self.num_cons_refinement = 0
         else:
             # Continue refinement. Update set of points
             # used to build model.
@@ -2044,7 +2131,7 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
     if (len(integer_vars)):
         # Get a rounding of the point
         point, model_impr_adj = ref.get_integer_candidate(
-            settings, n, k, h, point, integer_vars)
+            settings, n, k, h, start_point, tr_radius, point, integer_vars)
         model_impr += model_impr_adj
     if (grad_norm <= settings.min_tr_grad_norm):
         return None, model_impr

@@ -42,6 +42,12 @@ class TestRefinement(unittest.TestCase):
                                   [7, 7, 7]])
         self.node_val = np.array([2*i for i in range(self.k)])
         self.integer_vars = np.array([0, 2])
+        # Compute maximum distance between nodes
+        max_dist = 0
+        for node1 in self.node_pos:
+            for node2 in self.node_pos:
+                max_dist = max(max_dist, dist(node1, node2))
+        self.max_dist = max_dist
     # -- end function        
 
     def test_init_trust_region(self):
@@ -50,17 +56,13 @@ class TestRefinement(unittest.TestCase):
         """
         settings = RbfoptSettings()
         # Compute maximum distance between nodes
-        max_dist = 0
-        for node1 in self.node_pos:
-            for node2 in self.node_pos:
-                max_dist = max(max_dist, dist(node1, node2))
         for k in range(2, self.k):
             model_set, radius = ref.init_trust_region(settings, self.n, k, 
                                                       self.node_pos[:k], 
                                                       self.node_pos[k-1])
             self.assertEqual(len(model_set), min(k, 2*self.n + 1),
                              msg='Wrong size of model set')
-            self.assertLessEqual(radius, max_dist)
+            self.assertLessEqual(radius, self.max_dist)
     # -- end function
 
     def test_get_linear_model(self):
@@ -87,15 +89,10 @@ class TestRefinement(unittest.TestCase):
         """
         settings = RbfoptSettings()
         model_set = np.arange(self.k)
-        # Compute maximum distance between nodes
-        max_dist = 0
-        for node1 in self.node_pos:
-            for node2 in self.node_pos:
-                max_dist = max(max_dist, dist(node1, node2))
         for i in range(self.k):
             h = np.random.rand(self.n)
             b = np.random.rand()
-            tr_radius = np.random.uniform(max_dist/2)
+            tr_radius = np.random.uniform(self.max_dist/2)
             point, diff, grad_norm = ref.get_candidate_point(
                 settings, self.n, self.k, self.var_lower, self.var_upper, 
                 h, self.node_pos[i], tr_radius)
@@ -122,12 +119,16 @@ class TestRefinement(unittest.TestCase):
         """
         settings = RbfoptSettings()
         model_set = np.arange(self.k)
-        for i in range(5):
+        for i in range(self.k):
             h = np.random.rand(self.n)
             b = np.random.rand()
-            candidate = np.random.uniform(self.var_lower, self.var_upper)
+            tr_radius = np.random.uniform(self.max_dist/2)
+            candidate, diff, grad_norm = ref.get_candidate_point(
+                settings, self.n, self.k, self.var_lower, self.var_upper, 
+                h, self.node_pos[i], tr_radius)
             point, diff = ref.get_integer_candidate(
-                settings, self.n, self.k, h, candidate, self.integer_vars)
+                settings, self.n, self.k, h, self.node_pos[i], 
+                tr_radius, candidate, self.integer_vars)
             self.assertAlmostEqual(diff, np.dot(h, candidate - point),
                                    msg='Wrong model difference estimate')
             for j in range(self.n):

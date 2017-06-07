@@ -163,7 +163,7 @@ class RbfoptSettings:
     model_selection_solver : string
         Solver to compute leave-one-out errors in cross validation for
         model selection. Choice of 'clp', 'cplex', 'numpy'. Default
-        'numpy'.
+        'clp'.
 
     algorithm : string
         Optimization algorithm used. Choice of 'Gutmann' and 'MSRSM',
@@ -210,7 +210,7 @@ class RbfoptSettings:
         original MSRSM score function. Default True.
 
     max_cons_refinement : int
-        Maximum number of consecutive refinement steps. Default 5.
+        Maximum number of consecutive refinement steps. Default 10.
 
     thresh_unlimited_refinement : float
         Lower threshold for the amounf of search budget depleted,
@@ -220,9 +220,17 @@ class RbfoptSettings:
         0.9.
 
     refinement_frequency : int
-        Number of full global search cycles after which the refinement
-        step can be performed (in case a better solution has been
-        found in the meantime). Default 3.
+        In serial search mode, this indicates the number of full
+        global search cycles after which the refinement step can be
+        performed (in case a better solution has been found in the
+        meantime). In parallel mode, this determines the maximum
+        acceptable ration between other search steps and refinement
+        steps. Default 5.
+
+    num_tr_integer_candidates : int
+        Number of integer candidates per dimension of the problem that
+        are considered when rounding the (fractional) point computed
+        during the refinement step. Default 10.
 
     tr_acceptable_decrease_shrink : float
         Maximum ratio between real decrease and trust region model
@@ -304,55 +312,56 @@ class RbfoptSettings:
     _allowed_global_search_method = {'genetic', 'sampling', 'solver'}
 
     def __init__(self,
-                 rbf = 'thin_plate_spline',
-                 max_iterations = 150,
-                 max_evaluations = 250,
-                 max_fast_evaluations = 150,
-                 max_clock_time = 1.0e30,
-                 num_cpus = 1,
-                 parallel_wakeup_time = 0.1,
-                 target_objval = -1.0e10,
-                 eps_opt = 1.0e-2,
-                 eps_zero = 1.0e-15,
-                 eps_impr = 1.0e-3,
-                 min_dist = 1.0e-5,
-                 do_infstep = False,
-                 num_global_searches = 5,
-                 init_strategy = 'lhd_maximin',
-                 function_scaling = 'auto',
-                 log_scaling_threshold = 1.0e6,
-                 domain_scaling = 'auto',
-                 dynamism_clipping = 'auto',
-                 dynamism_threshold = 1.0e3,
-                 local_search_box_scaling = 0.5,
-                 max_stalled_cycles = 10,
-                 max_stalled_objfun_impr = 0.05,
-                 max_consecutive_discarded = 15,
-                 max_consecutive_restoration = 15,
-                 fast_objfun_rel_error = 0.0,
-                 fast_objfun_abs_error = 0.0,
-                 max_fast_restarts = 2,
-                 max_fast_iterations = 100,
-                 model_selection_solver = 'numpy',
-                 algorithm = 'MSRSM',
-                 targetval_clipping = True,
-                 global_search_method = 'genetic',
-                 ga_base_population_size = 400,
-                 ga_num_generations = 20,
-                 num_samples_aux_problems = 1000,
-                 modified_msrsm_score = True,
-                 max_cons_refinement = 5,
-                 thresh_unlimited_refinement = 0.9,
-                 refinement_frequency = 3,
-                 tr_acceptable_decrease_shrink = 0.2,
-                 tr_acceptable_decrease_enlarge = 0.6,
-                 tr_acceptable_decrease_move = 0.1,
-                 min_tr_radius = 1.0e-3,
-                 min_tr_grad_norm = 1.0e-2,
-                 print_solver_output = False,
-                 save_state_interval = 100000,
-                 save_state_file = 'rbfopt_algorithm_state.dat',
-                 rand_seed = 937627691):
+                 rbf='thin_plate_spline',
+                 max_iterations=150,
+                 max_evaluations=250,
+                 max_fast_evaluations=150,
+                 max_clock_time=1.0e30,
+                 num_cpus=1,
+                 parallel_wakeup_time=0.1,
+                 target_objval=-1.0e10,
+                 eps_opt=1.0e-2,
+                 eps_zero=1.0e-15,
+                 eps_impr=1.0e-3,
+                 min_dist=1.0e-5,
+                 do_infstep=False,
+                 num_global_searches=5,
+                 init_strategy='lhd_maximin',
+                 function_scaling='auto',
+                 log_scaling_threshold=1.0e6,
+                 domain_scaling='auto',
+                 dynamism_clipping='auto',
+                 dynamism_threshold=1.0e3,
+                 local_search_box_scaling=0.5,
+                 max_stalled_cycles=10,
+                 max_stalled_objfun_impr=0.05,
+                 max_consecutive_discarded=15,
+                 max_consecutive_restoration=15,
+                 fast_objfun_rel_error=0.0,
+                 fast_objfun_abs_error=0.0,
+                 max_fast_restarts=2,
+                 max_fast_iterations=100,
+                 model_selection_solver='clp',
+                 algorithm='MSRSM',
+                 targetval_clipping=True,
+                 global_search_method='genetic',
+                 ga_base_population_size=400,
+                 ga_num_generations=20,
+                 num_samples_aux_problems=1000,
+                 modified_msrsm_score=True,
+                 max_cons_refinement=10,
+                 thresh_unlimited_refinement=0.9,
+                 refinement_frequency=5,
+                 num_tr_integer_candidates=10,
+                 tr_acceptable_decrease_shrink=0.2,
+                 tr_acceptable_decrease_enlarge=0.6,
+                 tr_acceptable_decrease_move=0.1,
+                 min_tr_radius=1.0e-3,
+                 min_tr_grad_norm=1.0e-2,
+                 print_solver_output=False,
+                 save_state_interval=100000,
+                 save_state_file='rbfopt_algorithm_state.dat',
+                 rand_seed=937627691):
         """Class constructor with default values. 
         """
         self.rbf = rbf
@@ -395,6 +404,7 @@ class RbfoptSettings:
         self.max_cons_refinement = max_cons_refinement
         self.thresh_unlimited_refinement = thresh_unlimited_refinement
         self.refinement_frequency = refinement_frequency
+        self.num_tr_integer_candidates = num_tr_integer_candidates
         self.tr_acceptable_decrease_shrink = tr_acceptable_decrease_shrink
         self.tr_acceptable_decrease_enlarge = tr_acceptable_decrease_enlarge
         self.tr_acceptable_decrease_move = tr_acceptable_decrease_move

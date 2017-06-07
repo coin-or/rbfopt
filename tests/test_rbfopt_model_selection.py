@@ -45,10 +45,11 @@ class TestModelSelection(unittest.TestCase):
         self.k = 10
         self.var_lower = np.array([i for i in range(self.n)])
         self.var_upper = np.array([i + 10 for i in range(self.n)])
-        self.node_pos = np.array([self.var_lower, self.var_upper,
-                         [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12],
-                         [3.2, 10.2, 4], [2.1, 1.1, 7.4], [6.6, 9.1, 2.0],
-                         [10, 8.8, 11.1], [7, 7, 7]])
+        self.node_pos = np.array([self.var_lower, self.var_upper, 
+                                  [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12],
+                                  [3.2, 10.2, 4], [2.1, 1.1, 7.4],
+                                  [6.6, 9.1, 2.0], [10, 8.8, 11.1],
+                                  [7, 7, 7]])
         self.node_val = np.array([2*i for i in range(self.k)])
     # -- end function        
 
