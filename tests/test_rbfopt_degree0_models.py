@@ -16,18 +16,15 @@ import numpy as np
 import pyomo.environ
 import test_rbfopt_env
 import rbfopt_degree0_models as d0
-try:
-    import cython_rbfopt.rbfopt_utils as ru
-except ImportError:
-    import rbfopt_utils as ru
-from rbfopt_settings import RbfSettings
+import rbfopt_utils as ru
+from rbfopt_settings import RbfoptSettings
 
 class TestMultiquadricModels(unittest.TestCase):
     """Test the rbfopt_degree0_models module using multiquadric RBF."""
 
     def setUp(self):
         """Generate data to simulate an optimization problem."""
-        self.settings = RbfSettings(rbf = 'multiquadric')
+        self.settings = RbfoptSettings(rbf = 'multiquadric')
         self.n = 3
         self.k = 5
         self.var_lower = np.array([i for i in range(self.n)])
@@ -142,7 +139,7 @@ class TestLinearModels(unittest.TestCase):
 
     def setUp(self):
         """Generate data to simulate an optimization problem."""
-        self.settings = RbfSettings(rbf = 'linear')
+        self.settings = RbfoptSettings(rbf = 'linear')
         self.n = 3
         self.k = 5
         self.var_lower = np.array([i for i in range(self.n)])

@@ -14,15 +14,9 @@ from __future__ import absolute_import
 import unittest
 import numpy as np
 import test_rbfopt_env
-try:
-    import cython_rbfopt.rbfopt_utils as ru
-except ImportError:
-    import rbfopt_utils as ru
-try:
-    import cython_rbfopt.rbfopt_aux_problems as aux
-except ImportError:
-    import rbfopt_aux_problems as aux
-from rbfopt_settings import RbfSettings
+import rbfopt_utils as ru
+import rbfopt_aux_problems as aux
+from rbfopt_settings import RbfoptSettings
 
 def quadratic(points):
     """Quadratic function for optimization.
@@ -49,7 +43,7 @@ class TestAuxProblems(unittest.TestCase):
 
     def setUp(self):
         """Generate data to simulate an optimization problem."""
-        self.settings = RbfSettings(rbf = 'cubic',
+        self.settings = RbfoptSettings(rbf = 'cubic',
                                     num_samples_aux_problems = 10000,
                                     ga_base_population_size = 1000)
         self.n = 3
@@ -81,7 +75,7 @@ class TestAuxProblems(unittest.TestCase):
         self.rbf_h = np.array([-0.10953754862932995, 0.6323031632900591,
                       0.5216788297837124, 9.935450288253636])
         self.integer_vars = np.array([1])
-        self.rbf_types = [rbf_type for rbf_type in RbfSettings._allowed_rbf
+        self.rbf_types = [rbf_type for rbf_type in RbfoptSettings._allowed_rbf
                           if rbf_type != 'auto']
     # -- end function
 
@@ -98,8 +92,8 @@ class TestAuxProblems(unittest.TestCase):
         """
         solutions = {'Gutmann' : [8.279843262880693, 8.0, 10.768370103772106],
                      'MSRSM' : [4.7403574071279078, 11, 2.3070673078496355]}
-        for algorithm in RbfSettings._allowed_algorithm:
-            for method in RbfSettings._allowed_global_search_method:
+        for algorithm in RbfoptSettings._allowed_algorithm:
+            for method in RbfoptSettings._allowed_global_search_method:
                 self.settings.algorithm = algorithm
                 self.settings.global_search_method = method
                 ref = solutions[algorithm]
@@ -119,14 +113,14 @@ class TestAuxProblems(unittest.TestCase):
                               'ub {:f} solution {:f} '.format(ub, sol[i]) +
                               'alg {:s} '.format(algorithm) +
                               'method {:s}'.format(method))
-                    self.assertLessEqual(lb, sol[i], msg = msg_lb)
-                    self.assertLessEqual(sol[i], ub, msg = msg_ub)
+                    self.assertLessEqual(lb, sol[i], msg=msg_lb)
+                    self.assertLessEqual(sol[i], ub, msg=msg_ub)
                 for i in self.integer_vars:
-                    msg = ('Variable {:d} not integer in solution'.format(i)
+                    msg=('Variable {:d} not integer in solution'.format(i)
                            + ' alg {:s} '.format(algorithm) +
                            'method {:s}'.format(method))
                     self.assertAlmostEqual(abs(sol[i] - round(sol[i])), 0.0,
-                                           msg = msg)
+                                           msg=msg)
     # -- end function
 
     def test_minimize_rbf(self):
@@ -140,7 +134,7 @@ class TestAuxProblems(unittest.TestCase):
         """
         solutions = {'Gutmann' : [[0.0, 1.0, 2.0], [10.0, 1.0, 2.0]],
                      'MSRSM' : [[0.0, 1.0, 2.0], [10.0, 1.0, 2.0]]}
-        for algorithm in RbfSettings._allowed_algorithm:
+        for algorithm in RbfoptSettings._allowed_algorithm:
             self.settings.algorithm = algorithm
             references = solutions[algorithm]
             sol = aux.minimize_rbf(self.settings, self.n, self.k,
@@ -162,14 +156,14 @@ class TestAuxProblems(unittest.TestCase):
                 if satisfied:
                     found_solution = True
             self.assertTrue(found_solution, 
-                            msg = 'The minimize_rbf solution' +
+                            msg='The minimize_rbf solution' +
                             ' with algorithm {:s}'.format(algorithm) +
                             ' does not match any known local optimum')
             for i in self.integer_vars:
-                msg = ('Variable {:d} not integer in solution'.format(i)
+                msg=('Variable {:d} not integer in solution'.format(i)
                        + ' alg {:s} '.format(algorithm))
                 self.assertAlmostEqual(abs(sol[i] - round(sol[i])), 0.0,
-                                       msg = msg)
+                                       msg=msg)
     # -- end function
 
     def test_global_search(self):
@@ -187,8 +181,8 @@ class TestAuxProblems(unittest.TestCase):
                      'MSRSM' : [9.6569123529739933, 1, 2.0364710264329515]}
         target_val = -0.1
         dist_weight = 0.5
-        for algorithm in RbfSettings._allowed_algorithm:
-            for method in RbfSettings._allowed_global_search_method:
+        for algorithm in RbfoptSettings._allowed_algorithm:
+            for method in RbfoptSettings._allowed_global_search_method:
                 self.settings.algorithm = algorithm
                 self.settings.global_search_method = method
                 ref = solutions[algorithm]
@@ -210,14 +204,14 @@ class TestAuxProblems(unittest.TestCase):
                               'ub {:f} solution {:f} '.format(ub, sol[i]) +
                               'alg {:s} '.format(algorithm) +
                               'method {:s} '.format(method))
-                    self.assertLessEqual(lb, sol[i], msg = msg_lb)
-                    self.assertLessEqual(sol[i], ub, msg = msg_ub)
+                    self.assertLessEqual(lb, sol[i], msg=msg_lb)
+                    self.assertLessEqual(sol[i], ub, msg=msg_ub)
                 for i in self.integer_vars:
-                    msg = ('Variable {:d} not integer in solution'.format(i)
+                    msg=('Variable {:d} not integer in solution'.format(i)
                            + ' alg {:s} '.format(algorithm) +
                            'method {:s}'.format(method))
                     self.assertAlmostEqual(abs(sol[i] - round(sol[i])), 0.0,
-                                           msg = msg)
+                                           msg=msg)
     # -- end function
 
     def test_get_noisy_rbf_coefficients(self):
@@ -244,8 +238,8 @@ class TestAuxProblems(unittest.TestCase):
                                   self.n, self.k, self.node_pos, l, h)
             lb = self.node_val[j] + fast_node_err_bounds[i][0]
             ub = self.node_val[j] + fast_node_err_bounds[i][1]
-            self.assertLessEqual(lb, val, msg = 'Node value outside bounds')
-            self.assertGreaterEqual(ub, val, msg = 'Node value outside bounds')
+            self.assertLessEqual(lb, val, msg='Node value outside bounds')
+            self.assertGreaterEqual(ub, val, msg='Node value outside bounds')
         # Verify interpolation conditions for regular (exact) nodes
         for i in range(self.k):
             if i in fast_node_index:
@@ -253,7 +247,7 @@ class TestAuxProblems(unittest.TestCase):
             val = ru.evaluate_rbf(self.settings, self.node_pos[j],
                                   self.n, self.k, self.node_pos, l, h)
             self.assertAlmostEqual(self.node_val[j], val,
-                                   msg = 'Node value does not match')
+                                   msg='Node value does not match')
     # -- end function
 
     def test_get_min_bump_node(self):
@@ -265,12 +259,12 @@ class TestAuxProblems(unittest.TestCase):
         possible point that could be replaced.
 
         """
-        settings = RbfSettings(rbf = 'cubic')
+        settings = RbfoptSettings(rbf = 'cubic')
         ind, bump = aux.get_min_bump_node(settings, 1, 10, np.matrix((1,1)),
                                           np.array([0] * 10), np.array([]), 
                                           [], 0)
-        self.assertIsNone(ind, msg = 'Failed whith empty list')
-        self.assertEqual(bump, float('+inf'), msg = 'Failed whith empty list')
+        self.assertIsNone(ind, msg='Failed whith empty list')
+        self.assertEqual(bump, float('+inf'), msg='Failed whith empty list')
 
         n = 3
         k = 5
@@ -301,7 +295,7 @@ class TestAuxProblems(unittest.TestCase):
                                               node_val, fast_node_index,
                                               fast_node_err_bounds,
                                               node_val[j] - 0.5)
-            self.assertEqual(ind, j, msg = 'Only one point is a candidate' +
+            self.assertEqual(ind, j, msg='Only one point is a candidate' +
                              'for replacement, but it was not returned!')
     # -- end function
 
@@ -314,7 +308,7 @@ class TestAuxProblems(unittest.TestCase):
         bumpiness, and that's what we check.
 
         """
-        settings = RbfSettings(rbf='cubic')
+        settings = RbfoptSettings(rbf='cubic')
         n = 3
         k = 5
         var_lower = np.array([i for i in range(n)])
@@ -367,22 +361,22 @@ class TestAuxProblems(unittest.TestCase):
                                              self.var_lower, self.var_upper,
                                              self.integer_vars, 123)
         self.assertEqual(len(samples), 123,
-                         msg = 'Wrong number of sample points')
+                         msg='Wrong number of sample points')
         for sample in samples:
-            self.assertEqual(len(sample), self.n, msg = 'Wrong point length')
+            self.assertEqual(len(sample), self.n, msg='Wrong point length')
             for i in self.integer_vars:
-                msg = 'Variable {:d} not integer in sample'.format(i)
+                msg='Variable {:d} not integer in sample'.format(i)
                 self.assertAlmostEqual(abs(sample[i] - round(sample[i])),
-                                       0.0, msg = msg)
+                                       0.0, msg=msg)
         # Now test some limit cases
         samples = aux.generate_sample_points(self.settings, 0, np.array([]), np.array([]),
                                              np.array([]), 45)
         self.assertListEqual(samples.tolist(), [[] for i in range(45)],
-                             msg = 'Samples are not empty when n = 0')
+                             msg='Samples are not empty when n = 0')
         samples = aux.generate_sample_points(self.settings, self.n, 
                                              self.var_lower, self.var_upper,
                                              self.integer_vars, 0)
-        self.assertFalse(samples, msg = 'List of samples should be empty')
+        self.assertFalse(samples, msg='List of samples should be empty')
     # -- end function
 
     def test_ga_optimize(self):
@@ -391,15 +385,41 @@ class TestAuxProblems(unittest.TestCase):
         var_lower = np.array([-1] * 3)
         var_upper = np.array([1] * 3)
         integer_vars = np.array([])
-        settings = RbfSettings(ga_base_population_size = 100)
+        settings = RbfoptSettings(ga_base_population_size = 100)
         point = aux.ga_optimize(settings, 3, var_lower, var_upper,
                                 integer_vars, quadratic)
         self.assertLessEqual(quadratic([point])[0], 0.05,
-                             msg = 'Could not solve quadratic with GA')
+                             msg='Could not solve quadratic with GA')
         point = aux.ga_optimize(settings, 3, var_lower, var_upper,
                                 integer_vars, shifted_quadratic)
         self.assertLessEqual(shifted_quadratic([point])[0], 0.05,
-                             msg = 'Could not solve shifted quadratic with GA')
+                             msg='Could not solve shifted quadratic with GA')
+    # -- end function
+
+    def test_ga_optimize_stochastic(self):
+        """Verify that the GA is deterministic with same random seed.
+        """
+        var_lower = np.array([-2] * 5)
+        var_upper = np.array([2] * 5)
+        integer_vars = np.array([1, 2])
+        settings = RbfoptSettings(ga_base_population_size = 100)
+        state = np.random.get_state()
+        quad_point = aux.ga_optimize(settings, 5, var_lower, var_upper,
+                                     integer_vars, quadratic)
+        shift_quad_point = aux.ga_optimize(settings, 5, var_lower, var_upper,
+                                           integer_vars, shifted_quadratic)
+        for i in range(10):
+            np.random.set_state(state)
+            point = aux.ga_optimize(settings, 5, var_lower, var_upper,
+                                    integer_vars, quadratic)
+            self.assertAlmostEqual(np.dot(quad_point - point, 
+                                          quad_point - point), 0,
+                                   msg='Obtained different point')
+            point = aux.ga_optimize(settings, 5, var_lower, var_upper,
+                                    integer_vars, shifted_quadratic)
+            self.assertAlmostEqual(np.dot(shift_quad_point - point, 
+                                          shift_quad_point - point), 0,
+                                   msg='Obtained different point')
     # -- end function
 
 # - end class

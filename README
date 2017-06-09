@@ -1,9 +1,8 @@
 #  File:      README
 #  Author(s): Giacomo Nannicini
-#             Singapore University of Technology and Design
 #             International Business Machines Corporation
 #             nannicini@us.ibm.com
-#  Last edit: 03/30/17
+#  Last edit: 06/09/17
 #
 #  (C) Copyright Singapore University of Technology and Design 2015.
 #  (C) Copyright International Business Machines Corporation 2016.
@@ -12,6 +11,9 @@
 
 This software is released under the Revised BSD License. By using
 this software, you are implicitly accepting the terms of the license.
+
+RBFOpt is a Python library for black-box optimization (also known as
+derivative-free optimization). It supports Python 2.7 and Python 3.
 
 Contents of this directory:
 
@@ -25,9 +27,6 @@ README:
 	This file.
 requirements.txt:
 	List of dependencies for this project.
-setup.py:
-	Setup file, using setuptools, to compile some modules with
-	Cython.
 
 Contents of the src/ directory:
 
@@ -48,23 +47,12 @@ rbfopt_config.py:
 rbfopt_degreeX_models.py:
 	PyOmo models for the auxiliary problems necessary for RBF
 	functions with minimum required polynomial degree X.
-rbfopt_model_selection.py:
-	Routines for automatic model selection.
+rbfopt_refinement:
+	Routines for trust-region based refinement phase.
 rbfopt_settings.py:
 	Global and algorithmic settings.
 rbfopt_utils.py:
 	Utility routines.
-rbfopt_bumpiness.py:
-	Routines regarding the bumpiness of the RBF interpolant.
-
-
-Contents of the src/cython_rbfopt/ directory:
-
-rbfopt_aux_problems.pyx:
-	Interface for the auxiliary problems solved during
-	the optimization process. Cython version.
-rbfopt_utils.pyx:
-	Utility routines. Cython version.
 
 Contents of the tests/ directory:
 
@@ -81,6 +69,8 @@ test_rbfopt_degreeX_models.py:
 	Testing module for rbfopt_degreeX_models.py.
 test_rbfopt_env.py:
 	Environment variables for testing environment.
+test_rbfopt_refinement::
+	Testing module for rbfopt_refinement.py
 test_rbfopt_settings.py:
 	Testing module for rbfopt_settings.py.
 test_rbfopt_utils.py
@@ -104,7 +94,7 @@ make.bat:
 
 This package requires the following software:
 
-Python 2.7.* (latest 2.7.* release recommended)
+Python version >= 2.7 
 NumPy version >= 1.11.0
 SciPy version >= 0.13.3
 Pyomo version >= 4.3.11388
@@ -113,10 +103,8 @@ The software has been tested with the versions indicated above. It may
 work with earlier version and should work with subsequent version, if
 they are backward compatible.
 
-Note that Python 3 is not compatible with Python 2.7. While our
-library is Python 3 compliant and consistently uses "from __future__
-import [...]", the code has not been tested on Python 3 yet. We
-recommend using Python 2.7. 
+The code is mainly developed keeping Python 3 in mind, but it also
+runs on Python 2.7. We recommend using Python 3 if possible.
 
 The easiest way to install all the dependencies is via the Python
 module manager pip, using the command:
@@ -170,7 +158,11 @@ procedure. Supported solvers:
 IBM-ILOG Cplex via its Python API
 COIN-OR Clp via CyLP (see https://github.com/coin-or/CyLP).
 
-The two packages above are optional.
+The two packages above are optional. Keep in mind that the automatic
+model selection procedure (option --rbf auto) is in our experience
+very beneficial in practice, and it can be slow without a linear
+programming solver installed. Make sure you set the option
+--model_selection_solver correctly if you are using one the solvers.
 
 
 #--------------------------------------------------------------------------
@@ -192,10 +184,10 @@ The two packages above are optional.
 3) Enjoy!
 
 4) You can test the installation by running:
-   python2.7 tests/rbfopt_test_interface.py branin
+   python tests/rbfopt_test_interface.py branin
    
    See:
-   python2.7 tests/rbfopt_test_interface.py --help
+   python tests/rbfopt_test_interface.py --help
    for more details on command-line options for the testing utility.
 
    Many more test functions, with different characteristics, are
@@ -204,7 +196,7 @@ The two packages above are optional.
 
 5) Unit tests for the library can be executed by running:
 
-   python2.7 -m unittest discover -s tests/
+   python -m unittest discover -s tests/
 
    from the current (main) directory. This may take some time. If some
    of the tests fail, the library may or may not work correctly. Some
@@ -218,10 +210,10 @@ The two packages above are optional.
    say in a file called my_black_box.py, and the alorithm can be
    executed on it by running:
 
-   python2.7 src/rbfopt_cl_interface.py -m my_black_box.py
+   python src/rbfopt_cl_interface.py -m my_black_box.py
 
    See:
-   python2.7 src/rbfopt_cl_interface.py --help
+   python src/rbfopt_cl_interface.py --help
    for more details on command-line options.
 
    (If no module is specified with the -m option, the algorithm will
@@ -236,23 +228,6 @@ The two packages above are optional.
    corresponding "import" Python command (i.e. "import cplex" and
    "import cylp.cy"), you can select the corresponding value for the
    option model_selection_solver.
-
-8) Some modules of RBFOpt can be compiled in C for improved speed,
-   using Cython. The procedure is automated in the file setup.py using
-   distutils. From the current (main) directory, run:
-
-   python2.7 setup.py build_ext --build-lib src
-
-   This will compile the hybrid Python/C version of some modules (all
-   those that are available in C) under the build/ directory, and
-   install them in src/cython_rbfopt/. If this step is not carried out,
-   or the compilation fails, the regular Python modules will be used
-   instead.
-
-   To clean compiled modules, run:
-
-   python2.7 setup.py clean --all
-   rm src/cython_rbfopt/*.so src/cython_rbfopt/*.c
 
 
 #--------------------------------------------------------------------------
@@ -327,7 +302,6 @@ paper.
 A. Fokoue, G. Diaz, G. Nannicini, H. Samulowitz. An effective
 algorithm for hyperparameter optimization of neural networks. IBM
 Journal of Research and Development, 61(4-5), 2017, to appear.
-
 
 #--------------------------------------------------------------------------
 # Support

@@ -18,9 +18,9 @@ import sys
 import argparse
 import ast
 import importlib
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 from rbfopt_black_box import BlackBox
-from rbfopt_algorithm import OptAlgorithm
+from rbfopt_algorithm import RbfoptAlgorithm
 
 
 def register_options(parser):
@@ -35,13 +35,13 @@ def register_options(parser):
 
     See also
     --------   
-    :class:`rbfopt_settings.RbfSettings` for a detailed description of
+    :class:`rbfopt_settings.RbfoptSettings` for a detailed description of
     all the command line options.
     """
     # Algorithmic settings
     algset = parser.add_argument_group('Algorithmic settings')
     # Get default values from here
-    default = RbfSettings()
+    default = RbfoptSettings()
     attrs = vars(default)
     docstring = default.__doc__
     param_docstring = docstring[docstring.find('Parameters'):
@@ -82,7 +82,7 @@ def register_options(parser):
                         metavar = 'LOG_FILE_NAME', dest = 'output_stream',
                         help = 'Name of log file for output redirection')
     intset.add_argument('--pause', '-p', action = 'store', dest = 'pause',
-                        default = sys.maxint, type = int,
+                        default = sys.maxsize, type = int,
                         help = 'Number of iterations after which ' +
                         'the optimization process should be paused')
     intset.add_argument('--points_from_file', '-f', action = 'store',
@@ -141,7 +141,7 @@ def rbfopt_cl_interface(args, black_box):
             print(e, file = sys.stderr)
 
     # Make a copy of parameters and adjust them, deleting keys
-    # that are not recognized as valid by RbfSettings.
+    # that are not recognized as valid by RbfoptSettings.
     local_args = args.copy()
     del local_args['black_box_module']
     del local_args['output_stream']
@@ -151,10 +151,10 @@ def rbfopt_cl_interface(args, black_box):
     del local_args['pause']
     del local_args['print_solution']
 
-    settings = RbfSettings.from_dictionary(local_args)
+    settings = RbfoptSettings.from_dictionary(local_args)
     settings.print(output_stream = output_stream)
     if (args['load_state'] is not None):
-        alg = OptAlgorithm.load_from_file(args['load_state'])
+        alg = RbfoptAlgorithm.load_from_file(args['load_state'])
     elif (args['points_file'] is not None):
         try:
             init_node_pos = list()
@@ -174,15 +174,15 @@ def rbfopt_cl_interface(args, black_box):
             print(type(e), file = output_stream)
             print(e, file = output_stream)
             output_stream.close()
-            sys.exit()
-        alg = OptAlgorithm(settings = settings, black_box = black_box,
+            exit()
+        alg = RbfoptAlgorithm(settings = settings, black_box = black_box,
                            init_node_pos = init_node_pos,
                            init_node_val = init_node_val)
     else:
-        alg = OptAlgorithm(settings = settings, black_box = black_box)
+        alg = RbfoptAlgorithm(settings = settings, black_box = black_box)
     alg.set_output_stream(output_stream)
     result = alg.optimize(args['pause'])
-    print('OptAlgorithm.optimize() returned ' + 
+    print('RbfoptAlgorithm.optimize() returned ' + 
           'function value {:.15f}'.format(result[0]),
           file = output_stream)
     if (args['print_solution']):
@@ -192,15 +192,14 @@ def rbfopt_cl_interface(args, black_box):
         alg.save_to_file(args['dump_state'])
         print('Dumped state to file {:s}'.format(args['dump_state']),
               file = output_stream)
-    #output_stream.close()
+    output_stream.close()
 
 # -- end function
 
 if (__name__ == "__main__"):
-    if (sys.version_info[0] >= 3):
-        print('Error: Python 3 is currently not tested.')
-        print('Please use Python 2.7')
-        sys.exit()
+    if (sys.version_info[0] <= 2 and sys.version_info[1] < 7):
+        print('Error: this software requires Python 2.7 or later')
+        exit()
     # Create command line parsers
     desc = ('Apply the RBF method to an object of class "BlackBox".')
     parser = argparse.ArgumentParser(description = desc)

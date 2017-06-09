@@ -1,6 +1,6 @@
-"""Test the class RbfSettings.
+"""Test the class RbfoptSettings.
 
-This module contains unit tests for the class RbfSettings.
+This module contains unit tests for the class RbfoptSettings.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright International Business Machines Corporation 2016.
@@ -16,12 +16,12 @@ import test_rbfopt_env
 import rbfopt_settings as rs
 import ast
 
-class TestRbfSettings(unittest.TestCase):
+class TestRbfoptSettings(unittest.TestCase):
     """Test the RbfSetting class."""
 
     def setUp(self):
         """Create default parameter object and read docstring."""
-        self.default = rs.RbfSettings()
+        self.default = rs.RbfoptSettings()
         attrs = vars(self.default)
         docstring = self.default.__doc__
         param_docstring = docstring[docstring.find('Parameters'):
@@ -92,8 +92,8 @@ class TestRbfSettings(unittest.TestCase):
                 type_fun = str
             dict_settings[self.param_name[i]] = type_fun(self.param_default[i])
         # Create new object
-        settings = rs.RbfSettings.from_dictionary(dict_settings)
-        self.assertIsInstance(settings, rs.RbfSettings)
+        settings = rs.RbfoptSettings.from_dictionary(dict_settings)
+        self.assertIsInstance(settings, rs.RbfoptSettings)
         # Verify that values are preserved
         for name in self.param_name:
             message = ('Value of parameter {:s}'.format(name) + 

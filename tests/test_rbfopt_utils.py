@@ -16,25 +16,22 @@ import math
 import random
 import numpy as np
 import test_rbfopt_env
-try:
-    import cython_rbfopt.rbfopt_utils as ru
-except ImportError:
-    import rbfopt_utils as ru
+import rbfopt_utils as ru
 import rbfopt_config as config
-from rbfopt_settings import RbfSettings
+from rbfopt_settings import RbfoptSettings
 
 class TestUtils(unittest.TestCase):
     """Test the rbfopt_utils module."""
 
     def setUp(self):
         """Initialize data used by several functions."""
-        self.rbf_types = [rbf_type for rbf_type in RbfSettings._allowed_rbf
+        self.rbf_types = [rbf_type for rbf_type in RbfoptSettings._allowed_rbf
                           if rbf_type != 'auto']
     # -- end function
 
     def test_get_rbf_function(self):
         """Check that all RBFs are properly computed at 0 and at 1."""
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         # Set up values of the RBF at 0 and at 1
         rbf_values = dict()
         rbf_values['linear'] = (0.0, 1.0)
@@ -45,15 +42,15 @@ class TestUtils(unittest.TestCase):
             settings.rbf = rbf_type
             rbf = ru.get_rbf_function(settings)
             rbf_at_0, rbf_at_1 = rbf_values[rbf_type]
-            msg = 'RBF {:s} is not {:f} at 0'.format(rbf_type, rbf_at_0)
-            self.assertEqual(rbf_at_0, rbf(0.0), msg = msg)
-            msg = 'RBF {:s} is not {:f} at 1'.format(rbf_type, rbf_at_1)
-            self.assertEqual(rbf_at_1, rbf(1.0), msg = msg)
+            msg='RBF {:s} is not {:f} at 0'.format(rbf_type, rbf_at_0)
+            self.assertEqual(rbf_at_0, rbf(0.0), msg=msg)
+            msg='RBF {:s} is not {:f} at 1'.format(rbf_type, rbf_at_1)
+            self.assertEqual(rbf_at_1, rbf(1.0), msg=msg)
     # -- end function
 
     def test_get_degree_polynomial(self):
         """Verify that the degree is always between 0 and 1."""
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         for rbf_type in self.rbf_types:
             settings.rbf = rbf_type
             degree = ru.get_degree_polynomial(settings)
@@ -62,7 +59,7 @@ class TestUtils(unittest.TestCase):
 
     def test_get_size_P_matrix(self):
         """Verify that the size is always between 0 and n+1."""
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         for rbf_type in self.rbf_types:
             settings.rbf = rbf_type
             for n in range(20):
@@ -75,9 +72,10 @@ class TestUtils(unittest.TestCase):
         var_lower = np.array([-1, 0, 1])
         var_upper = np.array([1, 2, 3])
         corners = ru.get_all_corners(var_lower, var_upper)
-        self.assertItemsEqual([[-1, 0, 1], [-1, 0, 3], [-1, 2, 1], [-1, 2, 3],
-                               [1, 0, 1], [1, 0, 3], [1, 2, 1], [1, 2, 3]],
-                              corners.tolist())
+        self.assertTrue(sorted([[-1, 0, 1], [-1, 0, 3], [-1, 2, 1], 
+                                [-1, 2, 3], [1, 0, 1], [1, 0, 3], 
+                                [1, 2, 1], [1, 2, 3]]) ==
+                        sorted(corners.tolist()))
     # -- end function
 
     def test_get_lower_corners(self):
@@ -85,8 +83,9 @@ class TestUtils(unittest.TestCase):
         var_lower = np.array([-1, 0, 1])
         var_upper = np.array([1, 2, 3])
         corners = ru.get_lower_corners(var_lower, var_upper)
-        self.assertItemsEqual([[-1, 0, 1], [-1, 0, 3], [-1, 2, 1], 
-                               [1, 0, 1]], corners.tolist())
+        self.assertTrue(sorted([[-1, 0, 1], [-1, 0, 3], 
+                                [-1, 2, 1], [1, 0, 1]]) == 
+                        sorted(corners.tolist()))
     # -- end function
 
     def test_get_random_corners(self):
@@ -121,13 +120,13 @@ class TestUtils(unittest.TestCase):
         var_lower = np.array([-1, 0, 1])
         var_upper = np.array([1, 2, 3])
         integer_vars = np.array([1, 2])
-        for method in RbfSettings._allowed_init_strategy:
-            settings = RbfSettings(init_strategy = method)
+        for method in RbfoptSettings._allowed_init_strategy:
+            settings = RbfoptSettings(init_strategy = method)
             points = ru.initialize_nodes(settings, var_lower, var_upper,
                                          integer_vars)
-            msg = ('Number of points returned by {:s}'.format(method) +
+            msg=('Number of points returned by {:s}'.format(method) +
                    ' is insufficient')
-            self.assertGreaterEqual(len(points), 4, msg = msg)
+            self.assertGreaterEqual(len(points), 4, msg=msg)
             for point in points:
                 for index in integer_vars:
                     self.assertEqual(point[index] - round(point[index]), 0)
@@ -138,15 +137,15 @@ class TestUtils(unittest.TestCase):
         point = np.array([0.1, 2.3, -3.5, 4.6])
         ru.round_integer_vars(point, np.array([0, 2]))
         self.assertListEqual(point.tolist(), [0.0, 2.3, -4.0, 4.6],
-                             msg = 'Failed when integer_vars is subset')
+                             msg='Failed when integer_vars is subset')
         point = np.array([0.1, 2.3, -3.5, 4.6])
         ru.round_integer_vars(point, np.array([]))
         self.assertListEqual(point.tolist(), [0.1, 2.3, -3.5, 4.6],
-                             msg = 'Failed when integer_vars is empty')
+                             msg='Failed when integer_vars is empty')
         point = np.array([0.1, 2.3, -3.5, 4.6])
         ru.round_integer_vars(point, np.array([0, 1, 2, 3]))
         self.assertListEqual(point.tolist(), [0.0, 2.0, -4.0, 5.0],
-                             msg = 'Failed when integer_vars is everything')
+                             msg='Failed when integer_vars is everything')
     # -- end function
 
     def test_round_integer_bounds(self):
@@ -155,46 +154,46 @@ class TestUtils(unittest.TestCase):
         var_upper = np.array([2.5, 3.0, -1.2, 4.6])
         ru.round_integer_bounds(var_lower, var_upper, np.array([0, 2]))
         self.assertListEqual(var_lower.tolist(), [-1.0, 2.3, -4.0, 4.6],
-                             msg = 'Failed when integer_vars is subset')
+                             msg='Failed when integer_vars is subset')
         self.assertListEqual(var_upper.tolist(), [3.0, 3.0, -1.0, 4.6],
-                             msg = 'Failed when integer_vars is subset')
+                             msg='Failed when integer_vars is subset')
         var_lower = np.array([-0.1, 2.3, -3.5, 4.6])
         var_upper = np.array([2.5, 3.0, -1.2, 4.6])
         ru.round_integer_bounds(var_lower, var_upper, np.array([]))
         self.assertListEqual(var_lower.tolist(), [-0.1, 2.3, -3.5, 4.6],
-                             msg = 'Failed when integer_vars is empty')
+                             msg='Failed when integer_vars is empty')
         self.assertListEqual(var_upper.tolist(), [2.5, 3.0, -1.2, 4.6],
-                             msg = 'Failed when integer_vars is empty')
+                             msg='Failed when integer_vars is empty')
         var_lower = np.array([-0.1, 2.3, -3.5, 4.6])
         var_upper = np.array([2.5, 3.0, -1.2, 4.6])
         ru.round_integer_bounds(var_lower, var_upper, np.array([0, 1, 2, 3]))
         self.assertListEqual(var_lower.tolist(), [-1.0, 2.0, -4.0, 4.0],
-                             msg = 'Failed when integer_vars is everything')
+                             msg='Failed when integer_vars is everything')
         self.assertListEqual(var_upper.tolist(), [3.0, 3.0, -1.0, 5.0],
-                             msg = 'Failed when integer_vars is everything')
+                             msg='Failed when integer_vars is everything')
     # -- end function
 
     def test_norm(self):
         """Verify that norm is 0 at 0 and correct for some other vectors."""
         self.assertEqual(ru.norm(np.array([0 for i in range(10)])), 0.0,
-                         msg = 'Norm is not zero at zero')
+                         msg='Norm is not zero at zero')
         self.assertEqual(ru.norm(np.array([-1 for i in range(9)])), 3.0,
-                         msg = 'Norm is not 3.0 at {-1}^9')
+                         msg='Norm is not 3.0 at {-1}^9')
         self.assertEqual(ru.norm(np.array([-2 + i for i in range(5)])), math.sqrt(10),
-                         msg = 'Norm is not sqrt{10} at [-2, -1, 0, 1, 2]')
+                         msg='Norm is not sqrt{10} at [-2, -1, 0, 1, 2]')
     # -- end function
 
     def test_distance(self):
         """Verify that distance is 0 iff two points are the same."""
         self.assertEqual(ru.distance(np.array([i*5 for i in range(15)]),
                                      np.array([i*5 for i in range(15)])), 0.0,
-                         msg = 'Distance is not zero at equal points')
+                         msg='Distance is not zero at equal points')
         self.assertNotEqual(ru.distance(np.array([i*5 for i in range(15)]),
                                         np.array([i*5 + 0.001 for i in range(15)])),
-                            0.0, msg = 'Distance is nonzero at diff points')
+                            0.0, msg='Distance is nonzero at diff points')
         self.assertNotEqual(ru.distance(np.array([-i*5 for i in range(15)]),
                                         np.array([-i*5 + 0.001 for i in range(15)])),
-                            0.0, msg = 'Distance is nonzero at diff points')
+                            0.0, msg='Distance is nonzero at diff points')
     # -- end function
 
     def test_get_min_distance(self):
@@ -236,8 +235,8 @@ class TestUtils(unittest.TestCase):
                      for point in points]
             dist2 = ru.bulk_get_min_distance(points, other_points)
             for j in range(num_points_1):
-                msg = 'Failed random test {:d} point {:d}'.format(i, j)
-                self.assertAlmostEqual(dist1[j], dist2[j], 12, msg = msg)
+                msg='Failed random test {:d} point {:d}'.format(i, j)
+                self.assertAlmostEqual(dist1[j], dist2[j], 12, msg=msg)
     # -- end function
 
     def test_get_rbf_matrix(self):
@@ -246,7 +245,7 @@ class TestUtils(unittest.TestCase):
         Verify that the RBF matrix is symmetric and it has the correct
         size for all types of RBF.
         """
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         for i in range(50):
             dim = random.randint(1, 20)
             num_points = random.randint(10, 50)
@@ -258,7 +257,7 @@ class TestUtils(unittest.TestCase):
                 mat = ru.get_rbf_matrix(settings, dim, num_points, node_pos)
                 self.assertIsInstance(mat, np.matrix)
                 self.assertAlmostEqual(np.max(mat - mat.transpose()), 0.0,
-                                       msg = 'RBF matrix is not symmetric')
+                                       msg='RBF matrix is not symmetric')
                 size = num_points + 1
                 if (ru.get_degree_polynomial(settings) > 0):
                     size += dim ** ru.get_degree_polynomial(settings)
@@ -275,12 +274,13 @@ class TestUtils(unittest.TestCase):
         This will verify that the transformation strategies always
         produce valid results and can handle extreme cases.
         """
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         settings.fast_objfun_rel_error = 0.01
         settings.fast_objfun_abs_error = 0.01
-        list_scaling = [val for val in RbfSettings._allowed_function_scaling
+        list_scaling = [val for val in RbfoptSettings._allowed_function_scaling
                         if val != 'auto']
-        list_clipping = [val for val in RbfSettings._allowed_dynamism_clipping
+        list_clipping = [val for val in 
+                         RbfoptSettings._allowed_dynamism_clipping
                          if val != 'auto']
         transf = ru.transform_function_values
         # Create list of values to test: node_val and corresponding
@@ -301,29 +301,29 @@ class TestUtils(unittest.TestCase):
                 for (node_val, fast_node_index) in to_test:
                     settings.function_scaling = scaling
                     settings.dynamism_clipping = clipping
-                    (scaled, minval, maxval,
-                     errbounds) = transf(settings, node_val, min(node_val),
-                                         max(node_val), fast_node_index)
+                    (scaled, minval, maxval, errbounds,
+                     rescale_func) = transf(settings, node_val, min(node_val),
+                                            max(node_val), fast_node_index)
                     # Check that the number of scaled values is the
                     # same as the number of input values
-                    msg = 'Number of output values is different from input'
+                    msg='Number of output values is different from input'
                     self.assertEqual(len(scaled), len(node_val),
-                                     msg = header + msg)
-                    msg = 'Dynamism threshold was not enforced'
+                                     msg=header + msg)
+                    msg='Dynamism threshold was not enforced'
                     v1 = abs(min(scaled))
                     v2 = abs(max(scaled))
                     c1 = v1 > 1.0e-10 and v2/v1 <= settings.dynamism_threshold
                     c2 = v1 <= 1.0e-10 and v2 <= settings.dynamism_threshold
                     self.assertTrue(clipping == 'off' or c1 or c2,
-                                    msg = header + msg)
+                                    msg=header + msg)
                     for (i, j) in enumerate(fast_node_index):
-                        msg = 'Fast_node_index have wrong sign'
-                        self.assertLessEqual(errbounds[i][0], 0, msg = msg)
-                        self.assertGreaterEqual(errbounds[i][1], 0, msg = msg)
-                    msg = ('Min/Max of scaled values inconsistent with ' +
+                        msg='Fast_node_index have wrong sign'
+                        self.assertLessEqual(errbounds[i][0], 0, msg=msg)
+                        self.assertGreaterEqual(errbounds[i][1], 0, msg=msg)
+                    msg=('Min/Max of scaled values inconsistent with ' +
                            'returned scaled_min and scaled_max')
-                    self.assertEqual(min(scaled), minval, msg = header + msg)
-                    self.assertEqual(max(scaled), maxval, msg = header + msg)
+                    self.assertEqual(min(scaled), minval, msg=header + msg)
+                    self.assertEqual(max(scaled), maxval, msg=header + msg)
         # -- end for
     # -- end function
 
@@ -333,7 +333,7 @@ class TestUtils(unittest.TestCase):
         Further check that 'off' transformation returns the point as
         is, and unimplemented strategies raise a ValueError.
         """
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         settings.domain_scaling = 'affine'
         var_lower = np.array([i for i in range(5)] + [i for i in range(5)])
         var_upper = np.array([i for i in range(5)] + [i + 10 for i in range(5)])
@@ -344,19 +344,19 @@ class TestUtils(unittest.TestCase):
         orig_point = ru.transform_domain(settings, var_lower, var_upper,
                                          transf_point, True)
         for i in range(10):
-            msg = 'Exceeding lower bound on affine domain scaling'
-            self.assertLessEqual(0.0, transf_point[i], msg = msg)
-            msg = 'Exceeding upper bound on affine domain scaling'
-            self.assertLessEqual(transf_point[i], 1.0, msg = msg)
-            msg = 'Doubly transformed point does not match original'
-            self.assertAlmostEqual(point[i], orig_point[i], 12, msg = msg)
+            msg='Exceeding lower bound on affine domain scaling'
+            self.assertLessEqual(0.0, transf_point[i], msg=msg)
+            msg='Exceeding upper bound on affine domain scaling'
+            self.assertLessEqual(transf_point[i], 1.0, msg=msg)
+            msg='Doubly transformed point does not match original'
+            self.assertAlmostEqual(point[i], orig_point[i], 12, msg=msg)
         # Check that 'off' scaling does not do anything
         settings.domain_scaling = 'off'
         transf_point = ru.transform_domain(settings, var_lower, 
                                            var_upper, point)
         for i in range(10):
-            msg = 'Transformed point with \'off\' does not match original'
-            self.assertEqual(point[i], transf_point[i], msg = msg)
+            msg='Transformed point with \'off\' does not match original'
+            self.assertEqual(point[i], transf_point[i], msg=msg)
         # Check that unimplemented strategies are rejected
         settings.domain_scaling = 'test'
         self.assertRaises(ValueError, ru.transform_domain, settings, 
@@ -365,16 +365,16 @@ class TestUtils(unittest.TestCase):
 
     def test_transform_domain_bounds(self):
         """Check that domain bounds are consistent."""
-        list_scaling = [val for val in RbfSettings._allowed_domain_scaling 
+        list_scaling = [val for val in RbfoptSettings._allowed_domain_scaling 
                         if val != 'auto']
         for scaling in list_scaling:
-            settings = RbfSettings(domain_scaling = scaling)
+            settings = RbfoptSettings(domain_scaling = scaling)
             # Test limit case with empty bounds
             vl, vu = ru.transform_domain_bounds(settings, np.array([]), np.array([]))
-            msg = 'Failed transform_domain_bounds on empty bounds'
-            self.assertEqual(len(vl), 0, msg = msg)
-            self.assertEqual(len(vu), 0, msg = msg)
-            msg = 'Bounds inconsistent with random bounds'
+            msg='Failed transform_domain_bounds on empty bounds'
+            self.assertEqual(len(vl), 0, msg=msg)
+            self.assertEqual(len(vu), 0, msg=msg)
+            msg='Bounds inconsistent with random bounds'
             for i in range(10):
                 dim = random.randint(0, 20)
                 var_lower = np.array([random.uniform(-100, 100) for j in range(dim)])
@@ -382,10 +382,10 @@ class TestUtils(unittest.TestCase):
                              for j in range(dim)])
                 vl, vu = ru.transform_domain_bounds(settings, var_lower,
                                                     var_upper)
-                self.assertEqual(len(vl), len(var_lower), msg = msg)
-                self.assertEqual(len(vu), len(var_upper), msg = msg)
+                self.assertEqual(len(vl), len(var_lower), msg=msg)
+                self.assertEqual(len(vu), len(var_upper), msg=msg)
                 for j in range(dim):
-                    self.assertLessEqual(vl[j], vu[j], msg = msg)
+                    self.assertLessEqual(vl[j], vu[j], msg=msg)
     # -- end function
 
     def test_get_sigma_n(self):
@@ -398,7 +398,7 @@ class TestUtils(unittest.TestCase):
                                            num_global_searches,
                                            num_initial_points)
                         self.assertTrue(0 <= i < k, 
-                                        msg = 'sigma_n out of bounds')
+                                        msg='sigma_n out of bounds')
     # -- end function
 
     def test_get_fmax_current_iter(self):
@@ -408,15 +408,93 @@ class TestUtils(unittest.TestCase):
         there is a single-element list of node values, and when the
         list of node values is exactly the minimum required k + 1.
         """
-        settings = RbfSettings()
+        settings = RbfoptSettings()
         fun = ru.get_fmax_current_iter
         self.assertEqual(fun(settings, 0, 1, 1, np.array([1])), 1,
-                         msg = 'Failed on single-element list')
-        self.assertEqual(fun(settings, 10, 11, 5, np.array([i for i in range(11)])),
-                         10, msg = 'Failed on n == k + 1')
+                         msg='Failed on single-element list')
+        self.assertEqual(fun(settings, 10, 11, 5, 
+                             np.array([i for i in range(11)])),
+                         10, msg='Failed on n == k + 1')
     # -- end function
 
 # -- end class
+
+class TestModelSelection(unittest.TestCase):
+    """Test the model selection functions."""
+
+    def setUp(self):
+        """Determine which model selection solvers should be tested."""
+        self.n = 3
+        self.k = 10
+        self.var_lower = np.array([i for i in range(self.n)])
+        self.var_upper = np.array([i + 10 for i in range(self.n)])
+        self.node_pos = np.array([self.var_lower, self.var_upper, 
+                                  [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12],
+                                  [3.2, 10.2, 4], [2.1, 1.1, 7.4],
+                                  [6.6, 9.1, 2.0], [10, 8.8, 11.1],
+                                  [7, 7, 7]])
+        self.node_val = np.array([2*i*i for i in range(self.k)])
+
+    # -- end function        
+
+    def test_get_best_rbf_model(self):
+        """Test the get_best_rbf_model function.
+        """
+        settings = RbfoptSettings()
+        res = ru.get_best_rbf_model(settings, self.n, self.k, 
+                                    self.node_pos, self.node_val,
+                                    self.k)
+        self.assertEqual(res, 'linear',
+                         msg='Did not obtain expected model')
+    # -- end function
+
+    def test_get_model_quality_estimate(self):
+        """Test the get_model_quality_estimate function.
+        """
+        for rbf in ['cubic', 'thin_plate_spline', 'multiquadric', 'linear']:
+            settings = RbfoptSettings(rbf=rbf)
+            error = ru.get_model_quality_estimate(
+                settings, self.n, self.k, self.node_pos, 
+                self.node_val, self.k)
+            # Create a copy of the interpolation nodes and values
+            sorted_idx = self.node_val.argsort()
+            sorted_node_val = self.node_val[sorted_idx]
+            # Initialize the arrays used for the cross-validation
+            cv_node_pos = self.node_pos[sorted_idx[1:]]
+            cv_node_val = self.node_val[sorted_idx[1:]]            
+            # The node that was left out
+            rm_node_pos = self.node_pos[sorted_idx[0]]
+            rm_node_val = self.node_val[sorted_idx[0]]
+            # Estimate of the model error
+            loo_error = 0.0    
+            for i in range(self.k):
+                # Compute the RBF interpolant with one node left out
+                Amat = ru.get_rbf_matrix(settings, self.n, self.k-1, 
+                                         cv_node_pos)
+                rbf_l, rbf_h = ru.get_rbf_coefficients(
+                    settings, self.n, self.k-1, Amat, cv_node_val)
+                # Compute value of the interpolant at the removed node
+                predicted_val = ru.evaluate_rbf(settings, rm_node_pos, 
+                                                self.n, self.k-1, 
+                                                cv_node_pos, rbf_l, rbf_h)
+                # Update leave-one-out error
+                loc = np.searchsorted(sorted_node_val, predicted_val)
+                loo_error += abs(loc - i)
+                # Update the node left out
+                if (i < self.k - 1):
+                    tmp = cv_node_pos[i].copy()
+                    cv_node_pos[i] = rm_node_pos
+                    rm_node_pos = tmp
+                    cv_node_val[i], rm_node_val = rm_node_val, cv_node_val[i]
+            self.assertAlmostEqual(loo_error, error, 
+                                   msg='Model selection procedure ' +
+                                   'miscomputed the error')
+            # -- end for
+        # -- end for
+    # -- end function
+
+# -- end class
+
 
 if (__name__ == '__main__'):
     # Set random seed for testing environment
