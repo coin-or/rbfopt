@@ -15,7 +15,7 @@
 	Several default settings have been changed.
 	* Removed:
 	Module rbfopt_model_selection is no longer necessary.
-	Option model_selection solver is no longer necessary.
+	Option model_selection_solver is no longer necessary.
 	Option max_stalled_obj_fun_impr is subsumed by eps_impr.
 	Cython modules and setup.py have been removed.
 
