@@ -1,9 +1,8 @@
 #  File:      README
 #  Author(s): Giacomo Nannicini
-#             Singapore University of Technology and Design
 #             International Business Machines Corporation
-#             nannicini@sutd.edu.sg, nannicini@us.ibm.com
-#  Last edit: 02/10/17
+#             nannicini@us.ibm.com
+#  Last edit: 06/09/17
 #
 #  (C) Copyright Singapore University of Technology and Design 2015.
 #  (C) Copyright International Business Machines Corporation 2016.
@@ -13,8 +12,8 @@
 This software is released under the Revised BSD License. By using
 this software, you are implicitly accepting the terms of the license.
 
-RBFOpt is a Python library for black-box (also known as
-derivative-free) optimization.
+RBFOpt is a Python library for black-box optimization (also known as
+derivative-free optimization). It supports Python 2.7 and Python 3.
 
 Contents of this directory:
 
@@ -48,8 +47,6 @@ rbfopt_config.py:
 rbfopt_degreeX_models.py:
 	PyOmo models for the auxiliary problems necessary for RBF
 	functions with minimum required polynomial degree X.
-rbfopt_model_selection.py:
-	Routines for automatic model selection.
 rbfopt_refinement:
 	Routines for trust-region based refinement phase.
 rbfopt_settings.py:
@@ -72,8 +69,6 @@ test_rbfopt_degreeX_models.py:
 	Testing module for rbfopt_degreeX_models.py.
 test_rbfopt_env.py:
 	Environment variables for testing environment.
-test_rbfopt_model_selection::
-	Testing module for rbfopt_model_selection.py
 test_rbfopt_refinement::
 	Testing module for rbfopt_refinement.py
 test_rbfopt_settings.py:
@@ -102,14 +97,14 @@ This package requires the following software:
 Python version >= 2.7 
 NumPy version >= 1.11.0
 SciPy version >= 0.13.3
-Pyomo version 4.3.11388
+Pyomo version >= 4.3.11388
 
 The software has been tested with the versions indicated above. It may
 work with earlier version and should work with subsequent version, if
 they are backward compatible.
 
-The code is mainly developed for Python 3, but it is backward
-compatible with Python 2.7. We recommend using Python 3 if possible.
+The code is mainly developed keeping Python 3 in mind, but it also
+runs on Python 2.7. We recommend using Python 3 if possible.
 
 The easiest way to install all the dependencies is via the Python
 module manager pip, using the command:
@@ -163,7 +158,11 @@ procedure. Supported solvers:
 IBM-ILOG Cplex via its Python API
 COIN-OR Clp via CyLP (see https://github.com/coin-or/CyLP).
 
-The two packages above are optional.
+The two packages above are optional. Keep in mind that the automatic
+model selection procedure (option --rbf auto) is in our experience
+very beneficial in practice, and it can be slow without a linear
+programming solver installed. Make sure you set the option
+--model_selection_solver correctly if you are using one the solvers.
 
 
 #--------------------------------------------------------------------------

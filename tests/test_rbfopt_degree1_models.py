@@ -16,10 +16,7 @@ import numpy as np
 import pyomo.environ
 import test_rbfopt_env
 import rbfopt_degree1_models as d1
-try:
-    import cython_rbfopt.rbfopt_utils as ru
-except ImportError:
-    import rbfopt_utils as ru
+import rbfopt_utils as ru
 from rbfopt_settings import RbfoptSettings
 
 class TestCubicModels(unittest.TestCase):

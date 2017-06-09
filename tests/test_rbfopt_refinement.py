@@ -15,10 +15,7 @@ import unittest
 import numpy as np
 import test_rbfopt_env
 import rbfopt_refinement as ref
-try:
-    import cython_rbfopt.rbfopt_utils as ru
-except ImportError:
-    import rbfopt_utils as ru
+import rbfopt_utils as ru
 from rbfopt_settings import RbfoptSettings
 
 def dist(a, b):

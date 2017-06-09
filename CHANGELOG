@@ -1,3 +1,12 @@
+2017-06-08  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_utils.py (get_model_quality_estimate)
+	(get_best_rbf_model): Functions moved to this module from the
+	former model_selection module.	
+	* rbfopt_model_selection.py: Module removed.
+	* rbfopt_settings.py (RbfoptSettings): Many default settings have
+	been updated, most notably rbf is now set to auto, and some
+	settings have been deleted.
+	
 2017-06-03  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_utils.py: Major optimizations in the computation of
 	radial basis functions.

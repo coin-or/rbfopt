@@ -20,17 +20,11 @@ import math
 import time
 import os
 import pickle
+import copy
 import numpy as np
 from multiprocessing import Pool
-try:
-    import cython_rbfopt.rbfopt_utils as ru
-except (ImportError, TypeError):
-    import rbfopt_utils as ru
-try:
-    import cython_rbfopt.rbfopt_aux_problems as aux
-except (ImportError, TypeError):
-    import rbfopt_aux_problems as aux
-import rbfopt_model_selection as ms
+import rbfopt_utils as ru
+import rbfopt_aux_problems as aux
 import rbfopt_config as config
 import rbfopt_refinement as ref
 from rbfopt_black_box import BlackBox
@@ -728,15 +722,15 @@ class RbfoptAlgorithm:
 
             # If RBF selection is automatic, at the beginning of each
             # cycle check if a different RBF yields a better model
-            if (settings.rbf == 'auto' and k > n+1 and 
+            if (settings.rbf == 'auto' and k > n+2 and 
                 self.current_step <= self.first_step):
                 loc_iter = int(math.ceil(k*0.1))
                 glob_iter = int(math.ceil(k*0.7))
-                self.best_local_rbf = ms.get_best_rbf_model(l_settings, n, k, 
+                self.best_local_rbf = ru.get_best_rbf_model(l_settings, n, k, 
                                                             self.node_pos,
                                                             scaled_node_val,
                                                             loc_iter)
-                self.best_global_rbf = ms.get_best_rbf_model(l_settings, n, k,
+                self.best_global_rbf = ru.get_best_rbf_model(l_settings, n, k,
                                                              self.node_pos,
                                                              scaled_node_val,
                                                              glob_iter)
@@ -757,13 +751,13 @@ class RbfoptAlgorithm:
                     # Compute RBF interpolant at current stage
                     if (fast_node_index.size):
                         # Get coefficients for the exact RBF
-                        rc = ru.get_rbf_coefficients(l_settings, n, k, 
-                                                     Amat, scaled_node_val)
+                        rbf_l, rbf_h = ru.get_rbf_coefficients(
+                            l_settings, n, k, Amat, scaled_node_val)
                         # RBF with some fast function evaluations
                         rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
                             l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
                             scaled_node_val, fast_node_index,
-                            node_err_bounds, rc[0], rc[1])
+                            node_err_bounds, rbf_l, rbf_h)
                     else:
                         # Fully accurate RBF
                         rbf_l, rbf_h = ru.get_rbf_coefficients(
@@ -1033,31 +1027,42 @@ class RbfoptAlgorithm:
                 # Transform back to original space if necessary
                 next_p_orig = ru.transform_domain(l_settings, var_lower,
                                                   var_upper, next_p, True)
-                # Add to data structures.
-                self.add_node(next_p, next_p_orig, next_val, node_is_fast)
-                gap = ru.compute_gap(l_settings, self.fbest, 
-                                     self.is_fbest_fast)
-                self.update_log(iid, node_is_fast, next_val, gap)
-                # Perform refinement updates if necessary
-                if (iid == 'RefinementStep'):
-                    real_impr = (ref_rescale_function(
-                        node_val[self.tr_iterate_index]) - 
-                                 ref_rescale_function(next_val))
-                    self.refinement_update_parallel(model_impr, real_impr)
-                    refinement_itercount += 1
-                # Update iteration number
+                if (node_is_fast and
+                    self.require_accurate_evaluation(next_val)):
+                    # Evaluate again
+                    node_is_fast = False
+                    new_res = pool.apply_async(
+                        objfun,  
+                        ([self.bb, next_p_orig, self.fixed_vars], ))
+                    self.evalcount += 1
+                    res_eval.append([new_res, next_p, node_is_fast, iid])
+                    # Update temporary node value
+                    temp_node_val[j] = next_val
+                else:
+                    # Add to data structures.
+                    self.add_node(next_p, next_p_orig, next_val, node_is_fast)
+                    gap = ru.compute_gap(l_settings, self.fbest, 
+                                         self.is_fbest_fast)
+                    self.update_log(iid, node_is_fast, next_val, gap)
+                    # Perform refinement updates if necessary
+                    if (iid == 'RefinementStep'):
+                        real_impr = (ref_rescale_function(
+                            node_val[self.tr_iterate_index]) - 
+                                     ref_rescale_function(next_val))
+                        self.refinement_update_parallel(model_impr, real_impr)
+                        refinement_itercount += 1
+                    # Remove from list of temporary points
+                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
+                                              j, axis=0)
+                    temp_node_val = np.delete(temp_node_val, j)
+                    temp_node_is_fast = np.delete(temp_node_is_fast, j)
+                # Perform main updates
                 self.itercount += 1
+                self.stalling_update()
+                self.phase_update()
                 # Check if we should save the state.
                 if (self.itercount % l_settings.save_state_interval == 0):
                     self.save_to_file(l_settings.save_state_file)
-                # Remove from list of temporary points
-                temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), j,
-                                          axis=0)
-                temp_node_val = np.delete(temp_node_val, j)
-                temp_node_is_fast = np.delete(temp_node_is_fast, j)
-                # Perform main updates
-                self.stalling_update()
-                self.phase_update()
             # -- end while
             if (itercount_before_rescheck < self.itercount):
                 # If some points have been evaluated, force another
@@ -1105,7 +1110,10 @@ class RbfoptAlgorithm:
                     self.num_cons_discarded += 1
                     if (iteration_id == 'RefinementStep'):
                         self.num_cons_refinement = 0
+                    # Update iteration number
+                    self.itercount += 1
                     self.update_log('Discarded')
+
                 else:
                     # Transform back to original space if necessary
                     next_p_orig = ru.transform_domain(
@@ -1211,6 +1219,9 @@ class RbfoptAlgorithm:
                                if self.two_phase_optimization
                                else np.array([]))
 
+            # Make a copy as there might be parallel access
+            l_settings = copy.deepcopy(l_settings)
+
             # If function scaling is automatic, determine which one to use
             if (settings.function_scaling == 'auto' and 
                 self.current_step <= self.first_step):
@@ -1230,15 +1241,15 @@ class RbfoptAlgorithm:
 
             # If RBF selection is automatic, at the beginning of each
             # cycle check if a different RBF yields a better model
-            if (settings.rbf == 'auto' and k > n+1 and 
+            if (settings.rbf == 'auto' and k > n+2 and 
                 self.current_step <= self.first_step):
                 loc_iter = int(math.ceil(k*0.1))
                 glob_iter = int(math.ceil(k*0.7))
-                self.best_local_rbf = ms.get_best_rbf_model(l_settings, n, 
+                self.best_local_rbf = ru.get_best_rbf_model(l_settings, n, 
                                                             k, node_pos,
                                                             scaled_node_val,
                                                             loc_iter)
-                self.best_global_rbf = ms.get_best_rbf_model(l_settings, n, 
+                self.best_global_rbf = ru.get_best_rbf_model(l_settings, n, 
                                                              k, node_pos,
                                                              scaled_node_val,
                                                              glob_iter)
@@ -1258,13 +1269,13 @@ class RbfoptAlgorithm:
                 # Compute RBF interpolant at current stage
                 if (fast_node_index.size):
                     # Get coefficients for the exact RBF
-                    rc = ru.get_rbf_coefficients(l_settings, n, k, 
-                                                 Amat, scaled_node_val)
+                    rbf_l, rbf_h = ru.get_rbf_coefficients(
+                        l_settings, n, k, Amat, scaled_node_val)
                     # RBF with some fast function evaluations
                     rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
                         l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
                         scaled_node_val, fast_node_index,
-                        node_err_bounds, rc[0], rc[1])
+                        node_err_bounds, rbf_l, rbf_h)
                 else:
                     # Fully accurate RBF
                     rbf_l, rbf_h = ru.get_rbf_coefficients(
@@ -1283,15 +1294,33 @@ class RbfoptAlgorithm:
             next_p = None
             curr_is_fast = (self.eval_mode == 'fast')
 
+            if (self.current_step == self.restoration_step):
+                # Restoration
+                next_p, to_remove = self.restoration_search_parallel(
+                    temp_node_pos)
+                if (next_p is None):
+                    self.update_log('Restoration phase failed. Abort.')
+                    # This will force the optimization process to return
+                    break
+                # Remove necessary nodes and move them to the
+                # temporary list
+                for j in reversed(to_remove):
+                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
+                                              j, axis=0)
+                    temp_node_val = np.delete(temp_node_val, j)
+                    temp_node_is_fast = np.delete(temp_node_is_fast, j)
+                    res_removed.append(res_eval.pop(j))
+                iteration_id = 'Restoration'
+
             # If no refinement is in progress, and the frequency is
             # not excessive, start it or keep it going
-            if ((refinement_itercount <= self.itercount / 
+            elif ((refinement_itercount <= self.itercount / 
                  l_settings.refinement_frequency) and
                 ('RefinementStep' not in [v[-1] for v in res_eval]) and
                 ('RefinementStep' not in [v[-1] for v in res_search])):
                 if (self.num_cons_refinement == 0 or
                     (self.fmin <= node_val[self.tr_iterate_index] -
-                     settings.eps_impr * 
+                     l_settings.eps_impr * 
                      max(1.0, abs(node_val[self.tr_iterate_index])))):
                     # For the first refinement step iteration, some data
                     # has to be computed
@@ -1325,24 +1354,6 @@ class RbfoptAlgorithm:
                      node_pos, Amatinv))
                 iteration_id = 'InfStep'
                 res_search.append([new_res, curr_is_fast, iteration_id])
-
-            elif (self.current_step == self.restoration_step):
-                # Restoration
-                next_p, to_remove = self.restoration_search_parallel(
-                    temp_node_pos)
-                if (next_p is None):
-                    self.update_log('Restoration phase failed. Abort.')
-                    # This will force the optimization process to return
-                    break
-                # Remove necessary nodes and move them to the
-                # temporary list
-                for j in reversed(to_remove):
-                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
-                                              j, axis=0)
-                    temp_node_val = np.delete(temp_node_val, j)
-                    temp_node_is_fast = np.delete(temp_node_is_fast, j)
-                    res_removed.append(res_eval.pop(j))
-                iteration_id = 'Restoration'
             
             elif (self.current_step == self.local_search_step):
                 # Local search
@@ -1569,9 +1580,10 @@ class RbfoptAlgorithm:
             if (cons_restoration == 0):
                 # First, try to get the next point through something
                 # similar to a global search, using the MSRSM
-                # algorithm with default settings for speed
-                temp_settings = RbfoptSettings(algorithm = 'MSRSM',
-                                            global_search_method = 'genetic')
+                # algorithm.
+                temp_settings = RbfoptSettings(
+                    rbf='linear', algorithm='MSRSM', 
+                    global_search_method='genetic')
                 next_p = pure_global_step(temp_settings, 
                                           self.n, len(self.node_pos),
                                           self.l_lower, self.l_upper,
@@ -1627,12 +1639,12 @@ class RbfoptAlgorithm:
         cons_restoration = 0
         to_be_removed = list()
         # Get a point far from all current nodes
-        next_p = pure_global_step(RbfoptSettings(algorithm = 'MSRSM'),
-                                  self.n, len(self.node_pos) +
-                                  len(temp_node_pos), self.l_lower,
-                                  self.l_upper, self.integer_vars,
-                                  np.vstack((self.node_pos, temp_node_pos)), 
-                                  None)
+        next_p = pure_global_step(
+            RbfoptSettings(rbf='linear', algorithm='MSRSM', 
+                           global_search_method='genetic'),
+            self.n, len(self.node_pos) + len(temp_node_pos), 
+            self.l_lower, self.l_upper, self.integer_vars,
+            np.vstack((self.node_pos, temp_node_pos)), None)
         # Loop through all temporary nodes, and try to restore the
         # matrix by substituting the above point.
         i = len(temp_node_pos) - 1
@@ -1708,9 +1720,9 @@ class RbfoptAlgorithm:
         if (tr_move):
             # Accept new iterate
             self.tr_iterate_index = len(self.node_pos) - 1
-        if (self.tr_radius < self.l_settings.min_tr_radius or
+        if (self.tr_radius < self.l_settings.tr_min_radius or
             ((self.num_cons_refinement >= 
-              self.l_settings.max_cons_refinement) and
+              self.l_settings.max_consecutive_refinement) and
              (self.itercount <= self.l_settings.max_iterations * 
               self.l_settings.thresh_unlimited_refinement) and
              (self.evalcount <= self.l_settings.max_evaluations * 
@@ -1725,7 +1737,8 @@ class RbfoptAlgorithm:
             # used to build model.
             to_replace = np.argmax(self.node_val[self.tr_model_set])
             self.tr_model_set[to_replace] = len(self.node_pos) - 1
-        if (self.num_cons_refinement < self.l_settings.max_cons_refinement):
+        if (self.num_cons_refinement < 
+            self.l_settings.max_consecutive_refinement):
             # Update value at last refinement, unless we stopped
             # refinement because of limit of iterations reached
             self.fmin_last_refine = self.fmin
@@ -1754,7 +1767,7 @@ class RbfoptAlgorithm:
         if (tr_move):
             # Accept new iterate
             self.tr_iterate_index = len(self.node_pos) - 1
-        if (self.tr_radius < self.l_settings.min_tr_radius):
+        if (self.tr_radius < self.l_settings.tr_min_radius):
             # Do no continue refinement
             self.num_cons_refinement = 0
         else:
@@ -1762,7 +1775,8 @@ class RbfoptAlgorithm:
             # used to build model.
             to_replace = np.argmax(self.node_val[self.tr_model_set])
             self.tr_model_set[to_replace] = len(self.node_pos) - 1
-        if (self.num_cons_refinement < self.l_settings.max_cons_refinement):
+        if (self.num_cons_refinement < 
+            self.l_settings.max_consecutive_refinement):
             # Update value at last refinement, unless we stopped
             # refinement because of limit of iterations reached
             self.fmin_last_refine = self.fmin
@@ -1788,8 +1802,8 @@ class RbfoptAlgorithm:
         """
         if (self.itercount % (self.cycle_length - self.first_step) == 0):
             if (self.fmin <= (self.fmin_cycle_start - 
-                              self.l_settings.max_stalled_objfun_impr
-                              * max(1.0, abs(self.fmin_cycle_start)))):
+                              self.l_settings.eps_impr *
+                              max(1.0, abs(self.fmin_cycle_start)))):
                 self.num_stalled_cycles = 0
                 self.fmin_cycle_start = self.fmin
             else:
@@ -1819,6 +1833,7 @@ class RbfoptAlgorithm:
         best_possible = ((ru.get_fast_error_bounds(self.l_settings,
                                                    [self.fmin])[0, 0]
                           if self.is_fmin_fast else 0.0) + self.fmin)
+        best_possible = self.fmin
         if ((fast_val <= best_possible -
              self.l_settings.eps_impr*max(1.0, abs(best_possible))) or
             (fast_val <= self.l_settings.target_objval +
@@ -2133,7 +2148,7 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
         point, model_impr_adj = ref.get_integer_candidate(
             settings, n, k, h, start_point, tr_radius, point, integer_vars)
         model_impr += model_impr_adj
-    if (grad_norm <= settings.min_tr_grad_norm):
+    if (grad_norm <= settings.tr_min_grad_norm):
         return None, model_impr
     return point, model_impr
 
@@ -2284,9 +2299,9 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         local_varu = var_upper
 
     next_p = aux.global_search(settings, n, k, local_varl, local_varu,
-                             integer_vars, node_pos, rbf_lambda,
-                             rbf_h, Amatinv, target_val, dist_weight,
-                             scaled_fmin, scaled_fmax)
+                               integer_vars, node_pos, rbf_lambda,
+                               rbf_h, Amatinv, target_val, dist_weight,
+                               scaled_fmin, scaled_fmax)
     return next_p
 # -- end function
 

@@ -15,10 +15,7 @@ from __future__ import absolute_import
 
 from pyomo.environ import *
 import sys
-try:
-    import cython_rbfopt.rbfopt_utils as ru
-except ImportError:
-    import rbfopt_utils as ru
+import rbfopt_utils as ru
 import numpy as np
 import rbfopt_config as config
 from rbfopt_settings import RbfoptSettings

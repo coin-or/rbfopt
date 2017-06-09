@@ -197,8 +197,8 @@ def rbfopt_cl_interface(args, black_box):
 # -- end function
 
 if (__name__ == "__main__"):
-    if (sys.version_info[0] < 3):
-        print('Error: this software requires Python 3.')
+    if (sys.version_info[0] <= 2 and sys.version_info[1] < 7):
+        print('Error: this software requires Python 2.7 or later')
         exit()
     # Create command line parsers
     desc = ('Apply the RBF method to an object of class "BlackBox".')

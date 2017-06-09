@@ -20,8 +20,10 @@ from __future__ import absolute_import
 import sys
 import math
 import itertools
+import warnings
 import numpy as np
 import scipy.spatial as ss
+import scipy.linalg as la
 from scipy.special import xlogy
 import rbfopt_config as config
 from rbfopt_settings import RbfoptSettings
@@ -1369,6 +1371,171 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
 
 # -- end function
 
+def get_model_quality_estimate(settings, n, k, node_pos, node_val,
+                               num_nodes_to_check):
+    """Compute an estimate of model quality.
+
+    Computes an estimate of model quality, performing
+    cross-validation. It only checks the best num_nodes_to_check nodes.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfoptSettings`
+        Global and algorithmic settings.
+
+    n : int
+        Dimension of the problem, i.e. the space where the point lives.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    node_pos : 2D numpy.ndarray[float]
+        Location of current interpolation nodes (one on each row).
+
+    node_val : 1D numpy.ndarray[float]
+        List of values of the function at the nodes.
+
+    num_nodes_to_check : int
+        Number of nodes on which quality should be tested.
+    
+    Returns
+    -------
+    float
+        An estimate of the leave-one-out cross-validation error, which
+        can be interpreted as a measure of model quality.
+
+    Raises
+    ------
+    ValueError
+        If the RBF type is not implemented.
+    """
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(node_val, np.ndarray))
+    assert(isinstance(settings, RbfoptSettings))
+    assert(len(node_val) == k)
+    assert(len(node_pos) == k)
+    assert(num_nodes_to_check <= k)
+    # We cannot find a nontrivial leave-one-out interpolant if the
+    # following condition is not met.
+    assert(k > n + 2)
+
+    # Get size of polynomial part of the matrix (p) and sign of obj
+    # function (sign)
+    if (get_degree_polynomial(settings) == 1):
+        p = n + 1
+    elif (get_degree_polynomial(settings) == 0):
+        p = 1
+    else:
+        raise ValueError('RBF type ' + settings.rbf + ' not supported')
+
+    # Sort interpolation nodes by increasing objective function value
+    sorted_idx = node_val.argsort()
+
+    # Initialize the arrays used for the cross-validation
+    cv_node_pos = node_pos[sorted_idx]
+    cv_node_val = node_val[sorted_idx]
+
+    Amat = get_rbf_matrix(settings, n, k, cv_node_pos)
+    lu, piv = la.lu_factor(Amat, check_finite=False)
+    rhs = np.zeros(k + p)
+    rhs[:k] = cv_node_val
+    base_sol = la.lu_solve((lu, piv), rhs)
+    # Estimate of the model error
+    loo_error = 0.0
+    
+    for i in range(num_nodes_to_check):
+        # Compute the RBF interpolant with one node left out
+        if (abs(base_sol[i]) <= settings.eps_zero):
+            # Lambda_i is 0 so we can just take the RBF interpolant as
+            # is: it does not involve node i.
+            predicted_val = evaluate_rbf(settings, cv_node_pos[i], n, k,
+                                         cv_node_pos, base_sol[:k], 
+                                         base_sol[k:])
+        else:
+            # Create basis vector e_i and solve for it
+            e_i = np.zeros(k + p)
+            e_i[i] = 1
+            adj = la.lu_solve((lu, piv), e_i)
+            # Adjust the solution of the linear system
+            new_sol = base_sol - adj*base_sol[i]/adj[i]
+            predicted_val = evaluate_rbf(settings, cv_node_pos[i], n, k,
+                                         cv_node_pos, new_sol[:k], 
+                                         new_sol[k:])
+
+        # Update leave-one-out error
+        loc = np.searchsorted(cv_node_val, predicted_val)
+        loo_error += abs(loc - i)
+
+    return loo_error
+
+# -- end function
+
+def get_best_rbf_model(settings, n, k, node_pos, node_val, 
+                       num_nodes_to_check):
+    """Compute which type of RBF yields the best model.
+
+    Compute which RBF interpolant yields the best surrogate model,
+    using cross validation to determine the lowest leave-one-out
+    error.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfoptSettings`
+        Global and algorithmic settings.
+
+    n : int
+        Dimension of the problem, i.e. the space where the point lives.
+
+    k : int
+        Number of nodes, i.e. interpolation points.
+
+    node_pos : 2D numpy.ndarray[float]
+        Location of current interpolation nodes (one on each row.
+
+    node_val : 1D numpy.ndarray[float]
+        List of values of the function at the nodes.
+
+    num_nodes_to_check : int
+        Number of nodes on which quality should be tested.
+
+    Returns
+    -------
+    str
+        The type of RBF that currently yields the best surrogate
+        model, based on leave-one-out error. This will be one of the
+        supported types of RBF.
+    """
+    assert(isinstance(node_pos, np.ndarray))
+    assert(isinstance(node_val, np.ndarray))
+    assert(isinstance(settings, RbfoptSettings))
+    assert(len(node_val) == k)
+    assert(len(node_pos) == k)
+    assert(num_nodes_to_check <= k)
+    # We cannot find a nontrivial leave-one-out interpolant if the
+    # following condition is not met.
+    assert(k > n + 2)
+
+    best_loo_error = float('inf')
+    best_model = None
+    original_rbf_type = settings.rbf
+    rbf_list = ['cubic', 'thin_plate_spline', 'multiquadric', 'linear']
+    with warnings.catch_warnings():
+        warnings.filterwarnings('error')
+        for rbf_type in rbf_list:
+            settings.rbf = rbf_type
+            try:
+                loo_error = get_model_quality_estimate(
+                    settings, n, k, node_pos, node_val, num_nodes_to_check)
+            except:
+                return original_rbf_type
+            if (loo_error < best_loo_error):
+                best_loo_error = loo_error
+                best_model = rbf_type
+
+    settings.rbf = original_rbf_type
+    return best_model
+
+# -- end function
 
 def results_ready(results):
     """Check if some asynchronous results completed.

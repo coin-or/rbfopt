@@ -70,7 +70,8 @@ def init_trust_region(settings, n, k, node_pos, center):
     # Build array of nodes to keep
     model_set = dist_order[np.arange(num_to_keep)]
     tr_radius = max(np.percentile(dist[0, model_set[1:]], 0.5),
-                    settings.min_tr_radius * 2**4)
+                    settings.tr_min_radius * 
+                    2**settings.tr_init_radius_multiplier)
     return (model_set, tr_radius)
 # -- end function
 
@@ -257,7 +258,7 @@ def get_integer_candidate(settings, n, k, h, start_point, tr_radius,
     curr_point[integer_vars] = np.where(h[integer_vars] >= 0, ceil, floor)
     best_value = np.dot(h, curr_point)
     best_point = np.copy(curr_point)
-    for i in range(n * settings.num_tr_integer_candidates):
+    for i in range(n * settings.tr_num_integer_candidates):
         # We round each integer variable up or down depending on its
         # fractional value and a uniform random number
         curr_point[integer_vars] = np.where(
@@ -290,7 +291,7 @@ def update_trust_region_radius(settings, tr_radius, model_obj_diff,
 
     model_obj_diff : float
         Objective function value of the new point according to the
-        quadratic model.
+        linear model.
 
     real_obj_diff : float
         Real objective function value of the new point.
@@ -305,7 +306,8 @@ def update_trust_region_radius(settings, tr_radius, model_obj_diff,
     assert(tr_radius >= 0)
     assert(isinstance(settings, RbfoptSettings))
     init_radius = tr_radius
-    decrease = real_obj_diff / model_obj_diff
+    decrease = (real_obj_diff / model_obj_diff 
+                if abs(model_obj_diff) > settings.eps_zero else 0)
     if (decrease <= settings.tr_acceptable_decrease_shrink):
         tr_radius *= 0.5
     elif (decrease >= settings.tr_acceptable_decrease_enlarge):

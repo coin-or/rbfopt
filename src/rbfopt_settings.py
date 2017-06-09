@@ -32,16 +32,16 @@ class RbfoptSettings:
 
     rbf : str
         Radial basis function used by the method. Choice of 'cubic',
-        'thin_plate_spline', 'linear', 'multiquadric', 'auto'. Default
-        'thin_plate_spline'.
+        'thin_plate_spline', 'linear', 'multiquadric', 'auto'. In case
+        of 'auto', the type of rbf will be dynamically selected by the
+        algorithm. Default 'auto'.
 
     max_iterations : int
-        Maximum number of iterations. Default 150.
+        Maximum number of iterations. Default 1000.
 
     max_evaluations : int
-        Maximum number of function evaluations in accurate mode. This
-        includes the evaluations to initialize the algorithm. Default
-        250.
+        Maximum number of function evaluations in accurate mode. 
+        Default 300.
 
     max_fast_evaluations : int
         Maximum number of function evaluations in fast mode.
@@ -78,7 +78,7 @@ class RbfoptSettings:
         Tolerance for improvement of the objective function. Any
         improvement in the objective function by less than this amount
         in absolute and relative terms, will be ignored.  Default
-        1.0e-3.
+        1.0e-2.
 
     min_dist : float
         Minimum Euclidean distance between nodes. A new point will be
@@ -128,16 +128,11 @@ class RbfoptSettings:
         Maximum number of consecutive optimization cycles without
         improvement before we perform a full restart. Default 10.
 
-    max_stalled_objfun_impr : float
-        Maximum relative objective function improvement between
-        consecutive optimization cycles to be considered
-        "stalling". Default 0.05.
-
     max_consecutive_discarded : int
         Maximum number of discarded points before a restart is
         triggered. This number is multiplied by the number of cpus to
         determine the actual maximum number of consecutive discarded
-        points. Default 15.
+        points. Default 10.
 
     max_consecutive_restoration : int
         Maximum number of consecutive nonsingularity restoration
@@ -160,11 +155,6 @@ class RbfoptSettings:
         Maximum number of iterations in fast mode before switching
         to accurate mode. Default 100.
     
-    model_selection_solver : string
-        Solver to compute leave-one-out errors in cross validation for
-        model selection. Choice of 'clp', 'cplex', 'numpy'. Default
-        'clp'.
-
     algorithm : string
         Optimization algorithm used. Choice of 'Gutmann' and 'MSRSM',
         see References Gutmann (2001) and Regis and Shoemaker
@@ -209,7 +199,7 @@ class RbfoptSettings:
         improving the objective function value, compared to the
         original MSRSM score function. Default True.
 
-    max_cons_refinement : int
+    max_consecutive_refinement : int
         Maximum number of consecutive refinement steps. Default 10.
 
     thresh_unlimited_refinement : float
@@ -227,7 +217,7 @@ class RbfoptSettings:
         acceptable ration between other search steps and refinement
         steps. Default 5.
 
-    num_tr_integer_candidates : int
+    tr_num_integer_candidates : int
         Number of integer candidates per dimension of the problem that
         are considered when rounding the (fractional) point computed
         during the refinement step. Default 10.
@@ -247,11 +237,16 @@ class RbfoptSettings:
         decrease for which the new candidate point is accepted as the
         new iterate. Default 0.1.
 
-    min_tr_radius : float
+    tr_min_radius : float
         Minimum radius of the trust region for the refinement
         step. Default 1.0e-3.
 
-    min_tr_grad_norm : float
+    tr_init_radius_multiplier : float
+        Exponent (with base 2) of the multiplier used to determine the
+        minimum initial radius of the trust region for the refinement
+        step. Default 2.0.
+
+    tr_min_grad_norm : float
         Minimum norm of the gradient for the trust region method in
         the refinement step, before we assume that we converged to a
         stationary point. Default 1.0e-2.
@@ -290,8 +285,6 @@ class RbfoptSettings:
         Allowed domain scaling strategies.
     _allowed_dynamism_clipping : Dict[str]
         Allowed dynamism clipping strategies.
-    _allowed_model_selection_solver : Dict[str]
-        Allowed model selection method.
     _allowed_algorithm : Dict[str]
         Allowed algorithms.
     _allowed_global_search_method : Dict[str]
@@ -307,14 +300,13 @@ class RbfoptSettings:
     _allowed_function_scaling = {'off', 'affine', 'log', 'auto'}
     _allowed_domain_scaling = {'off', 'affine', 'auto'}
     _allowed_dynamism_clipping = {'off', 'median', 'clip_at_dyn', 'auto'}
-    _allowed_model_selection_solver = {'clp', 'cplex', 'numpy'}
     _allowed_algorithm = {'Gutmann', 'MSRSM'}
     _allowed_global_search_method = {'genetic', 'sampling', 'solver'}
 
     def __init__(self,
-                 rbf='thin_plate_spline',
-                 max_iterations=150,
-                 max_evaluations=250,
+                 rbf='auto',
+                 max_iterations=1000,
+                 max_evaluations=300,
                  max_fast_evaluations=150,
                  max_clock_time=1.0e30,
                  num_cpus=1,
@@ -322,7 +314,7 @@ class RbfoptSettings:
                  target_objval=-1.0e10,
                  eps_opt=1.0e-2,
                  eps_zero=1.0e-15,
-                 eps_impr=1.0e-3,
+                 eps_impr=1.0e-2,
                  min_dist=1.0e-5,
                  do_infstep=False,
                  num_global_searches=5,
@@ -334,14 +326,12 @@ class RbfoptSettings:
                  dynamism_threshold=1.0e3,
                  local_search_box_scaling=0.5,
                  max_stalled_cycles=10,
-                 max_stalled_objfun_impr=0.05,
-                 max_consecutive_discarded=15,
+                 max_consecutive_discarded=10,
                  max_consecutive_restoration=15,
                  fast_objfun_rel_error=0.0,
                  fast_objfun_abs_error=0.0,
                  max_fast_restarts=2,
                  max_fast_iterations=100,
-                 model_selection_solver='clp',
                  algorithm='MSRSM',
                  targetval_clipping=True,
                  global_search_method='genetic',
@@ -349,15 +339,16 @@ class RbfoptSettings:
                  ga_num_generations=20,
                  num_samples_aux_problems=1000,
                  modified_msrsm_score=True,
-                 max_cons_refinement=10,
+                 max_consecutive_refinement=10,
                  thresh_unlimited_refinement=0.9,
                  refinement_frequency=5,
-                 num_tr_integer_candidates=10,
+                 tr_num_integer_candidates=10,
                  tr_acceptable_decrease_shrink=0.2,
                  tr_acceptable_decrease_enlarge=0.6,
                  tr_acceptable_decrease_move=0.1,
-                 min_tr_radius=1.0e-3,
-                 min_tr_grad_norm=1.0e-2,
+                 tr_min_radius=1.0e-3,
+                 tr_init_radius_multiplier=2.0,
+                 tr_min_grad_norm=1.0e-2,
                  print_solver_output=False,
                  save_state_interval=100000,
                  save_state_file='rbfopt_algorithm_state.dat',
@@ -386,14 +377,12 @@ class RbfoptSettings:
         self.dynamism_threshold = dynamism_threshold
         self.local_search_box_scaling = local_search_box_scaling
         self.max_stalled_cycles = max_stalled_cycles
-        self.max_stalled_objfun_impr = max_stalled_objfun_impr
         self.max_consecutive_discarded = max_consecutive_discarded
         self.max_consecutive_restoration = max_consecutive_restoration
         self.fast_objfun_rel_error = fast_objfun_rel_error
         self.fast_objfun_abs_error = fast_objfun_abs_error
         self.max_fast_restarts = max_fast_restarts
         self.max_fast_iterations = max_fast_iterations
-        self.model_selection_solver = model_selection_solver
         self.algorithm = algorithm
         self.targetval_clipping = targetval_clipping
         self.global_search_method = global_search_method
@@ -401,15 +390,16 @@ class RbfoptSettings:
         self.ga_num_generations = ga_num_generations
         self.num_samples_aux_problems = num_samples_aux_problems
         self.modified_msrsm_score = modified_msrsm_score
-        self.max_cons_refinement = max_cons_refinement
+        self.max_consecutive_refinement = max_consecutive_refinement
         self.thresh_unlimited_refinement = thresh_unlimited_refinement
         self.refinement_frequency = refinement_frequency
-        self.num_tr_integer_candidates = num_tr_integer_candidates
+        self.tr_num_integer_candidates = tr_num_integer_candidates
         self.tr_acceptable_decrease_shrink = tr_acceptable_decrease_shrink
         self.tr_acceptable_decrease_enlarge = tr_acceptable_decrease_enlarge
         self.tr_acceptable_decrease_move = tr_acceptable_decrease_move
-        self.min_tr_radius = min_tr_radius
-        self.min_tr_grad_norm = min_tr_grad_norm
+        self.tr_min_radius = tr_min_radius
+        self.tr_init_radius_multiplier = tr_init_radius_multiplier
+        self.tr_min_grad_norm = tr_min_grad_norm
         self.print_solver_output = print_solver_output
         self.save_state_interval = save_state_interval
         self.save_state_file = save_state_file
@@ -432,11 +422,6 @@ class RbfoptSettings:
             RbfoptSettings._allowed_dynamism_clipping):
             raise ValueError('settings.dynamism_clipping = ' + 
                              str(self.dynamism_clipping) + ' not supported')
-        if (self.model_selection_solver not in 
-            RbfoptSettings._allowed_model_selection_solver):
-            raise ValueError('settings.model_selection_solver = ' + 
-                             str(self.model_selection_solver) + 
-                             ' not supported')
         if (self.algorithm not in RbfoptSettings._allowed_algorithm):
             raise ValueError('settings.algorithm = ' + 
                              str(self.algorithm) + ' not supported')

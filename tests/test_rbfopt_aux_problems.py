@@ -14,14 +14,8 @@ from __future__ import absolute_import
 import unittest
 import numpy as np
 import test_rbfopt_env
-try:
-    import cython_rbfopt.rbfopt_utils as ru
-except ImportError:
-    import rbfopt_utils as ru
-try:
-    import cython_rbfopt.rbfopt_aux_problems as aux
-except ImportError:
-    import rbfopt_aux_problems as aux
+import rbfopt_utils as ru
+import rbfopt_aux_problems as aux
 from rbfopt_settings import RbfoptSettings
 
 def quadratic(points):
