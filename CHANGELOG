@@ -1,3 +1,24 @@
+2017-06-09  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 3.0.0 released. List of major changes:
+	* Added: 
+	Refinement phase for improved local search: see option
+	refinement_frequency and new options that start with tr_.
+	Support for Python 3.
+	* Changed:
+	OptAlgorithm is now called RbfoptAlgoritm.
+	RbfSettings is now called RbfoptSettings.
+	Automatic model selection is now active by default, using fast
+	linear algebra routines.
+	Rbf functions in module rbfopt_utils now use Numpy, triggering
+	several code optimization changes and major improvement in
+	iteration speed.
+	Several default settings have been changed.
+	* Removed:
+	Module rbfopt_model_selection is no longer necessary.
+	Option model_selection solver is no longer necessary.
+	Option max_stalled_obj_fun_impr is subsumed by eps_impr.
+	Cython modules and setup.py have been removed.
+
 2017-06-08  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_utils.py (get_model_quality_estimate)
 	(get_best_rbf_model): Functions moved to this module from the
