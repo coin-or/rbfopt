@@ -151,19 +151,6 @@ In case any of the packages indicated above is missing, some features
 may be disabled, not function properly, or the software may not run at
 all.
 
-This package can take advantage of supported linear programming
-solvers to increase the speed of the automatic model selection
-procedure. Supported solvers:
-
-IBM-ILOG Cplex via its Python API
-COIN-OR Clp via CyLP (see https://github.com/coin-or/CyLP).
-
-The two packages above are optional. Keep in mind that the automatic
-model selection procedure (option --rbf auto) is in our experience
-very beneficial in practice, and it can be slow without a linear
-programming solver installed. Make sure you set the option
---model_selection_solver correctly if you are using one the solvers.
-
 
 #--------------------------------------------------------------------------
 # Installation instructions and getting started
@@ -185,7 +172,7 @@ programming solver installed. Make sure you set the option
 
 4) You can test the installation by running:
    python tests/rbfopt_test_interface.py branin
-   
+lp   
    See:
    python tests/rbfopt_test_interface.py --help
    for more details on command-line options for the testing utility.
@@ -218,16 +205,6 @@ programming solver installed. Make sure you set the option
 
    (If no module is specified with the -m option, the algorithm will
    be applied to rbfopt_black_box_example.py.)
-
-7) To take advantage of faster model selection procedures, you must
-   have either IBM-ILOG Cplex or COIN-OR Clp available on your
-   machine. By default, the model selection procedure uses Numpy and
-   it can be slow on large problems. Using Cplex (via its Python
-   library) or Clp (via CyLP) can increase its speed dramatically. If
-   one of these packages is installed and available via the
-   corresponding "import" Python command (i.e. "import cplex" and
-   "import cylp.cy"), you can select the corresponding value for the
-   option model_selection_solver.
 
 
 #--------------------------------------------------------------------------
