@@ -97,7 +97,7 @@ MINLP_SOLVER_OPTIONS = [('bonmin.num_resolve_at_root', 10),
                         ('max_cpu_time', 20),
                         ('max_iter', 1000)]
 MINLP_SOLVER_RAND_SEED_OPTION = 'bonmin.random_generator_seed'
-MINLP_SOLVER_MAX_SEED = 2147983646
+MINLP_SOLVER_MAX_SEED = 2**31 - 2
 
 NLP_SOLVER_NAME = 'ipopt'
 # If the path contains directories, use forward slashes '/' to
@@ -108,7 +108,7 @@ NLP_SOLVER_OPTIONS = [('acceptable_tol', 1.0e-3),
                       ('max_cpu_time', 20),
                       ('max_iter', 1000)]
 NLP_SOLVER_RAND_SEED_OPTION = None
-NLP_SOLVER_MAX_SEED = 2147983646
+NLP_SOLVER_MAX_SEED = 2**31 - 2
 
 GAMMA = 1.0
 
