@@ -1,3 +1,10 @@
+2017-06-13  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_refinement (init_trust_region): Now uses only n+1 points
+	rather 2n+1 for the initial trust region model.
+	* rbfopt_settings.py (RbfoptSettings): Changed default settings
+	for eps_impr, refinement_frequency, max_stalled_cycles to favor
+	local search.
+	
 2017-06-09  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 3.0.0 released. List of major changes:
 	* Added: 

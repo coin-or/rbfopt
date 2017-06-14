@@ -66,7 +66,7 @@ def init_trust_region(settings, n, k, node_pos, center):
     dist = ss.distance.cdist(np.atleast_2d(center), node_pos)
     dist_order = np.argsort(dist[0])
     # The nodes to keep are those closest to the center
-    num_to_keep = min(2*n + 1, k)
+    num_to_keep = min(n + 1, k)
     # Build array of nodes to keep
     model_set = dist_order[np.arange(num_to_keep)]
     tr_radius = max(np.percentile(dist[0, model_set[1:]], 0.5),

@@ -78,7 +78,7 @@ class RbfoptSettings:
         Tolerance for improvement of the objective function. Any
         improvement in the objective function by less than this amount
         in absolute and relative terms, will be ignored.  Default
-        1.0e-2.
+        1.0e-4.
 
     min_dist : float
         Minimum Euclidean distance between nodes. A new point will be
@@ -126,7 +126,7 @@ class RbfoptSettings:
 
     max_stalled_cycles : int
         Maximum number of consecutive optimization cycles without
-        improvement before we perform a full restart. Default 10.
+        improvement before we perform a full restart. Default 30.
 
     max_consecutive_discarded : int
         Maximum number of discarded points before a restart is
@@ -215,7 +215,7 @@ class RbfoptSettings:
         performed (in case a better solution has been found in the
         meantime). In parallel mode, this determines the maximum
         acceptable ration between other search steps and refinement
-        steps. Default 5.
+        steps. Default 3.
 
     tr_num_integer_candidates : int
         Number of integer candidates per dimension of the problem that
@@ -314,7 +314,7 @@ class RbfoptSettings:
                  target_objval=-1.0e10,
                  eps_opt=1.0e-2,
                  eps_zero=1.0e-15,
-                 eps_impr=1.0e-2,
+                 eps_impr=1.0e-4,
                  min_dist=1.0e-5,
                  do_infstep=False,
                  num_global_searches=5,
@@ -325,7 +325,7 @@ class RbfoptSettings:
                  dynamism_clipping='auto',
                  dynamism_threshold=1.0e3,
                  local_search_box_scaling=0.5,
-                 max_stalled_cycles=10,
+                 max_stalled_cycles=30,
                  max_consecutive_discarded=10,
                  max_consecutive_restoration=15,
                  fast_objfun_rel_error=0.0,
@@ -341,7 +341,7 @@ class RbfoptSettings:
                  modified_msrsm_score=True,
                  max_consecutive_refinement=10,
                  thresh_unlimited_refinement=0.9,
-                 refinement_frequency=5,
+                 refinement_frequency=3,
                  tr_num_integer_candidates=10,
                  tr_acceptable_decrease_shrink=0.2,
                  tr_acceptable_decrease_enlarge=0.6,
