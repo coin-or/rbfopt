@@ -201,14 +201,17 @@ class TestGutmannParallel(unittest.TestCase):
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving goldsteinprice with random seed ' +
+            print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
                                       global_search_method='solver',
                                       target_objval=optimum,
+                                      max_stalled_cycles=10,
+                                      eps_impr=0.01,
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
                                       max_evaluations=300,
+                                      refinement_frequency=5,
                                       num_cpus=2,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
@@ -254,7 +257,7 @@ class TestGutmannParallel(unittest.TestCase):
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving branin with random seed ' +
+            print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
                                       global_search_method='genetic',

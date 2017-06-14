@@ -911,6 +911,7 @@ class RbfoptAlgorithm:
                     real_impr = (scaled_node_val[self.tr_iterate_index] - 
                                  rescale_function(next_val))
                     self.refinement_update(model_impr, real_impr)
+                    self.iter_last_refine = self.itercount
                 elif ((self.current_step == self.local_search_step) and
                       (self.itercount >= self.iter_last_refine +
                        self.l_settings.refinement_frequency *
@@ -1110,11 +1111,11 @@ class RbfoptAlgorithm:
                       l_settings.min_dist))):
                     self.num_cons_discarded += 1
                     if (iteration_id == 'RefinementStep'):
+                        refinement_itercount += 1
                         self.num_cons_refinement = 0
                     # Update iteration number
                     self.itercount += 1
                     self.update_log('Discarded')
-
                 else:
                     # Transform back to original space if necessary
                     next_p_orig = ru.transform_domain(
