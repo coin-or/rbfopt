@@ -57,7 +57,7 @@ class TestRefinement(unittest.TestCase):
             model_set, radius = ref.init_trust_region(settings, self.n, k, 
                                                       self.node_pos[:k], 
                                                       self.node_pos[k-1])
-            self.assertEqual(len(model_set), min(k, 2*self.n + 1),
+            self.assertEqual(len(model_set), min(k, self.n + 1),
                              msg='Wrong size of model set')
             self.assertLessEqual(radius, self.max_dist)
     # -- end function

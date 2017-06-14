@@ -914,7 +914,8 @@ class RbfoptAlgorithm:
                 elif ((self.current_step == self.local_search_step) and
                       (self.itercount >= self.iter_last_refine +
                        self.l_settings.refinement_frequency *
-                       self.cycle_length) and
+                       self.cycle_length or
+                       self.unlimited_refinement_active()) and
                       (self.fmin <= self.fmin_last_refine -
                        self.l_settings.eps_impr *
                        max(1.0, abs(self.fmin_last_refine)))):
@@ -1696,7 +1697,28 @@ class RbfoptAlgorithm:
             self.eval_mode = 'accurate'            
     # -- end function
 
+    def unlimited_refinement_active(self):
+        """Should the usual limits of refinement phase be ignored?
+        
+        Verify if, based on the unlimited_refinement_thresh parameter,
+        the usual limitations on the refinement phase should be
+        ignored.
+
+        Returns
+        -------
+        bool
+            True if unlimited refinement is active, False otherwise.
+        """
+        return ((self.itercount >= self.l_settings.max_iterations * 
+                 self.l_settings.thresh_unlimited_refinement) or
+                (self.evalcount >= self.l_settings.max_evaluations * 
+                 self.l_settings.thresh_unlimited_refinement) or
+                (self.elapsed_time >= self.l_settings.max_clock_time * 
+                 self.l_settings.thresh_unlimited_refinement))
+    # -- end function
+
     def refinement_update(self, model_impr, real_impr):
+
         """Perform updates to refinement step and decide if continue.
 
         Update the radius of the trust region and the iterate for the
@@ -1721,14 +1743,9 @@ class RbfoptAlgorithm:
             # Accept new iterate
             self.tr_iterate_index = len(self.node_pos) - 1
         if (self.tr_radius < self.l_settings.tr_min_radius or
-            ((self.num_cons_refinement >= 
-              self.l_settings.max_consecutive_refinement) and
-             (self.itercount <= self.l_settings.max_iterations * 
-              self.l_settings.thresh_unlimited_refinement) and
-             (self.evalcount <= self.l_settings.max_evaluations * 
-              self.l_settings.thresh_unlimited_refinement) and
-             (self.elapsed_time <= self.l_settings.max_clock_time * 
-              self.l_settings.thresh_unlimited_refinement))):
+            (self.num_cons_refinement >= 
+             self.l_settings.max_consecutive_refinement and
+             not self.unlimited_refinement_active())):
             # Do no continue refinement
             self.num_cons_refinement = 0
             self.current_step = self.first_step
