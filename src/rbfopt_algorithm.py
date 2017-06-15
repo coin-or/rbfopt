@@ -662,6 +662,9 @@ class RbfoptAlgorithm:
         # The dimension will not be changed so it is safe to localize
         n = self.n
 
+        if (l_settings.algorithm == 'MSRSM'):
+            Amatinv = None
+
         # Save number of iterations at start
         itercount_at_start = self.itercount
         # If this is the first iteration, initialize the algorithm
@@ -746,7 +749,8 @@ class RbfoptAlgorithm:
                 try:
                     # Compute the matrices necessary for the algorithm
                     Amat = ru.get_rbf_matrix(l_settings, n, k, self.node_pos)
-                    Amatinv = ru.get_matrix_inverse(l_settings, Amat)
+                    if (l_settings.algorithm == 'Gutmann'):
+                        Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
                     # Compute RBF interpolant at current stage
                     if (fast_node_index.size):
@@ -997,12 +1001,18 @@ class RbfoptAlgorithm:
         temp_node_pos = np.array([])
         temp_node_val = np.array([])
         temp_node_is_fast = np.array([])
+
+        if (l_settings.algorithm == 'MSRSM'):
+            Amatinv = None
         
         # Number of iterations spent in refinement. We used this
         # strange initialization statement to make sure that the
         # number is consistent (if not accurate) in case the algorithm
         # is stopped and restarted.
         refinement_itercount = self.itercount/l_settings.refinement_frequency
+
+        # Is a refinement iteration in progress?
+        refinement_in_progress = False
 
         # If this is the first iteration, initialize the algorithm
         if (self.itercount == 0):
@@ -1053,6 +1063,7 @@ class RbfoptAlgorithm:
                                      ref_rescale_function(next_val))
                         self.refinement_update_parallel(model_impr, real_impr)
                         refinement_itercount += 1
+                        refinement_in_progress = False
                     # Remove from list of temporary points
                     temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
                                               j, axis=0)
@@ -1112,6 +1123,7 @@ class RbfoptAlgorithm:
                     self.num_cons_discarded += 1
                     if (iteration_id == 'RefinementStep'):
                         refinement_itercount += 1
+                        refinement_in_progress = False
                         self.num_cons_refinement = 0
                     # Update iteration number
                     self.itercount += 1
@@ -1266,7 +1278,8 @@ class RbfoptAlgorithm:
             try:
                 # Compute the matrices necessary for the algorithm
                 Amat = ru.get_rbf_matrix(l_settings, n, k, node_pos)
-                Amatinv = ru.get_matrix_inverse(l_settings, Amat)
+                if (l_settings.algorithm == 'Gutmann'):
+                    Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
                 # Compute RBF interpolant at current stage
                 if (fast_node_index.size):
@@ -1316,10 +1329,9 @@ class RbfoptAlgorithm:
 
             # If no refinement is in progress, and the frequency is
             # not excessive, start it or keep it going
-            elif ((refinement_itercount <= self.itercount / 
-                 l_settings.refinement_frequency) and
-                ('RefinementStep' not in [v[-1] for v in res_eval]) and
-                ('RefinementStep' not in [v[-1] for v in res_search])):
+            elif (not refinement_in_progress and 
+                  (refinement_itercount <= self.itercount / 
+                   l_settings.refinement_frequency)):
                 if (self.num_cons_refinement == 0 or
                     (self.fmin <= node_val[self.tr_iterate_index] -
                      l_settings.eps_impr * 
@@ -1343,6 +1355,7 @@ class RbfoptAlgorithm:
                     iteration_id = 'RefinementStep'
                     ref_rescale_function = rescale_function
                     res_search.append([new_res, curr_is_fast, iteration_id])
+                    refinement_in_progress = True
                 except np.linalg.LinAlgError:
                     # Error in the solution of the linear system. We
                     # ignore and continue the search.
@@ -1982,8 +1995,9 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     Amat : numpy.matrix
         RBF matrix, i.e. [Phi P; P^T 0].
 
-    Amatinv : numpy.matrix
-        Inverse of the RBF matrix, i.e. [Phi P; P^T 0]^{-1}.
+    Amatinv : numpy.matrix or None
+        Inverse of the RBF matrix, i.e. [Phi P; P^T 0]^{-1}. Can be
+        None if the algorithm is MSRSM.
 
     fmin_index : int
         Index of the minimum value among the nodes.
@@ -2028,7 +2042,8 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert((eval_mode=='fast') or (eval_mode=='accurate'))
     assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(Amat, np.matrix))
-    assert(isinstance(Amatinv, np.matrix))
+    assert((Amatinv is None and settings.algorithm == 'MSRSM') or 
+           isinstance(Amatinv, np.matrix) )
     scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
     # Local search: compute the minimum of the RBF.
     min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper,
@@ -2217,10 +2232,11 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         Transformed function values: scaled node values, scaled
         minimum, scaled maximum, and node error bounds.
 
-    Amatinv : numpy.matrix
+    Amatinv : numpy.matrix or None
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a square numpy.matrix of appropriate dimension.
+        be a square numpy.matrix of appropriate dimension. Can be None
+        if algorithm is MSRSM.
 
     fmin_index : int
         Index of the minimum value among the nodes.
@@ -2246,7 +2262,8 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
     assert(0 <= fmin_index < k)
-    assert(isinstance(Amatinv, np.matrix))
+    assert((Amatinv is None and settings.algorithm == 'MSRSM') or 
+           isinstance(Amatinv, np.matrix))
     assert(isinstance(settings, RbfoptSettings))
     assert(0 <= current_step <= settings.num_global_searches)
 
