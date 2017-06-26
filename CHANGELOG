@@ -1,3 +1,11 @@
+2017-06-26  Giacomo Nannicini  <nannicini@us.ibm.com>	
+	Version 3.0.1 released. List of major changes:
+	* Changed:
+	Faster and improved refinement phase.
+	Several default settings have been changed to exploit the
+	refinement phase further.
+	Fixed bug in parallel optimizer.
+	
 2017-06-14  Giacomo Nannicini  <nannicini@us.ibm.com>	
 	* rbfopt_refinement (init_trust_region): Now uses only n+1 points
 	rather 2n+1 for the initial trust region model.
@@ -5,7 +13,7 @@
 	for eps_impr, refinement_frequency, max_stalled_cycles to favor
 	local search.
 	* rbfopt_algorithm.py (optimize_parallel): Fixed bug that could
-	occurr in parallel optimizer when many consecutive refinement
+	occur in parallel optimizer when many consecutive refinement
 	steps failed on integer problems.
 	
 2017-06-09  Giacomo Nannicini  <nannicini@us.ibm.com>
