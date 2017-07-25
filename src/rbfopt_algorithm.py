@@ -780,7 +780,7 @@ class RbfoptAlgorithm:
                         self.node_pos[self.fmin_index])
                     self.tr_iterate_index = self.fmin_index
 
-                # Compute quadratic model for trust region method
+                # Compute linear model for trust region method
                 try:
                     h, b = ref.get_linear_model(
                         l_settings, n, k, self.node_pos, 
@@ -919,7 +919,8 @@ class RbfoptAlgorithm:
                 elif ((self.current_step == self.local_search_step) and
                       (self.itercount >= self.iter_last_refine +
                        self.l_settings.refinement_frequency *
-                       self.cycle_length or
+                       (self.cycle_length - 
+                        (1 if self.l_settings.do_infstep else 2)) or
                        self.unlimited_refinement_active()) and
                       (self.fmin <= self.fmin_last_refine -
                        self.l_settings.eps_impr *
