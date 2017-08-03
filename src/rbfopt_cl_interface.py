@@ -18,6 +18,7 @@ import sys
 import argparse
 import ast
 import importlib
+import numpy as np
 from rbfopt_settings import RbfoptSettings
 from rbfopt_black_box import BlackBox
 from rbfopt_algorithm import RbfoptAlgorithm
@@ -164,9 +165,10 @@ def rbfopt_cl_interface(args, black_box):
             if (len(init_node_pos[0]) == black_box.get_dimension() + 1):
                 # In this case the file contains function values as well,
                 # as the last column
-                init_node_val = [val[-1] for val in init_node_pos]
-                init_node_pos = [val[:-1] for val in init_node_pos]
+                init_node_val = np.array([val[-1] for val in init_node_pos])
+                init_node_pos = np.array([val[:-1] for val in init_node_pos])
             else:
+                init_node_pos = np.array(init_node_pos)
                 init_node_val = None
         except Exception as e:
             print('Exception raised reading file with initialization points',
@@ -176,8 +178,8 @@ def rbfopt_cl_interface(args, black_box):
             output_stream.close()
             exit()
         alg = RbfoptAlgorithm(settings = settings, black_box = black_box,
-                           init_node_pos = init_node_pos,
-                           init_node_val = init_node_val)
+                              init_node_pos = init_node_pos,
+                              init_node_val = init_node_val)
     else:
         alg = RbfoptAlgorithm(settings = settings, black_box = black_box)
     alg.set_output_stream(output_stream)

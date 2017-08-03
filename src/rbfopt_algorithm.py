@@ -1516,15 +1516,11 @@ class RbfoptAlgorithm:
                     init_node_val = np.array(pool.map(objfun, map_arg))
                 self.evalcount += len(init_node_val)
             else:
-                init_node_val = np.array([self.init_node_val[i] for i in 
-                                          range(len(self.init_node_pos)) 
-                                          if dist[i] > 
-                                          self.l_settings.min_dist])
-            if not node_pos.size:
-                node_pos = init_node_pos.copy()
-            else:
+                init_node_val = self.init_node_val[dist >
+                                                   self.l_settings.min_dist]
+            if (init_node_pos.size):
                 node_pos = np.vstack((node_pos, init_node_pos))
-            node_val = np.append(node_val, init_node_val)
+                node_val = np.append(node_val, init_node_val)
 
             node_is_fast = np.append(node_is_fast, 
                                      np.zeros(init_node_val.shape[0],
@@ -2185,7 +2181,6 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
     if (grad_norm <= settings.tr_min_grad_norm):
         return None, model_impr
     return point, model_impr
-
 # -- end function
 
 def global_step(settings, n, k, var_lower, var_upper, integer_vars,
