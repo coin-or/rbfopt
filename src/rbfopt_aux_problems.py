@@ -595,7 +595,7 @@ def initialize_msrsm_aux_variables(settings, instance):
                                 for i in instance.Q)
     dist = min(sum((instance.x[j].value - instance.node[i, j])**2
                    for j in instance.N) for i in instance.K)
-    instance.mindistsq = min(dist, config.DISTANCE_SHIFT)
+    instance.mindistsq = dist
 
 # -- end function
 

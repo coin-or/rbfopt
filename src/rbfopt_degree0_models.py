@@ -898,19 +898,16 @@ def _x_bounds(model, i):
 # The expression is:
 # for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)
 def _udef_multiquad_constraint_rule(model, i):
-    return (model.u_pi[i] == 
-            sqrt(config.DISTANCE_SHIFT + 
-                 sum((model.x[j] - model.node[i, j])**2 for j in model.N) +
-                 GAMMA))
+    return (model.u_pi[i]**2 == GAMMA +
+            sum((model.x[j] - model.node[i, j])**2 for j in model.N))
 
 
 # Constraints: definition of the u components of u_pi for a linear RBF.
 # The expression is:
 # for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)
 def _udef_linear_constraint_rule(model, i):
-    return (model.u_pi[i] == 
-            sqrt(config.DISTANCE_SHIFT + 
-                 sum((model.x[j] - model.node[i, j])**2 for j in model.N)))
+    return (model.u_pi[i]**2 == 
+            sum((model.x[j] - model.node[i, j])**2 for j in model.N))
 
 
 # Constraint: definition of the nonhomogeneous term of the polynomial. 

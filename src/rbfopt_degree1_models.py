@@ -896,8 +896,8 @@ def _x_bounds(model, i):
 # for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)^3;
 def _udef_cubic_constraint_rule(model, i):
     return (model.u_pi[i] == 
-            sqrt(config.DISTANCE_SHIFT + 
-                 sum((model.x[j] - model.node[i, j])**2 for j in model.N))**3)
+            (config.DISTANCE_SHIFT +
+             sum((model.x[j] - model.node[i, j])**2 for j in model.N))**1.5)
 
 
 # Constraints: definition of the u components of u_pi for thin plate spline
@@ -907,9 +907,8 @@ def _udef_cubic_constraint_rule(model, i):
 def _udef_thinplate_constraint_rule(model, i):
     return (model.u_pi[i] == 
             (sum((model.x[j] - model.node[i, j])**2 for j in model.N)) *
-            log(sqrt(config.DISTANCE_SHIFT + 
-                     sum((model.x[j] - model.node[i, j])**2
-                         for j in model.N))))
+            log(sqrt(sum((model.x[j] - model.node[i, j])**2
+                         for j in model.N) + config.DISTANCE_SHIFT)))
 
 
 # Constraints: definition of the pi component of u_pi. The expression is:
