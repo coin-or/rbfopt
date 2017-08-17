@@ -72,8 +72,8 @@ class TestRefinement(unittest.TestCase):
             h = np.random.rand(self.n)
             b = np.random.rand()
             node_val = (np.dot(h, self.node_pos.T)).T + b
-            hm, bm = ref.get_linear_model(settings, self.n, self.k, 
-                                          self.node_pos, node_val, model_set)
+            hm, bm, rank_def = ref.get_linear_model(
+                settings, self.n, self.k, self.node_pos, node_val, model_set)
             self.assertAlmostEqual(dist(h, hm), 0,
                                    msg='Wrong linear part of linear model')
             self.assertAlmostEqual(b - bm, 0,
@@ -85,7 +85,6 @@ class TestRefinement(unittest.TestCase):
 
         """
         settings = RbfoptSettings()
-        model_set = np.arange(self.k)
         for i in range(self.k):
             h = np.random.rand(self.n)
             b = np.random.rand()
@@ -137,6 +136,34 @@ class TestRefinement(unittest.TestCase):
                 self.assertEqual(np.floor(point[j] + 0.5), int(point[j]),
                                  msg='Point is not integer')
     # -- end function
+
+    def test_get_model_improving_point(self):
+        """Test the get_model_improving_point function.
+
+        """
+        settings = RbfoptSettings()
+        n = 6
+        model_set = np.arange(n+1)
+        tr_radius = 1
+        integer_vars = np.arange(n)
+        var_lower = np.zeros(n)
+        var_upper = 10*np.ones(n)
+        for i in range(n):
+            node_pos = np.vstack((np.eye(n), np.eye(n)[i, :]))
+            point, success, to_replace = ref.get_model_improving_point(
+                settings, n, n+1, var_lower, var_upper,
+                node_pos, model_set, i, tr_radius, integer_vars)
+            self.assertTrue(success,
+                            msg='Model improvement was not successful')
+            self.assertTrue(to_replace == n - 1,
+                            msg='Wrong point to be replaced')
+            for j in range(n):
+                self.assertLessEqual(var_lower[j], point[j],
+                                     msg='Point outside bounds')
+                self.assertGreaterEqual(var_upper[j], point[j],
+                                     msg='Point outside bounds')
+    # -- end function
+
 
     def test_update_trust_region_radius(self):
         """Test the update_trust_region_radius function.

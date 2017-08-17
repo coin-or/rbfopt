@@ -447,7 +447,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
             nodes[:, integer_vars] = np.around(nodes[:, integer_vars])
 
         U, s, V = np.linalg.svd(nodes)
-        if (min(s) > settings.eps_zero):
+        if (min(s) > settings.eps_linear_dependence):
             dependent = False
 
     if (itercount == config.MAX_RANDOM_INIT):
@@ -717,14 +717,12 @@ def get_rbf_matrix(settings, n, k, node_pos):
 
     # Put together to obtain [Phi P; P^T 0].
     A = np.vstack((np.hstack((Phi, P)), np.hstack((PTr, np.zeros((p, p))))))
-
     Amat = np.matrix(A)
 
     # Zero out tiny elements
     Amat[np.abs(Amat) < settings.eps_zero] = 0
 
     return Amat
-
 # -- end function
 
 

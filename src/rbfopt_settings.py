@@ -80,6 +80,10 @@ class RbfoptSettings:
         in absolute and relative terms, will be ignored.  Default
         1.0e-4.
 
+    eps_linear_dependence : float
+        Tolerance to determine if a set of columns/rows is linearly
+        dependent. Default 1.0e-6.
+
     min_dist : float
         Minimum Euclidean distance between nodes. A new point will be
         discarded if it is closer than this value from existing
@@ -315,6 +319,7 @@ class RbfoptSettings:
                  eps_opt=1.0e-2,
                  eps_zero=1.0e-15,
                  eps_impr=1.0e-4,
+                 eps_linear_dependence=1.0e-6,
                  min_dist=1.0e-5,
                  do_infstep=False,
                  num_global_searches=5,
@@ -366,6 +371,7 @@ class RbfoptSettings:
         self.eps_opt = eps_opt
         self.eps_zero = eps_zero
         self.eps_impr = eps_impr
+        self.eps_linear_dependence = eps_linear_dependence
         self.min_dist = min_dist
         self.do_infstep = do_infstep
         self.num_global_searches = num_global_searches

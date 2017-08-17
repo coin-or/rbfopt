@@ -15,6 +15,7 @@ from __future__ import absolute_import
 
 import numpy as np
 import scipy.spatial as ss
+import scipy.linalg as la
 import rbfopt_config as config
 import rbfopt_utils as ru
 from rbfopt_settings import RbfoptSettings
@@ -69,7 +70,7 @@ def init_trust_region(settings, n, k, node_pos, center):
     num_to_keep = min(n + 1, k)
     # Build array of nodes to keep
     model_set = dist_order[np.arange(num_to_keep)]
-    tr_radius = max(np.percentile(dist[0, model_set[1:]], 0.5),
+    tr_radius = max(np.percentile(dist[0, model_set[1:]], 25),
                     settings.tr_min_radius * 
                     2**settings.tr_init_radius_multiplier)
     return (model_set, tr_radius)
@@ -105,8 +106,9 @@ def get_linear_model(settings, n, k, node_pos, node_val, model_set):
 
     Returns
     -------
-    1D numpy.ndarray[float], float
-        Coefficients of the quadratic model h, b.
+    1D numpy.ndarray[float], float, bool
+        Coefficients of the linear model h, b, and a boolean
+        indicating if the linear model is underdetermined.
 
     Raises
     ------
@@ -121,11 +123,14 @@ def get_linear_model(settings, n, k, node_pos, node_val, model_set):
     assert(isinstance(model_set, np.ndarray))
     assert(isinstance(settings, RbfoptSettings))
     model_size = len(model_set)
-    # Determine the coefficients of the underdetermined linear system.
+    # Determine the coefficients of the linear system.
     lstsq_mat = np.hstack((node_pos[model_set], np.ones((model_size, 1))))
+    rank_deficient = False
     # Solve least squares system and recover quadratic form
     try:
         x, res, rank, s = np.linalg.lstsq(lstsq_mat, node_val[model_set])
+        if (rank < model_size):
+            rank_deficient = True
     except np.linalg.LinAlgError as e:
         print('Exception raised trying to compute quadratic model',
               file=sys.stderr)
@@ -133,7 +138,7 @@ def get_linear_model(settings, n, k, node_pos, node_val, model_set):
         raise e
     h = x[:n]
     b = x[-1]
-    return h, b
+    return h, b, rank_deficient
 # -- end function
 
 def get_candidate_point(settings, n, k, var_lower, var_upper, h,
@@ -270,6 +275,103 @@ def get_integer_candidate(settings, n, k, h, start_point, tr_radius,
             best_value = curr_value
             best_point = np.copy(curr_point)
     return (best_point, np.dot(h, candidate) - best_value)
+# -- end function
+
+def get_model_improving_point(settings, n, k, var_lower, var_upper,
+                              node_pos, model_set, start_point_index,
+                              tr_radius, integer_vars):
+    """Compute the next candidate point of the trust region method.
+
+    Starting from a given point, compute a descent direction and move
+    in that direction to find the point with lowest value of the
+    linear model, within the radius of the trust region.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfoptSettings`.
+        Global and algorithmic settings.
+
+    n : int
+        Dimension of the problem, i.e. the size of the space.
+
+    k : int
+        Number of interpolation nodes.
+
+    var_lower : 1D numpy.ndarray[float]
+        Vector of variable lower bounds.
+    
+    var_upper : 1D numpy.ndarray[float]
+        Vector of variable upper bounds.
+
+    node_pos : 2D numpy.ndarray[float]
+        List of coordinates of the nodes.
+
+    model_set : 1D numpy.ndarray[int]
+        Indices of points in node_pos to be used to compute model.
+
+    start_point_index : int
+        Index in node_pos of the starting point for the descent.
+
+    tr_radius : float
+        Radius of the trust region.
+
+    integer_vars : 1D numpy.ndarray[int]
+        Indices of the integer variables.
+
+    Returns
+    -------
+    (1D numpy.ndarray[float], bool, int)
+        Next candidate point to improve the model, a boolean
+        indicating success, and the index of the point to replace if
+        successful.
+
+    """
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(len(var_lower)==n)
+    assert(len(var_upper)==n)
+    assert(isinstance(node_pos, np.ndarray))
+    assert(len(node_pos)==k)
+    assert(isinstance(model_set, np.ndarray))
+    assert(start_point_index < k)
+    assert(tr_radius>=0)
+    assert(isinstance(settings, RbfoptSettings))
+    # Remove the start point from the model set if necessary
+    red_model_set = np.array([i for i in model_set if i != start_point_index])
+    model_size = len(red_model_set)
+    # Tolerance for linearly dependent rows
+    # Determine the coefficients of the directions spanned by the model
+    A = node_pos[red_model_set] - node_pos[start_point_index]
+    Q, R, P = la.qr(A.T, mode='full', pivoting=True)
+    rank = min(A.shape) - np.abs(np.diag(R))[::-1].searchsorted(
+        settings.eps_linear_dependence)
+    success = False
+    d = np.zeros(n)
+    i = rank
+    to_replace = P[i]
+    while (i < model_size and not success):
+        # Determine candidate direction
+        d = Q[:, i].T*tr_radius
+        d = np.clip(node_pos[start_point_index] + d, var_lower,
+                    var_upper) - node_pos[start_point_index]
+        if (len(integer_vars)):
+            # Zero out small directions, and increase to one nonzero
+            # integer directions
+            d[np.abs(d) < settings.eps_zero] = 0
+            d[integer_vars] = (np.sign(d[integer_vars]) *
+                               np.maximum(np.abs(d[integer_vars]),
+                                          np.ones(len(integer_vars))))
+            d[integer_vars] = np.around(d[integer_vars])
+        # Check if rank increased
+        B = np.vstack((A[P[:rank], :], d.T))
+        Q2, R2, P2 = la.qr(B.T, mode='full', pivoting=True)
+        new_rank = min(B.shape) - np.abs(np.diag(R2))[::-1].searchsorted(
+            settings.eps_linear_dependence)
+        if (new_rank > rank):
+            to_replace = P[i]
+            success = True
+        i += 1
+    return (node_pos[start_point_index] + d, success, to_replace)
 # -- end function
 
 def update_trust_region_radius(settings, tr_radius, model_obj_diff,
