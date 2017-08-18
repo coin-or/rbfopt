@@ -922,10 +922,7 @@ class RbfoptAlgorithm:
                        self.l_settings.refinement_frequency *
                        (self.cycle_length - 
                         (1 if self.l_settings.do_infstep else 2)) or
-                       self.unlimited_refinement_active()) and
-                      (self.fmin <= self.fmin_last_refine -
-                       self.l_settings.eps_impr *
-                       max(1.0, abs(self.fmin_last_refine)))):
+                       self.unlimited_refinement_active())):
                     self.current_step = self.refinement_step
                     self.iter_last_refine = self.itercount
                 else:
