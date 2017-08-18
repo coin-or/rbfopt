@@ -1,3 +1,13 @@
+2017-08-18  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 3.0.2 released. List of major changes:
+	* Added:
+	Model improvement search for refinement phase.
+	* Changed:
+	Refinement phase now happens regardless of finding an improved
+	solution.
+	Pyomo models changed for numerical stability with default Ipopt
+	and Bonmin as downloaded from AMPL's website.
+	
 2017-06-26  Giacomo Nannicini  <nannicini@us.ibm.com>	
 	Version 3.0.1 released. List of major changes:
 	* Changed:

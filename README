@@ -140,12 +140,16 @@ open-source and available through the COIN-OR repository. The end-user
 is responsible for checking that they have the right to use whatever
 solver they employs.
 
-To obtain pre-compiled binaries for BonMin and Ipopt for several
+To obtain pre-compiled binaries for Bonmin and Ipopt for several
 platforms, we suggest having a look at:
 http://ampl.com/products/solvers/open-source/
 and
 http://ampl.com/dl/open/
-(for static binaries).
+(for static binaries). Please note that these binaries are quite
+outdated: *much* better performance can be obtained compiling Bonmin
+from scratch (Bonmin contains Ipopt as well), especially if using a
+different solver from the default Mumps, e.g., ma27. Remember to
+compile Bonmin and Ipopt with ASL support.
 
 In case any of the packages indicated above is missing, some features
 may be disabled, not function properly, or the software may not run at
@@ -204,7 +208,8 @@ lp
    for more details on command-line options.
 
    (If no module is specified with the -m option, the algorithm will
-   be applied to rbfopt_black_box_example.py.)
+   be applied to rbfopt_black_box_example.py. Notice that the module
+   must be in your Python path.)
 
 
 #--------------------------------------------------------------------------
