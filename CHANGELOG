@@ -1,3 +1,20 @@
+2017-08-22  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 3.1.0 released. List of major changes:
+	* Added:
+	Installation script setup.py.
+	Class to construct RbfoptBlackBox from user data
+	(rbfopt_user_black_box).
+	* Changed:
+	Directory structure reorganized to allow installation as a module
+	in Python's site-packages.
+	(rbfopt_black_box) BlackBox renamed to RbfoptBlackBox.
+	(rbfopt_cl_interface.py) is now a script and accepts reading
+	black-box definitions from a path.
+	(rbfopt_test_interface.py) is now a script.
+	Documentation and examples are now distributed within the rbfopt
+	module.
+	README updated with new installation instructions.
+
 2017-08-18  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 3.0.2 released. List of major changes:
 	* Added:

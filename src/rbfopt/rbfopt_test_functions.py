@@ -1,32 +1,32 @@
-#######################################################################
-#  File:      test_functions.py
-#  Author(s): Giacomo Nannicini
-#             Singapore University of Technology and Design
-#             nannicini@sutd.edu.sg
-#  Date:      02/09/14
-#
-#  This file is is NOT protected by copyright.
-#  It implements a number of already known mathematical functions.
-#######################################################################
+"""Test functions.
+
+This module implements several known mathematical functions, that can
+be used to test RBFOpt.
+
+Licensed under Revised BSD license, see LICENSE.
+(C) Copyright Singapore University of Technology and Design 2014.
+(C) Copyright International Business Machines Corporation 2017.
+Research partially supported by SUTD-MIT International Design Center.
+
+"""
 
 from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 
+import sys
 import math
 import numpy as np
+from .rbfopt_black_box import RbfoptBlackBox
 
 
 class branin:
     """
-    Branin function.
+    Branin function of the Dixon-Szego test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        Branin function of the Dixon-Szego test set.
-        """
         assert(len(x)==2)
         value = ((x[1] - (5.1/(4*math.pi*math.pi))*x[0]*x[0] + 
                   5/math.pi*x[0] - 6)**2 + 10*(1-1/(8*math.pi)) *
@@ -46,14 +46,11 @@ class branin:
 
 class hartman3:
     """
-    Hartman3 function.
+    Hartman3 function of the Dixon-Szego test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        Hartman3 function of the Dixon-Szego test set.
-        """
         assert(len(x)==3)
         a = [ [3.0,  0.1,  3.0,  0.1], 
               [10.0, 10.0, 10.0, 10.0],
@@ -80,14 +77,11 @@ class hartman3:
 
 class hartman6:
     """
-    Hartman6 function.
+    Hartman6 function of the Dixon-Szego test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        Hartman6 function of the Dixon-Szego test set.
-        """
         assert(len(x)==6)
         a = [ [10.00,  0.05,  3.00, 17.00],
               [3.00, 10.00,  3.50,  8.00],
@@ -121,14 +115,11 @@ class hartman6:
 
 class camel:
     """
-    Six-hump Camel function.
+    Six-hump Camel function of the Dixon-Szego test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        Cam function of the Dixon-Szego test set.
-        """
         assert(len(x)==2)
         value = ((4 - 2.1*x[0]**2 + x[0]**4/3)*x[0]**2 + 
                  x[0]*x[1] + (-4 + 4*x[1]**2)*x[1]**2)
@@ -145,14 +136,11 @@ class camel:
 
 class goldsteinprice:
     """
-    Goldstein & Price function.
+    Goldstein & Price function of the Dixon-Szego test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        Goldstein & Price function of the Dixon-Szego test set.
-        """
         assert(len(x)==2)
         value= ((1 + (x[0] + x[1] + 1)**2 * 
                  (19 - 14*x[0] + 3*x[0]**2 - 14*x[1] + 6*x[0]*x[1] + 
@@ -173,14 +161,11 @@ class goldsteinprice:
 
 class shekel5:
     """
-    Shekel5 function.
+    Shekel5 function of the Dixon-Szego test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        Shekel5 function of the Dixon-Szego test set.
-        """
         assert(len(x)==4)
 
         a = [ [4.0, 1.0, 8.0, 6.0, 3.0],
@@ -206,14 +191,11 @@ class shekel5:
 
 class shekel7:
     """
-    Shekel7 function.
+    Shekel7 function of the Dixon-Szego test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        Shekel7 function of the Dixon-Szego test set.
-        """
         assert(len(x)==4)
 
         a = [ [4.0, 1.0, 8.0, 6.0, 3.0, 2.0, 5.0],
@@ -239,14 +221,11 @@ class shekel7:
 
 class shekel10:
     """
-    Shekel10 function.
+    Shekel10 function of the Dixon-Szego test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        Shekel10 function of the Dixon-Szego test set.
-        """
         assert(len(x)==4)
 
         a = [ [4.0, 1.0, 8.0, 6.0, 3.0, 2.0, 5.0, 8.0, 6.0, 7.0],
@@ -272,14 +251,11 @@ class shekel10:
 
 class ex4_1_1:
     """
-    ex4_1_1 function.
+    ex4_1_1 function of the GlobalLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        ex4_1_1 function of the GlobalLib test set.
-        """
         assert(len(x)==1)
 
         value = (x[0]**6 - (52.0/25.0)*x[0]**5 + (39.0/80.0)*x[0]**4 + 
@@ -298,14 +274,11 @@ class ex4_1_1:
 
 class ex4_1_2:
     """
-    ex4_1_2 function.
+    ex4_1_2 function of the GlobalLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        ex4_1_2 function of the GlobalLib test set.
-        """
         assert(len(x)==1)
 
         a = [-500, 2.5, 1.666666666, 1.25, 1.0, 0.8333333, 0.714285714, 
@@ -333,14 +306,11 @@ class ex4_1_2:
 
 class ex8_1_1:
     """
-    ex8_1_1 function.
+    ex8_1_1 function of the GlobalLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        ex8_1_1 function of the GlobalLib test set.
-        """
         assert(len(x)==2)
 
         value = math.cos(x[0])*math.sin(x[1]) - x[0]/(x[1]**2+1)
@@ -357,14 +327,11 @@ class ex8_1_1:
 
 class ex8_1_4:
     """
-    ex8_1_4 function.
+    ex8_1_4 function of the GlobalLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        ex8_1_4 function of the GlobalLib test set.
-        """
         assert(len(x)==2)
 
         value = 12*x[0]**2-6.3*x[0]**4+x[0]**6-6*x[0]*x[1]+6*x[1]**2
@@ -381,14 +348,11 @@ class ex8_1_4:
 
 class least:
     """
-    least function.
+    least function of the GlobalLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        least function of the GlobalLib test set.
-        """
         assert(len(x)==3)
 
         value = ((127 + (-x[1]*math.exp(-5*x[2])) - x[0])**2 +
@@ -411,14 +375,11 @@ class least:
 
 class rbrock:
     """
-    rbrock function.
+    rbrock function of the GlobalLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        rbrock function of the GlobalLib test set.
-        """
         assert(len(x)==2)
 
         value = (100*(x[1] - x[0]**2)**2 + (1 - x[0])**2)
@@ -435,16 +396,13 @@ class rbrock:
 
 class perm_6:
     """
-    perm function of dimension 6
+    perm function of dimension 6 from Arnold Neumaier.
+    http://www.mat.univie.ac.at/~neum/glopt/my_problems.html
+    We use parameters (6, 60) here.
     """
 
     @staticmethod
     def evaluate(x):
-        """
-        perm function from Arnold Neumaier.
-        http://www.mat.univie.ac.at/~neum/glopt/my_problems.html
-        We use parameters (6, 60) here.
-        """
         assert(len(x)==6)
         beta = 60
         value = math.fsum([ (math.fsum([((i + 1)**k + beta) * 
@@ -464,16 +422,13 @@ class perm_6:
 
 class perm0_8:
     """
-    perm0 function of dimension 8.
+    perm0 function of dimension 8 from Arnold Neumaier.
+    http://www.mat.univie.ac.at/~neum/glopt/my_problems.html
+    We use parameters (8, 100) here. 
     """
 
     @staticmethod
     def evaluate(x):
-        """
-        perm0 function from Arnold Neumaier.
-        http://www.mat.univie.ac.at/~neum/glopt/my_problems.html
-        We use parameters (8, 100) here.
-        """
         assert(len(x)==8)
         beta = 100
         value = math.fsum([ (math.fsum([(i + 1 + beta) * 
@@ -498,9 +453,6 @@ class schoen_6_1:
 
     @staticmethod
     def evaluate(x):
-        """
-        schoen function
-        """
         assert(len(x)==6)
         z = [[0.298854, 0.181010, 0.984817, 0.125272, 0.548396, 0.894658],
              [0.800371, 0.817380, 0.398577, 0.652349, 0.250843, 0.130235],
@@ -591,9 +543,6 @@ class schoen_6_2:
 
     @staticmethod
     def evaluate(x):
-        """
-        schoen function
-        """
         assert(len(x)==6)
         z = [[0.669711, 0.815540, 0.646120, 0.377447, 0.111538, 0.040529],
              [0.000632, 0.706804, 0.857031, 0.473778, 0.993569, 0.616184],
@@ -684,9 +633,6 @@ class schoen_10_1:
 
     @staticmethod
     def evaluate(x):
-        """
-        schoen function
-        """
         assert(len(x)==10)
         z = [[0.914871, 0.765230, 0.139426, 0.617466, 0.823635, 
               0.794003, 0.801171, 0.568811, 0.279434, 0.540422],
@@ -828,9 +774,6 @@ class schoen_10_2:
 
     @staticmethod
     def evaluate(x):
-        """
-        schoen function
-        """
         assert(len(x)==10)
         z = [[0.131461, 0.965235, 0.046134, 0.983011, 0.719813, 
               0.827542, 0.662422, 0.570546, 0.578707, 0.013264],
@@ -972,9 +915,6 @@ class schaeffer_f7_12_1:
     
     @staticmethod
     def evaluate(x):
-        """ 
-        Schaeffer F7 function.
-        """
         assert(len(x)==12)
         opt = [-3.432567, -3.498896, 0.769262, 3.03388, -4.824371, 
                2.318355, 2.493374, 3.207436, 4.686153, 0.464872, 
@@ -1004,9 +944,6 @@ class schaeffer_f7_12_2:
     
     @staticmethod
     def evaluate(x):
-        """ 
-        Schaeffer F7 function.
-        """
         assert(len(x)==12)
         opt = [-0.8214, 3.069133, 4.826095, -0.494219, 
                1.515357, 0.04841, -1.354025, -4.078766, 
@@ -1033,14 +970,11 @@ class schaeffer_f7_12_2:
 
 class gear:
     """
-    gear function.
+    gear function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        gear function of the MINLPLib test set.
-        """
         assert(len(x)==4)
 
         value = ((0.14427932477276 - x[0]*x[1]/(x[2]*x[3]))**2)
@@ -1057,14 +991,11 @@ class gear:
 
 class gear4:
     """
-    gear4 function.
+    gear4 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        gear function of the MINLPLib test set.
-        """
         assert(len(x)==5)
 
         value = -1000000*x[0]*x[1]/(x[2]*x[3]) + 2*x[4] + 144279.32477276
@@ -1085,14 +1016,11 @@ class gear4:
 
 class nvs02:
     """
-    nvs02 function.
+    nvs02 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        nvs02 function of the MINLPLib test set.
-        """
         assert(len(x)==5)
 
         value = (0.0001*(5.3578547*math.sqrt(x[2]) + 0.8356891*x[0]*x[4] + 
@@ -1131,14 +1059,11 @@ class nvs02:
 
 class nvs03:
     """
-    nvs03 function.
+    nvs03 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        nvs03 function of the MINLPLib test set.
-        """
         assert(len(x)==2)
 
         value = (-8 + x[0])**2 + (-2 + x[1])**2
@@ -1161,14 +1086,11 @@ class nvs03:
 
 class nvs04:
     """
-    nvs04 function.
+    nvs04 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        nvs04 function of the MINLPLib test set.
-        """
         assert(len(x)==2)
 
         value = 100*(0.5 + x[1] - (0.6 + x[0])**2)**2 + (0.4 - x[0])**2
@@ -1185,14 +1107,11 @@ class nvs04:
 
 class nvs06:
     """
-    nvs06 function.
+    nvs06 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        nvs06 function of the MINLPLib test set.
-        """
         assert(len(x)==2)
 
         value = (0.1*((x[0])**2 + (1 + (x[1])**2)/(x[0])**2 + 
@@ -1210,14 +1129,11 @@ class nvs06:
 
 class nvs07:
     """
-    nvs07 function.
+    nvs07 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        nvs07 function of the MINLPLib test set.
-        """
         assert(len(x)==3)
 
         value = 2*x[1]**2 + x[0] + 5*x[2]
@@ -1240,14 +1156,11 @@ class nvs07:
 
 class nvs09:
     """
-    nvs09 function.
+    nvs09 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        nvs09 function of the MINLPLib test set.
-        """
         assert(len(x)==10)
         
         value = ((math.log(x[0] - 2))**2 + (math.log(10 - x[0]))**2 + 
@@ -1274,14 +1187,11 @@ class nvs09:
 
 class nvs14:
     """
-    nvs14 function.
+    nvs14 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        nvs14 function of the MINLPLib test set.
-        """
         assert(len(x)==5)
 
         value = (5.3578547*x[2]**2 + 0.8356891*x[0]*x[4] + 37.293239*x[0] - 
@@ -1319,14 +1229,11 @@ class nvs14:
 
 class nvs15:
     """
-    nvs15 function.
+    nvs15 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        nvs15 function of the MINLPLib test set.
-        """
         assert(len(x)==3)
         
         value = (2*x[0]**2 - 8*x[0] + 2*x[1]**2 - 6*x[1] + x[2]**2 - 4*x[2] + 
@@ -1348,14 +1255,11 @@ class nvs15:
 
 class nvs16:
     """
-    nvs16 function.
+    nvs16 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        nvs16 function of the MINLPLib test set.
-        """
         assert(len(x)==2)
         
         value = ((1.5 - x[0]*(1 - x[1]))**2 + 
@@ -1374,14 +1278,11 @@ class nvs16:
 
 class prob03:
     """
-    prob03 function.
+    prob03 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        prob03 function of the MINLPLib test set.
-        """
         assert(len(x)==2)
 
         value = 3*x[0] + 2*x[1]
@@ -1401,14 +1302,11 @@ class prob03:
 
 class sporttournament06:
     """
-    sporttournament06 function.
+    sporttournament06 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        sporttournament06 function of the MINLPLib test set.
-        """
         assert(len(x)==15)
 
         value = (2*x[0]*x[2] - 2*x[0] + 2*x[2] + 2*x[0]*x[6] - 2*x[6]
@@ -1435,14 +1333,11 @@ class sporttournament06:
 
 class st_miqp1:
     """
-    st_miqp1 function.
+    st_miqp1 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        st_miqp1 function of the MINLPLib test set.
-        """
         assert(len(x)==5)
 
         value = (50*x[0]*x[0] + 42*x[0] + 50*x[1]*x[1] + 44*x[1] +
@@ -1465,14 +1360,11 @@ class st_miqp1:
 
 class st_miqp3:
     """
-    st_miqp3 function.
+    st_miqp3 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        st_miqp3 function of the MINLPLib test set.
-        """
         assert(len(x)==2)
 
         value = (6*x[0]*x[0] - 3*x[1])
@@ -1492,14 +1384,11 @@ class st_miqp3:
 
 class st_test1:
     """
-    st_test1 function.
+    st_test1 function of the MINLPLib test set.
     """
     
     @staticmethod
     def evaluate(x):
-        """
-        st_test1 function of the MINLPLib test set.
-        """
         assert(len(x)==5)
 
         value = (50*x[0]*x[0] + 42*x[0] + 50*x[1]*x[1] - 44*x[1] + 
@@ -1528,9 +1417,6 @@ class schoen_6_1_int:
 
     @staticmethod
     def evaluate(x):
-        """
-        schoen function
-        """
         assert(len(x)==6)
         z = [[0.298854, 0.181010, 0.984817, 0.125272, 0.548396, 0.894658],
              [0.800371, 0.817380, 0.398577, 0.652349, 0.250843, 0.130235],
@@ -1623,9 +1509,6 @@ class schoen_6_2_int:
 
     @staticmethod
     def evaluate(x):
-        """
-        schoen function
-        """
         assert(len(x)==6)
         z = [[0.669711, 0.815540, 0.646120, 0.377447, 0.111538, 0.040529],
              [0.000632, 0.706804, 0.857031, 0.473778, 0.993569, 0.616184],
@@ -1718,9 +1601,6 @@ class schoen_10_1_int:
 
     @staticmethod
     def evaluate(x):
-        """
-        schoen function
-        """
         assert(len(x)==10)
         z = [[0.914871, 0.765230, 0.139426, 0.617466, 0.823635, 
               0.794003, 0.801171, 0.568811, 0.279434, 0.540422],
@@ -1864,9 +1744,6 @@ class schoen_10_2_int:
 
     @staticmethod
     def evaluate(x):
-        """
-        schoen function
-        """
         assert(len(x)==10)
         z =         z = [[0.131461, 0.965235, 0.046134, 0.983011, 0.719813, 
               0.827542, 0.662422, 0.570546, 0.578707, 0.013264],
@@ -1999,4 +1876,99 @@ class schoen_10_2_int:
     optimum_value = -1000
     integer_vars = np.array([0, 1, 2, 5, 6, 7])
 
+# -- end class
+
+
+
+class TestBlackBox(RbfoptBlackBox):
+    """A black-box constructed from a known test function.
+
+    Parameters
+    ----------
+    name : string
+        The name of the function to be implemented.
+    """
+    def __init__(self, name):
+        """Constructor.
+        """
+        try:
+            thismodule = sys.modules[__name__]
+            self._function = getattr(thismodule, name.lower())
+        except AttributeError:
+            raise ValueError('Function ' + name + ' not implemented')
+
+    def get_dimension(self):
+        return self._function.dimension
+
+    def get_var_lower(self):
+        return self._function.var_lower
+
+    def get_var_upper(self):
+        return self._function.var_upper
+
+    def get_integer_vars(self):
+        return self._function.integer_vars
+
+    def evaluate(self, point):
+        return self._function.evaluate(point)
+
+    def evaluate_fast(self, point):
+        raise NotImplementedError('evaluate_fast() not implemented')
+
+    def has_evaluate_fast(self):
+        return False
+# -- end class
+
+class TestNoisyBlackBox(RbfoptBlackBox):
+    """A noisy black-box constructed from a known test function.
+
+    Parameters
+    ----------
+    name : string
+        The name of the function to be implemented.
+
+    max_rel_error: float
+        Maximum relative error.
+
+    max_abs_error: float
+        Maximum absolute error.
+    """
+    def __init__(self, name, max_rel_error = 0.1, max_abs_error = 0.1):
+        """Constructor.
+        """
+        assert(max_rel_error >= 0.0)
+        assert(max_abs_error >= 0.0)
+        try:
+            thismodule = sys.modules[__name__]
+            self._function = getattr(thismodule, name.lower())
+        except AttributeError:
+            raise ValueError('Function ' + name + ' not implemented')
+        self._max_rel_error = max_rel_error
+        self._max_abs_error = max_abs_error
+
+    def get_dimension(self):
+        return self._function.dimension
+
+    def get_var_lower(self):
+        return self._function.var_lower
+
+    def get_var_upper(self):
+        return self._function.var_upper
+
+    def get_integer_vars(self):
+        return self._function.integer_vars
+
+    def evaluate(self, point):
+        return self._function.evaluate(point)
+
+    def evaluate_fast(self, point):
+        value = self._function.evaluate(point)
+        rel_noise = np.random.uniform(-self._max_rel_error,
+                                      self._max_rel_error)
+        abs_noise = np.random.uniform(-self._max_abs_error,
+                                      self._max_abs_error)
+        return (value + rel_noise*abs(value) + abs_noise)
+        
+    def has_evaluate_fast(self):
+        return True
 # -- end class

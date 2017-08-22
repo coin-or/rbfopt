@@ -2,8 +2,12 @@
 
 This module contains the definition of the black box function that is
 optimized by RBFOpt, when using the default command line
-interface. This is an abstract class: all methods *must* be
-reimplemented by the user.
+interface. The user can implement a similar class to define their own
+function.
+
+We provide here an example for a function of dimension 3 that returns
+the power of the sum of the three variables, with pre-determined
+exponent.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
@@ -11,21 +15,67 @@ Licensed under Revised BSD license, see LICENSE.
 Research partially supported by SUTD-MIT International Design Center.
 
 """
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
-from abc import ABCMeta, abstractmethod
+import numpy as np
+import rbfopt
 
-class BlackBox:
-    """Abstract class for a black-box function that can be optimized. 
-    
-    A class that declares (but does not implement) the necessary
-    methods to describe a black-box function. The user can implement a
-    derived class and use it to compute the function that must be
-    optimized.
+class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
+    """Example of a black-box function that can be optimized. 
 
+    A class that implements the necessary methods to describe a
+    black-box function. The user can implement a similar class and use
+    it to compute the function that must be optimized. The attributs
+    and functions below are required.
+
+    Attributes
+    ----------
+
+    dimension : int
+        Dimension of the problem.
+        
+    var_lower : 1D numpy.ndarray[float]
+        Lower bounds of the decision variables.
+
+    var_upper : 1D numpy.ndarray[float]
+        Upper bounds of the decision variables.
+
+    integer_vars : 1D numpy.ndarray[int]
+        A list of indices of the variables that must assume integer
+        values.
+
+    exponent : float
+        The power to which the sum of the variables should be
+        raised.
+
+    Parameters
+    ----------
+    exponent : float
+        The power to which the sum of the variables should be
+        raised. Should be nonnegative.
+
+    See also
+    --------
+    :class:`rbfopt_black_box.BlackBox`
     """
-    __metaclass__ = ABCMeta
 
-    @abstractmethod
+    def __init__(self, exponent=1):
+        """Constructor.
+        """
+        assert(exponent >= 0)
+        self.exponent = exponent
+
+        # Set required data
+        self.dimension = 3
+
+        self.var_lower = np.array([0, 0, 0])
+        self.var_upper = np.array([10, 10, 10])
+
+        self.integer_vars = np.array([0, 1])
+    # -- end function
+
     def get_dimension(self):
         """Return the dimension of the problem.
 
@@ -34,31 +84,29 @@ class BlackBox:
         int
             The dimension of the problem.
         """
-        pass
+        return self.dimension
     # -- end function
-
-    @abstractmethod
+    
     def get_var_lower(self):        
         """Return the array of lower bounds on the variables.
 
         Returns
         -------
-        1D numpy.ndarray[float]
+        List[float]
             Lower bounds of the decision variables.
         """
-        pass
+        return self.var_lower
     # -- end function
-    
-    @abstractmethod
+        
     def get_var_upper(self):
         """Return the array of upper bounds on the variables.
 
         Returns
         -------
-        1D numpy.ndarray[float]
+        List[float]
             Upper bounds of the decision variables.
         """
-        pass
+        return self.var_upper
     # -- end function
 
     def get_integer_vars(self):
@@ -66,21 +114,20 @@ class BlackBox:
         
         Returns
         -------
-        1D numpy.ndarray[int]
+        List[int]
             A list of indices of the variables that must assume
             integer values. Can be empty.
         """
-        pass
+        return self.integer_vars
     # -- end function
-
-    @abstractmethod
+    
     def evaluate(self, x):
 
         """Evaluate the black-box function.
         
         Parameters
         ----------
-        x : 1D numpy.ndarray[float]
+        x : List[float]
             Value of the decision variables.
 
         Returns
@@ -89,10 +136,9 @@ class BlackBox:
             Value of the function at x.
 
         """
-        pass
+        return np.sum(x)**self.exponent        
     # -- end function
-
-    @abstractmethod
+    
     def evaluate_fast(self, x):
         """Evaluate a fast approximation of the black-box function.
 
@@ -103,7 +149,7 @@ class BlackBox:
 
         Parameters
         ----------
-        x : 1D numpy.ndarray[float]
+        x : List[float]
             Value of the decision variables.
 
         Returns
@@ -112,10 +158,9 @@ class BlackBox:
             Approximate value of the function at x.
 
         """
-        pass
+        raise NotImplementedError('evaluate_fast not available')
     # -- end function
 
-    @abstractmethod
     def has_evaluate_fast(self):
         """Indicate whether evaluate_fast is available.
 
@@ -130,7 +175,7 @@ class BlackBox:
         bool
             Is evaluate_fast available?
         """
-        pass
+        return False
     # -- end function
 
 # -- end class

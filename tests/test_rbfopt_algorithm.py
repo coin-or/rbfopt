@@ -17,12 +17,12 @@ import time
 import tempfile
 import os
 import numpy as np
-import test_rbfopt_env
-from rbfopt_settings import RbfoptSettings
-import rbfopt_test_interface as ti
-import test_functions
-from rbfopt_black_box import BlackBox
-import rbfopt_algorithm as ra
+import src
+import src.rbfopt
+import src.rbfopt.rbfopt_algorithm as ra
+import src.rbfopt.rbfopt_test_functions as tf
+from src.rbfopt.rbfopt_settings import RbfoptSettings
+from src.rbfopt.rbfopt_black_box import RbfoptBlackBox
 
 class TestGutmann(unittest.TestCase):
     """Test Gutmann's algorithm on a small set of problems."""
@@ -30,9 +30,13 @@ class TestGutmann(unittest.TestCase):
     rand_seeds = [512319876, 231974198, 908652418]
     eps_opt = 0.05
 
+    def setUp(self):
+        """Initialize random seed."""
+        np.random.seed(71294123)
+
     def test_gutmann_ex8_1_4(self):
         """Check solution of ex8_1_4 with Gutmann's method, genetic."""
-        bb = ti.TestBlackBox('ex8_1_4')
+        bb = tf.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -56,7 +60,7 @@ class TestGutmann(unittest.TestCase):
 
     def test_gutmann_prob03(self):
         """Check solution of prob03 with Gutmann's method, solver."""
-        bb = ti.TestBlackBox('prob03')
+        bb = tf.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -85,7 +89,7 @@ class TestGutmann(unittest.TestCase):
         Sampling-based global search.
 
         """
-        bb = ti.TestBlackBox('ex8_1_4')
+        bb = tf.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -112,7 +116,7 @@ class TestGutmann(unittest.TestCase):
 
     def test_gutmann_st_miqp3_noisy(self):
         """Check solution of noisy st_miqp3 with Gutmann, genetic."""
-        bb = ti.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
+        bb = tf.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -138,7 +142,7 @@ class TestGutmann(unittest.TestCase):
 
     def test_gutmann_branin_noisy_with_init(self):
         """Check solution of noisy braning with Gutmann, solver."""
-        bb = ti.TestNoisyBlackBox('branin', 0.1, 0.01)
+        bb = tf.TestNoisyBlackBox('branin', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -168,7 +172,7 @@ class TestGutmann(unittest.TestCase):
 
     def test_time_limit(self):
         """Verify that time limits are satisfied."""
-        bb = ti.TestBlackBox('hartman6')
+        bb = tf.TestBlackBox('hartman6')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -197,7 +201,7 @@ class TestGutmannParallel(unittest.TestCase):
 
     def test_gutmann_parallel_ex8_1_4(self):
         """Check solution of ex8_1_4 with Gutmann's method, solver."""
-        bb = ti.TestBlackBox('ex8_1_4')
+        bb = tf.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -225,7 +229,7 @@ class TestGutmannParallel(unittest.TestCase):
 
     def test_gutmann_parallel_prob03(self):
         """Check solution of prob03 with Gutmann's method, sampling."""
-        bb = ti.TestBlackBox('prob03')
+        bb = tf.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -253,7 +257,7 @@ class TestGutmannParallel(unittest.TestCase):
         """Check solution of ex8_1_4 with Gutmann, log scaling, infstep.
 
         Genetic algorithm."""
-        bb = ti.TestBlackBox('ex8_1_4')
+        bb = tf.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -281,7 +285,7 @@ class TestGutmannParallel(unittest.TestCase):
 
     def test_gutmann_parallel_st_miqp3_noisy(self):
         """Check solution of noisy st_miqp3 with Gutmann, solver."""
-        bb = ti.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
+        bb = tf.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -308,7 +312,7 @@ class TestGutmannParallel(unittest.TestCase):
 
     def test_time_limit(self):
         """Verify that time limits are satisfied."""
-        bb = ti.TestBlackBox('hartman6')
+        bb = tf.TestBlackBox('hartman6')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -338,7 +342,7 @@ class TestMSRSM(unittest.TestCase):
 
     def test_msrsm_ex8_1_4(self):
         """Check solution of ex8_1_4 with the MSRSM algorithm, sampling."""
-        bb = ti.TestBlackBox('ex8_1_4')
+        bb = tf.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -363,7 +367,7 @@ class TestMSRSM(unittest.TestCase):
 
     def test_msrsm_prob03(self):
         """Check solution of prob03 with the MSRSM algorithm, genetic."""
-        bb = ti.TestBlackBox('prob03')
+        bb = tf.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -391,7 +395,7 @@ class TestMSRSM(unittest.TestCase):
         Sampling solution of global search problems.
 
         """
-        bb = ti.TestBlackBox('prob03')
+        bb = tf.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -417,7 +421,7 @@ class TestMSRSM(unittest.TestCase):
 
     def test_msrsm_st_miqp3_noisy(self):
         """Check solution of noisy st_miqp3 with MSRSM, genetic."""
-        bb = ti.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
+        bb = tf.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -443,7 +447,7 @@ class TestMSRSM(unittest.TestCase):
 
     def test_msrsm_branin_noisy_with_init(self):
         """Check solution of noisy branin with MSRSM, sampling."""
-        bb = ti.TestNoisyBlackBox('branin', 0.1, 0.01)
+        bb = tf.TestNoisyBlackBox('branin', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -471,7 +475,7 @@ class TestMSRSM(unittest.TestCase):
 
     def test_time_limit(self):
         """Verify that time limits are satisfied."""
-        bb = ti.TestBlackBox('hartman6')
+        bb = tf.TestBlackBox('hartman6')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -500,7 +504,7 @@ class TestMSRSMParallel(unittest.TestCase):
 
     def test_msrsm_parallel_ex8_1_4(self):
         """Check solution of ex8_1_4 with the MSRSM algorithm, sampling."""
-        bb = ti.TestBlackBox('ex8_1_4')
+        bb = tf.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -526,7 +530,7 @@ class TestMSRSMParallel(unittest.TestCase):
 
     def test_msrsm_parallel_prob03(self):
         """Check solution of prob03 with the MSRSM algorithm, genetic."""
-        bb = ti.TestBlackBox('prob03')
+        bb = tf.TestBlackBox('prob03')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -553,7 +557,7 @@ class TestMSRSMParallel(unittest.TestCase):
         """Check solution of st_miqp3 with MSRSM and no local search.
 
         Solver solution of global search problems."""
-        bb = ti.TestBlackBox('st_miqp3')
+        bb = tf.TestBlackBox('st_miqp3')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -580,7 +584,7 @@ class TestMSRSMParallel(unittest.TestCase):
 
     def test_msrsm_parallel_prob03_noisy(self):
         """Check solution of noisy prob03 with MSRSM, sampling."""
-        bb = ti.TestNoisyBlackBox('prob03', 0.1, 0.01)
+        bb = tf.TestNoisyBlackBox('prob03', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -607,7 +611,7 @@ class TestMSRSMParallel(unittest.TestCase):
 
     def test_time_limit(self):
         """Verify that time limits are satisfied."""
-        bb = ti.TestBlackBox('hartman6')
+        bb = tf.TestBlackBox('hartman6')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
@@ -637,7 +641,7 @@ class TestState(unittest.TestCase):
 
     def test_state_reload(self):
         """Check solution of ex8_1_4 after state save/reload."""
-        bb = ti.TestBlackBox('ex8_1_4')
+        bb = tf.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         handle, filename = tempfile.mkstemp()
         for seed in self.rand_seeds:
@@ -666,7 +670,7 @@ class TestState(unittest.TestCase):
     # -- end function
 # -- end class
 
-class TestBlackBoxFixed(BlackBox):
+class TestBlackBoxFixed(RbfoptBlackBox):
     """A black-box constructed from a known test function.
 
     Parameters
@@ -678,7 +682,7 @@ class TestBlackBoxFixed(BlackBox):
         """Constructor.
         """
         try:
-            self._function = getattr(test_functions, name.lower())
+            self._function = getattr(tf, name.lower())
         except AttributeError:
             raise ValueError('Function ' + name + ' not implemented')
         # Generate lower and upper bounds for fixed variables
@@ -787,6 +791,3 @@ class TestFixedVariables(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg=msg)
     # -- end function
 # -- end class
-
-if (__name__ == '__main__'):
-    unittest.main()

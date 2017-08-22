@@ -14,16 +14,18 @@ from __future__ import absolute_import
 import unittest
 import numpy as np
 import pyomo.environ
-import test_rbfopt_env
-import rbfopt_degree0_models as d0
-import rbfopt_utils as ru
-from rbfopt_settings import RbfoptSettings
+import src
+import src.rbfopt
+import src.rbfopt.rbfopt_utils as ru
+import src.rbfopt.rbfopt_degree0_models as d0
+from src.rbfopt.rbfopt_settings import RbfoptSettings
 
 class TestMultiquadricModels(unittest.TestCase):
     """Test the rbfopt_degree0_models module using multiquadric RBF."""
 
     def setUp(self):
         """Generate data to simulate an optimization problem."""
+        np.random.seed(71294123)
         self.settings = RbfoptSettings(rbf = 'multiquadric')
         self.n = 3
         self.k = 5
@@ -248,6 +250,3 @@ class TestLinearModels(unittest.TestCase):
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
 # -- end class
-
-if (__name__ == '__main__'):
-    unittest.main()

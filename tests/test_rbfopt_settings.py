@@ -12,15 +12,19 @@ from __future__ import division
 from __future__ import absolute_import
 
 import unittest
-import test_rbfopt_env
-import rbfopt_settings as rs
 import ast
+import numpy as np
+import src
+import src.rbfopt
+import src.rbfopt.rbfopt_settings as rs
+
 
 class TestRbfoptSettings(unittest.TestCase):
     """Test the RbfSetting class."""
 
     def setUp(self):
         """Create default parameter object and read docstring."""
+        np.random.seed(71294123)
         self.default = rs.RbfoptSettings()
         attrs = vars(self.default)
         docstring = self.default.__doc__
@@ -104,6 +108,3 @@ class TestRbfoptSettings(unittest.TestCase):
 
 
 # -- end class
-
-if (__name__ == '__main__'):
-    unittest.main()

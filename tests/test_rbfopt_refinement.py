@@ -13,10 +13,12 @@ from __future__ import absolute_import
 
 import unittest
 import numpy as np
-import test_rbfopt_env
-import rbfopt_refinement as ref
-import rbfopt_utils as ru
-from rbfopt_settings import RbfoptSettings
+import src
+import src.rbfopt
+import src.rbfopt.rbfopt_utils as ru
+import src.rbfopt.rbfopt_refinement as ref
+from src.rbfopt.rbfopt_settings import RbfoptSettings
+
 
 def dist(a, b):
     """Distance function, for convenience reimplemented here.
@@ -28,6 +30,7 @@ class TestRefinement(unittest.TestCase):
 
     def setUp(self):
         """Create data for subsequent tests."""
+        np.random.seed(71294123)
         self.n = 3
         self.k = 10
         self.var_lower = np.array([i for i in range(self.n)])

@@ -15,16 +15,18 @@ import unittest
 import math
 import random
 import numpy as np
-import test_rbfopt_env
-import rbfopt_utils as ru
-import rbfopt_config as config
-from rbfopt_settings import RbfoptSettings
+import src
+import src.rbfopt
+import src.rbfopt.rbfopt_utils as ru
+import src.rbfopt.rbfopt_config as config
+from src.rbfopt.rbfopt_settings import RbfoptSettings
 
 class TestUtils(unittest.TestCase):
     """Test the rbfopt_utils module."""
 
     def setUp(self):
         """Initialize data used by several functions."""
+        np.random.seed(71294123)
         self.rbf_types = [rbf_type for rbf_type in RbfoptSettings._allowed_rbf
                           if rbf_type != 'auto']
     # -- end function
@@ -492,12 +494,4 @@ class TestModelSelection(unittest.TestCase):
             # -- end for
         # -- end for
     # -- end function
-
 # -- end class
-
-
-if (__name__ == '__main__'):
-    # Set random seed for testing environment
-    random.seed(test_rbfopt_env.rand_seed)
-    np.random.seed(test_rbfopt_env.rand_seed)
-    unittest.main()

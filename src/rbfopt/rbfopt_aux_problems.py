@@ -21,11 +21,11 @@ import numpy as np
 import scipy.spatial as ss
 import pyomo.environ
 import pyomo.opt
-import rbfopt_utils as ru
-import rbfopt_config as config
-import rbfopt_degree1_models
-import rbfopt_degree0_models
-from rbfopt_settings import RbfoptSettings
+from . import rbfopt_utils as ru
+from . import rbfopt_config as config
+from . import rbfopt_degree1_models
+from . import rbfopt_degree0_models
+from .rbfopt_settings import RbfoptSettings
 
 
 def pure_global_search(settings, n, k, var_lower, var_upper,

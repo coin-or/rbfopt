@@ -16,9 +16,9 @@ from __future__ import absolute_import
 import numpy as np
 import scipy.spatial as ss
 import scipy.linalg as la
-import rbfopt_config as config
-import rbfopt_utils as ru
-from rbfopt_settings import RbfoptSettings
+from . import rbfopt_config as config
+from . import rbfopt_utils as ru
+from .rbfopt_settings import RbfoptSettings
 
 
 def init_trust_region(settings, n, k, node_pos, center):

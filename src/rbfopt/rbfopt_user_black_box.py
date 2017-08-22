@@ -1,36 +1,29 @@
-"""Black-box function.
+"""Black-box function from user data.
 
-This module contains the definition of the black box function that is
-optimized by RBFOpt, when using the default command line
-interface. The user can implement a similar class to define their own
-function.
-
-We provide here an example for a function of dimension 3 that returns
-the power of the sum of the three variables, with pre-determined
-exponent.
+This module contains the definition of a black box function
+constructed from user data that can be optimized by RBFOpt.
 
 Licensed under Revised BSD license, see LICENSE.
-(C) Copyright Singapore University of Technology and Design 2014.
-(C) Copyright International Business Machines Corporation 2016.
-Research partially supported by SUTD-MIT International Design Center.
+(C) Copyright International Business Machines Corporation 2017.
 
 """
+from __future__ import print_function
+from __future__ import division
+from __future__ import absolute_import
 
-import rbfopt_black_box as bb
+from . import rbfopt_black_box as bb
 import numpy as np
 
 
-class BlackBox(bb.BlackBox):
-    """Example of a black-box function that can be optimized. 
+class RbfoptUserBlackBox(bb.RbfoptBlackBox):
+    """A black-box function from user data that can be optimized.
 
-    A class that implements the necessary methods to describe a
-    black-box function. The user can implement a similar class and use
-    it to compute the function that must be optimized. The attributs
-    and functions below are required.
+    A class that implements the necessary methods to describe the
+    black-box function to be minimized, and gets all the required data
+    from the user.
 
-    Attributes
+    Parameters
     ----------
-
     dimension : int
         Dimension of the problem.
         
@@ -42,36 +35,39 @@ class BlackBox(bb.BlackBox):
 
     integer_vars : 1D numpy.ndarray[int]
         A list of indices of the variables that must assume integer
-        values.
+        values. Can be empty.
 
-    exponent : float
-        The power to which the sum of the variables should be
-        raised.
+    obj_funct : Callable[1D numpy.ndarray[float]]
+        The function to optimize. Must take a numpy array as argument,
+        and return a float.
 
-    Parameters
-    ----------
-    exponent : float
-        The power to which the sum of the variables should be
-        raised. Should be nonnegative.
+    obj_funct_fast : Callable[1D numpy.ndarray[float]] or None
+        The noisy but fast version of the function to optimize. If
+        given, it must take a numpy array as argument, and return a
+        float. If it is None, we assume that there is no fast version
+        of the objective function.
+        
 
     See also
     --------
     :class:`rbfopt_black_box.BlackBox`
+
     """
 
-    def __init__(self, exponent=1):
+    def __init__(self, dimension, var_lower, var_upper, integer_vars,
+                 obj_funct, obj_funct_fast=None):
         """Constructor.
         """
-        assert(exponent >= 0)
-        self.exponent = exponent
+        assert(len(var_lower) == dimension)
+        assert(len(var_upper) == dimension)
+        assert(len(integer_vars) <= dimension)
 
-        # Set required data
-        self.dimension = 3
-
-        self.var_lower = np.array([0, 0, 0])
-        self.var_upper = np.array([10, 10, 10])
-
-        self.integer_vars = np.array([0, 1])
+        self.dimension = dimension
+        self.var_lower = np.array(var_lower)
+        self.var_upper = np.array(var_upper)
+        self.integer_vars = np.array(integer_vars)
+        self.obj_funct = obj_funct
+        self.obj_funct_fast = obj_funct_fast
     # -- end function
 
     def get_dimension(self):
@@ -120,7 +116,6 @@ class BlackBox(bb.BlackBox):
     # -- end function
     
     def evaluate(self, x):
-
         """Evaluate the black-box function.
         
         Parameters
@@ -134,7 +129,8 @@ class BlackBox(bb.BlackBox):
             Value of the function at x.
 
         """
-        return np.sum(x)**self.exponent        
+        assert(len(x) == self.dimension)
+        return self.obj_funct(x)
     # -- end function
     
     def evaluate_fast(self, x):
@@ -156,7 +152,12 @@ class BlackBox(bb.BlackBox):
             Approximate value of the function at x.
 
         """
-        raise NotImplementedError('evaluate_fast not available')
+        assert(len(x) == self.dimension)
+        if (self.obj_funct_fast is None):
+            raise NotImplementedError('evaluate_fast not available')
+        else:
+            return self.obj_funct_fast(x)
+        
     # -- end function
 
     def has_evaluate_fast(self):
@@ -173,7 +174,7 @@ class BlackBox(bb.BlackBox):
         bool
             Is evaluate_fast available?
         """
-        return False
+        return (self.obj_funct_fast is not None)
     # -- end function
 
 # -- end class

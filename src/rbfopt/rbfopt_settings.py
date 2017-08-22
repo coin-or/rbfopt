@@ -1,4 +1,4 @@
-"""Settings for the RBF method.
+"""Settings for RBFOpt.
 
 This module contains the settings of the main optimization algorithm.
 

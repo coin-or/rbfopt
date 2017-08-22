@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """Command-line interface for RBFOpt.
 
 This module provides a basic command-line interface for RBFOpt,
@@ -17,11 +18,10 @@ from __future__ import absolute_import
 import sys
 import argparse
 import ast
-import importlib
 import numpy as np
-from rbfopt_settings import RbfoptSettings
-from rbfopt_black_box import BlackBox
-from rbfopt_algorithm import RbfoptAlgorithm
+from rbfopt import RbfoptSettings
+from rbfopt import RbfoptBlackBox
+from rbfopt import RbfoptAlgorithm
 
 
 def register_options(parser):
@@ -70,13 +70,14 @@ def register_options(parser):
                             help = param_help[i],
                             default = getattr(default, param_name[i]))
     intset = parser.add_argument_group('Execution settings')
-    intset.add_argument('--black_box_module', '-m', action = 'store',
-                        metavar = 'MODULE_NAME', dest = 'black_box_module',
-                        type = str, default = 'rbfopt_black_box_example',
-                        help = 'Name of module containing black box function'
-                        + ' and the description of its characteristics. ' +
-                        'This module should implement a BlackBox class ' +
-                        'derived from rbfopt_black_box.BlackBox.')
+    intset.add_argument('--black_box_file', '-m', action = 'store',
+                        metavar = 'FILE_NAME', dest = 'black_box_file',
+                        type = str, default = None,
+                        help = 'Name of python file containing black box ' +
+                        'function and the description of its ' +
+                        'characteristics. This file should implement a ' +
+                        'BlackBox class derived from ' +
+                        'rbfopt_black_box.BlackBox. ')
     intset.add_argument('--load', '-l', action = 'store', dest = 'load_state',
                         help = 'File to read state to resume optimization')
     intset.add_argument('--log', '-o', action = 'store',
@@ -107,9 +108,6 @@ def register_options(parser):
                         'save_state_interval and save_state_file because ' +
                         'here the state is only saved at the end of ' +
                         'the optimization (or after a pause).')
-
-
-
 # -- end function
 
 def rbfopt_cl_interface(args, black_box):
@@ -124,10 +122,10 @@ def rbfopt_cl_interface(args, black_box):
         A dictionary containing the values of the parameters in a
         format args['name'] = value. 
 
-    black_box : :class:`rbfopt_black_box.BlackBox`
+    black_box : :class:`rbfopt_black_box.RbfoptBlackBox`
         The black box to be optimized.
     """
-    if (not isinstance(black_box, BlackBox)):
+    if (not isinstance(black_box, RbfoptBlackBox)):
         raise ValueError('The specified module does not contain a ' +
                          'valid BlackBox instance')
 
@@ -144,7 +142,7 @@ def rbfopt_cl_interface(args, black_box):
     # Make a copy of parameters and adjust them, deleting keys
     # that are not recognized as valid by RbfoptSettings.
     local_args = args.copy()
-    del local_args['black_box_module']
+    del local_args['black_box_file']
     del local_args['output_stream']
     del local_args['load_state']
     del local_args['dump_state']
@@ -208,6 +206,21 @@ if (__name__ == "__main__"):
     # Add options to parser and parse arguments
     register_options(parser)
     args = parser.parse_args()
-    bb = importlib.import_module(args.black_box_module)
+    if (args.black_box_file is None):
+        raise ValueError('User must provide a file containing the ' +
+                         'implementation of RbfoptBlackBox.')
+    if (sys.version_info[0] == 2):
+        import imp
+        bb = imp.load_source('user_bb', args.black_box_file)
+    elif (sys.version_info[0] == 3 and 3 <= sys.version_info[1] <= 4):
+        from importlib.machinery import SourceFileLoader
+        bb = SourceFileLoader('user_bb', args.black_box_file).load_module()
+    elif (sys.version_info[0] == 3 and sys.version_info[1] >= 5):
+        import importlib.util
+        spec = importlib.util.spec_from_file_location('user_bb',
+                                                      args.black_box_file)
+        bb = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(bb)
+    # bb = importlib.import_module(args.black_box_module)
     # Run the interface
-    rbfopt_cl_interface(vars(args), bb.BlackBox())
+    rbfopt_cl_interface(vars(args), bb.RbfoptBlackBox())

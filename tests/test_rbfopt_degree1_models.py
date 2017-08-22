@@ -14,16 +14,18 @@ from __future__ import absolute_import
 import unittest
 import numpy as np
 import pyomo.environ
-import test_rbfopt_env
-import rbfopt_degree1_models as d1
-import rbfopt_utils as ru
-from rbfopt_settings import RbfoptSettings
+import src
+import src.rbfopt
+import src.rbfopt.rbfopt_utils as ru
+import src.rbfopt.rbfopt_degree1_models as d1
+from src.rbfopt.rbfopt_settings import RbfoptSettings
 
 class TestCubicModels(unittest.TestCase):
     """Test the rbfopt_degree1_models module using cubic RBF."""
 
     def setUp(self):
         """Generate data to simulate an optimization problem."""
+        np.random.seed(71294123)
         self.settings = RbfoptSettings(rbf = 'cubic')
         self.n = 3
         self.k = 5
@@ -257,6 +259,3 @@ class TestThinPlateSplineModels(unittest.TestCase):
 
 
 # -- end class
-
-if (__name__ == '__main__'):
-    unittest.main()

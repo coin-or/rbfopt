@@ -25,9 +25,9 @@ import numpy as np
 import scipy.spatial as ss
 import scipy.linalg as la
 from scipy.special import xlogy
-import rbfopt_config as config
-from rbfopt_settings import RbfoptSettings
-from rbfopt_config import GAMMA
+from . import rbfopt_config as config
+from .rbfopt_settings import RbfoptSettings
+from .rbfopt_config import GAMMA
 
 def get_rbf_function(settings):
     """Return a radial basis function.

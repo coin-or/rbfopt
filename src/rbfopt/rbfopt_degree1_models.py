@@ -1,8 +1,8 @@
-"""Pyomo models with zero-degree polynomial for RBFOpt.
+"""Pyomo models with degree-one polynomial for RBFOpt.
 
-This module creates all the auxiliary problems that rely on
-zero-degree polynomials. The models are created and instantiated using
-Pyomo. This module does *not* solve the problems.
+This module creates all the auxiliary problems that rely on degree-one
+polynomials. The models are created and instantiated using Pyomo. This
+module does *not* solve the problems.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
@@ -15,11 +15,10 @@ from __future__ import absolute_import
 
 from pyomo.environ import *
 import sys
-import rbfopt_utils as ru
 import numpy as np
-import rbfopt_config as config
-from rbfopt_settings import RbfoptSettings
-from rbfopt_config import GAMMA
+from . import rbfopt_utils as ru
+from . import rbfopt_config as config
+from .rbfopt_settings import RbfoptSettings
 
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
@@ -50,7 +49,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
         List of indices of integer variables.
 
     node_pos : 2D numpy.ndarray[float]
-        List of coordinates of the nodes.
+        List of coordinates of the nodes (one on each row).
 
     rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
@@ -74,10 +73,10 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
     assert(len(rbf_lambda) == k)
-    assert(len(rbf_h) == 1)
+    assert(len(rbf_h) == (n+1))
     assert(len(node_pos) == k)
     assert(isinstance(settings, RbfoptSettings))
-    assert(ru.get_degree_polynomial(settings) == 0)
+    assert(ru.get_degree_polynomial(settings) == 1)
 
     model = ConcreteModel()
     
@@ -90,15 +89,15 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     model.K = RangeSet(0, model.k - 1)
 
     # Dimension of u_pi
-    model.q = Param(initialize=(k+1))
+    model.q = Param(initialize=(n+k+1))
     model.Q = RangeSet(0, model.q - 1)
-    model.Qlast = RangeSet(model.q - 1, model.q - 1)
+    model.Qlast = RangeSet(model.q-1, model.q-1)
 
     # Coefficients of the RBF
     lambda_h_param = {}
     for i in range(k):
         lambda_h_param[i] = float(rbf_lambda[i])
-    for i in range(1):
+    for i in range(n+1):
         lambda_h_param[k+i] = float(rbf_h[i])
     model.lambda_h = Param(model.Q, initialize=lambda_h_param)
 
@@ -128,12 +127,13 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     model.OBJ = Objective(rule=_min_rbf_obj_expression, sense=minimize)
 
     # Constraints. See definitions below.
-    if (settings.rbf == 'linear'):
+    if (settings.rbf == 'cubic'):        
         model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_linear_constraint_rule)
-    elif (settings.rbf == 'multiquadric'):
+                                          rule=_udef_cubic_constraint_rule)
+    elif (settings.rbf == 'thin_plate_spline'):
         model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_multiquad_constraint_rule)
+                                          rule=_udef_thinplate_constraint_rule)
+    model.PidefConstraint = Constraint(model.N, rule=_pidef_constraint_rule)
     model.NonhomoConstraint = Constraint(model.Qlast, 
                                          rule=_nonhomo_constraint_rule)
 
@@ -147,6 +147,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
 
 def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper, 
                                  integer_vars, node_pos, mat):
+
     """Create the concrete model to maximize 1/\mu.
 
     Create the concrete model to maximize :math: `1/\mu`, also known
@@ -197,9 +198,9 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     assert(len(var_upper) == n)
     assert(len(node_pos) == k)
     assert(isinstance(mat, np.matrix))
-    assert(mat.shape == (k+1,k+1))
+    assert(mat.shape == (n+k+1, n+k+1))
     assert(isinstance(settings, RbfoptSettings))
-    assert(ru.get_degree_polynomial(settings) == 0)
+    assert(ru.get_degree_polynomial(settings) == 1)
 
     model = ConcreteModel()
 
@@ -212,7 +213,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     model.K = RangeSet(0, model.k - 1)
 
     # Dimension of the matrix
-    model.q = Param(initialize=(k+1))
+    model.q = Param(initialize=(n+k+1))
     model.Q = RangeSet(0, model.q - 1)
     model.Qlast = RangeSet(model.q - 1, model.q - 1)
 
@@ -236,8 +237,8 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     # symmetric, we only save the upper right part, while doubling the
     # off-diagonal elements.
     Ainv_param = {}
-    for i in range(k+1):
-        for j in range(i, k+1):
+    for i in range(n+k+1):
+        for j in range(i, n+k+1):
             if (abs(mat[i, j]) != 0.0):
                 if (i == j):
                     Ainv_param[i, j] = float(mat[i, j])
@@ -247,10 +248,8 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
                        default=0.0)
 
     # Value of phi at zero, necessary for shift
-    if (settings.rbf == 'linear'):
+    if (settings.rbf == 'cubic' or settings.rbf == 'thin_plate_spline'):
         model.phi_0 = Param(initialize=0.0)
-    elif (settings.rbf == 'multiquadric'):
-        model.phi_0 = Param(initialize=GAMMA)
 
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
@@ -266,12 +265,13 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
                           sense=maximize)
 
     # Constraints. See definitions below.
-    if (settings.rbf == 'linear'):
+    if (settings.rbf == 'cubic'):        
         model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_linear_constraint_rule)
-    elif (settings.rbf == 'multiquadric'):
+                                          rule=_udef_cubic_constraint_rule)
+    elif (settings.rbf == 'thin_plate_spline'):
         model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_multiquad_constraint_rule)
+                                          rule=_udef_thinplate_constraint_rule)
+    model.PidefConstraint = Constraint(model.N, rule=_pidef_constraint_rule)
     model.NonhomoConstraint = Constraint(model.Qlast, 
                                          rule=_nonhomo_constraint_rule)
 
@@ -285,9 +285,9 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
 
 def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
                          node_pos, rbf_lambda, rbf_h, mat, target_val):
-    """Create the abstract model to maximize h_k.
+    """Create the concrete model to maximize h_k.
 
-    Create the abstract model to maximize h_k, also known as the
+    Create the concrete model to maximize h_k, also known as the
     Global Search Step of the RBF method.
 
     Parameters
@@ -345,12 +345,12 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
     assert(len(rbf_lambda) == k)
-    assert(len(rbf_h) == 1)
+    assert(len(rbf_h) == (n+1))
     assert(len(node_pos) == k)
     assert(isinstance(mat, np.matrix))
-    assert(mat.shape == (k+1, k+1))
+    assert(mat.shape == (n+k+1,n+k+1))
     assert(isinstance(settings, RbfoptSettings))
-    assert(ru.get_degree_polynomial(settings) == 0)
+    assert(ru.get_degree_polynomial(settings) == 1)
 
     model = ConcreteModel()
 
@@ -363,7 +363,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     model.K = RangeSet(0, model.k - 1)
 
     # Dimension of the matrix
-    model.q = Param(initialize=(k+1))
+    model.q = Param(initialize=(n+k+1))
     model.Q = RangeSet(0, model.q - 1)
     model.Qlast = RangeSet(model.q - 1, model.q - 1)
 
@@ -371,7 +371,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     lambda_h_param = {}
     for i in range(k):
         lambda_h_param[i] = float(rbf_lambda[i])
-    for i in range(1):
+    for i in range(n+1):
         lambda_h_param[k+i] = float(rbf_h[i])
     model.lambda_h = Param(model.Q, initialize=lambda_h_param)
 
@@ -395,8 +395,8 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     # symmetric, we only save the upper right part, while doubling the
     # off-diagonal elements.
     Ainv_param = {}
-    for i in range(k+1):
-        for j in range(i, k+1):
+    for i in range(n+k+1):
+        for j in range(i, n+k+1):
             if (abs(mat[i, j]) != 0.0):
                 if (i == j):
                     Ainv_param[i, j] = float(mat[i, j])
@@ -409,10 +409,8 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     model.fstar = Param(initialize=target_val)
 
     # Value of phi at zero, necessary for shift
-    if (settings.rbf == 'linear'):
+    if (settings.rbf == 'cubic' or settings.rbf == 'thin_plate_spline'):
         model.phi_0 = Param(initialize=0.0)
-    elif (settings.rbf == 'multiquadric'):
-        model.phi_0 = Param(initialize=GAMMA)
 
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
@@ -431,12 +429,13 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     model.OBJ = Objective(rule=_max_h_k_obj_expression, sense=maximize)
 
     # Constraints. See definitions below.
-    if (settings.rbf == 'linear'):
+    if (settings.rbf == 'cubic'):        
         model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_linear_constraint_rule)
-    elif (settings.rbf == 'multiquadric'):
+                                          rule=_udef_cubic_constraint_rule)
+    elif (settings.rbf == 'thin_plate_spline'):
         model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_multiquad_constraint_rule)
+                                          rule=_udef_thinplate_constraint_rule)
+    model.PidefConstraint = Constraint(model.N, rule=_pidef_constraint_rule)
     model.NonhomoConstraint = Constraint(model.Qlast, 
                                          rule=_nonhomo_constraint_rule)
     model.RbfdefConstraint = Constraint(rule=_rbfdef_constraint_rule)
@@ -480,7 +479,7 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
     
-    fast_node_index : 1D numpy.ndarray[float]
+    fast_node_index : 1D numpy.ndarray[int]
         List of indices of nodes whose function value should be
         considered variable withing the allowed range.
     
@@ -501,9 +500,9 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     assert(isinstance(Phimat, np.matrix))
     assert(isinstance(Pmat, np.matrix))
     assert(Phimat.shape == (k, k))
-    assert(Pmat.shape == (k, 1))
+    assert(Pmat.shape == (k, n+1))
     assert(len(fast_node_index) == len(fast_node_err_bounds))
-    assert(ru.get_degree_polynomial(settings) == 0)
+    assert(ru.get_degree_polynomial(settings) == 1)
 
     model = ConcreteModel()
 
@@ -512,8 +511,8 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     model.N = RangeSet(0, model.n - 1)
 
     # Dimension of P matrix
-    model.p = Param(initialize=1)
-    model.P = RangeSet(0, 0)
+    model.p = Param(initialize=n+1)
+    model.P = RangeSet(0, model.n)
         
     # Number of interpolation nodes
     model.k = Param(initialize=k)
@@ -523,10 +522,10 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     # in the constraints
     node_val_param = {}
     for i in range(k):
-        node_val_param[i] = node_val[i]
+        node_val_param[i] = float(node_val[i])
     model.node_val = Param(model.K, initialize=node_val_param)
 
-    # Variable bounds
+    # Slack variable bounds
     slack_lower_param = {}
     slack_upper_param = {}
     for (pos, var_index) in enumerate(fast_node_index):
@@ -549,7 +548,7 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     # P matrix.
     Pm_param = {}
     for i in range(k):
-        for j in range(1):
+        for j in range(n+1):
             if (abs(Pmat[i, j]) != 0.0):
                 Pm_param[i, j] = float(Pmat[i, j])
     model.Pm = Param(model.K, model.P, initialize=Pm_param,
@@ -605,7 +604,7 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
         List of indices of integer variables.
 
     node_pos : 2D numpy.ndarray[float]
-        List of coordinates of the nodes.
+        List of coordinates of the nodes (one on each row).
 
     Returns
     -------
@@ -613,10 +612,10 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
         The concrete model describing the problem.
 
     """
-    assert (isinstance(var_lower, np.ndarray))
-    assert (isinstance(var_upper, np.ndarray))
-    assert (isinstance(integer_vars, np.ndarray))
-    assert (isinstance(node_pos, np.ndarray))
+    assert(isinstance(var_lower, np.ndarray))
+    assert(isinstance(var_upper, np.ndarray))
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
     assert(len(node_pos) == k)
@@ -742,10 +741,10 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
     assert(len(rbf_lambda) == k)
-    assert(len(rbf_h) == 1)
+    assert(len(rbf_h) == (n+1))
     assert(len(node_pos) == k)
     assert(isinstance(settings, RbfoptSettings))
-    assert(ru.get_degree_polynomial(settings) == 0)
+    assert(ru.get_degree_polynomial(settings) == 1)
     assert(0 <= dist_weight <= 1)
     assert(dist_max >= dist_min >= 0)
 
@@ -760,7 +759,7 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     model.K = RangeSet(0, model.k - 1)
 
     # Dimension of u_pi
-    model.q = Param(initialize=(k+1))
+    model.q = Param(initialize=(n+k+1))
     model.Q = RangeSet(0, model.q - 1)
     model.Qlast = RangeSet(model.q - 1, model.q - 1)
 
@@ -768,7 +767,7 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     lambda_h_param = {}
     for i in range(k):
         lambda_h_param[i] = float(rbf_lambda[i])
-    for i in range(1):
+    for i in range(n+1):
         lambda_h_param[k+i] = float(rbf_h[i])
     model.lambda_h = Param(model.Q, initialize=lambda_h_param)
 
@@ -805,10 +804,8 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
                                          else 1 - dist_weight))
 
     # Value of phi at zero, necessary for shift
-    if (settings.rbf == 'linear'):
+    if (settings.rbf == 'cubic' or settings.rbf == 'thin_plate_spline'):
         model.phi_0 = Param(initialize=0.0)
-    elif (settings.rbf == 'multiquadric'):
-        model.phi_0 = Param(initialize=GAMMA)
 
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
@@ -827,13 +824,13 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     model.OBJ = Objective(rule=_min_msrsm_obj_expression, sense=minimize)
 
     # Constraints. See definitions below.
-    # Constraints. See definitions below.
-    if (settings.rbf == 'linear'):
+    if (settings.rbf == 'cubic'):        
         model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_linear_constraint_rule)
-    elif (settings.rbf == 'multiquadric'):
+                                          rule=_udef_cubic_constraint_rule)
+    elif (settings.rbf == 'thin_plate_spline'):
         model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_multiquad_constraint_rule)
+                                          rule=_udef_thinplate_constraint_rule)
+    model.PidefConstraint = Constraint(model.N, rule=_pidef_constraint_rule)
     model.NonhomoConstraint = Constraint(model.Qlast, 
                                          rule=_nonhomo_constraint_rule)
     model.RbfdefConstraint = Constraint(rule=_rbfdef_constraint_rule)
@@ -894,20 +891,30 @@ def _x_bounds(model, i):
     return (model.var_lower[i], model.var_upper[i])
 
 
-# Constraints: definition of the u components of u_pi for a multiquadric RBF. 
+# Constraints: definition of the u components of u_pi for cubic RBF. 
 # The expression is:
-# for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)
-def _udef_multiquad_constraint_rule(model, i):
-    return (model.u_pi[i]**2 == GAMMA +
-            sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+# for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)^3;
+def _udef_cubic_constraint_rule(model, i):
+    return (model.u_pi[i] == 
+            (config.DISTANCE_SHIFT +
+             sum((model.x[j] - model.node[i, j])**2 for j in model.N))**1.5)
 
 
-# Constraints: definition of the u components of u_pi for a linear RBF.
-# The expression is:
-# for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)
-def _udef_linear_constraint_rule(model, i):
-    return (model.u_pi[i]**2 == 
-            sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+# Constraints: definition of the u components of u_pi for thin plate spline
+# RBF. The expression is:
+# for i in K: upi_i = \log(\sqrt(sum_{j in N} (x_j - node_{i, j})^2)) *
+#                     (sum_{j in N} (x_j - node_{i, j})^2)
+def _udef_thinplate_constraint_rule(model, i):
+    return (model.u_pi[i] == 
+            (sum((model.x[j] - model.node[i, j])**2 for j in model.N)) *
+            log(sqrt(sum((model.x[j] - model.node[i, j])**2
+                         for j in model.N) + config.DISTANCE_SHIFT)))
+
+
+# Constraints: definition of the pi component of u_pi. The expression is:
+# for i in N: upi_{k+i} = x_i
+def _pidef_constraint_rule(model, i):
+    return (model.u_pi[i + model.k] == model.x[i])
 
 
 # Constraint: definition of the nonhomogeneous term of the polynomial. 
@@ -928,9 +935,9 @@ def _rbfdef_constraint_rule(model):
 # \phi(0). Removed because it is zero in this case. Expression:
 # -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j
 def _mukdef_constraint_rule(model):
-    return (sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
-                for i in model.Q for j in model.Q) - model.phi_0 == 
-            model.mu_k_inv)
+    return (-1.0*sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
+                     for i in model.Q for j in model.Q) + 
+            model.phi_0 == model.mu_k_inv)
 
 
 # Constraints: definition of the interpolation conditions. Expression:
@@ -965,8 +972,8 @@ def _min_rbf_obj_expression(model):
 # Objective function for the "maximize 1/\mu" problem. The expression is:
 # max -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j;
 def _max_one_over_mu_obj_expression(model):
-    return (sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
-                for i in model.Q for j in model.Q) - model.phi_0)
+    return (-sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
+                 for i in model.Q for j in model.Q) + model.phi_0)
 
 
 # Objective function for the "maximize h_k" problem. The expression is:
@@ -977,10 +984,10 @@ def _max_h_k_obj_expression(model):
 
 # Objective function for the "minimize bumpiness with variable nodes"
 # problem. The expression is:
-# - lambda^T \Phi lambda.
+# lambda^T \Phi lambda.
 def _min_bump_obj_expression(model):
-    return (-sum(model.Phi[i,j] * model.rbf_lambda[i] * model.rbf_lambda[j]
-                 for i in model.K for j in model.K))
+    return (sum(model.Phi[i,j] * model.rbf_lambda[i] * model.rbf_lambda[j]
+                for i in model.K for j in model.K))
 
 
 # Objective function for the "minimize MSRSM obj" problem. The expression is:

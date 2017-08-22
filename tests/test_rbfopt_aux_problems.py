@@ -13,10 +13,11 @@ from __future__ import absolute_import
 
 import unittest
 import numpy as np
-import test_rbfopt_env
-import rbfopt_utils as ru
-import rbfopt_aux_problems as aux
-from rbfopt_settings import RbfoptSettings
+import src
+import src.rbfopt
+import src.rbfopt.rbfopt_utils as ru
+import src.rbfopt.rbfopt_aux_problems as aux
+from src.rbfopt.rbfopt_settings import RbfoptSettings
 
 def quadratic(points):
     """Quadratic function for optimization.
@@ -43,6 +44,7 @@ class TestAuxProblems(unittest.TestCase):
 
     def setUp(self):
         """Generate data to simulate an optimization problem."""
+        np.random.seed(71294123)
         self.settings = RbfoptSettings(rbf = 'cubic',
                                     num_samples_aux_problems = 10000,
                                     ga_base_population_size = 1000)
@@ -423,6 +425,3 @@ class TestAuxProblems(unittest.TestCase):
     # -- end function
 
 # - end class
-
-if (__name__ == '__main__'):
-    unittest.main()

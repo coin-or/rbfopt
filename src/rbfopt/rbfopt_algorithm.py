@@ -23,12 +23,12 @@ import pickle
 import copy
 import numpy as np
 from multiprocessing import Pool
-import rbfopt_utils as ru
-import rbfopt_aux_problems as aux
-import rbfopt_config as config
-import rbfopt_refinement as ref
-from rbfopt_black_box import BlackBox
-from rbfopt_settings import RbfoptSettings
+from . import rbfopt_utils as ru
+from . import rbfopt_aux_problems as aux
+from . import rbfopt_config as config
+from . import rbfopt_refinement as ref
+from .rbfopt_black_box import RbfoptBlackBox
+from .rbfopt_settings import RbfoptSettings
 
 class RbfoptAlgorithm:
     """Optimization algorithm.
@@ -219,7 +219,7 @@ class RbfoptAlgorithm:
         """Constructor.
         
         """
-        assert(isinstance(black_box, BlackBox))
+        assert(isinstance(black_box, RbfoptBlackBox))
         assert(isinstance(settings, RbfoptSettings))
 
         # Start timing
@@ -2362,22 +2362,22 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
 # -- end function
 
 def objfun(data):
-    """Call the evaluate() method of a BlackBox object.
+    """Call the evaluate() method of a RbfoptBlackBox object.
     
-    Apply the evaluate() method of the given BlackBox object to the
-    given point. This way of calling the method indirectly is
+    Apply the evaluate() method of the given RbfoptBlackBox object to
+    the given point. This way of calling the method indirectly is
     necessary for parallelization.
 
     Parameters
     ----------
-    data : (rbfopt_black_box.BlackBox, 1D numpy.ndarray[float], 
+    data : (rbfopt_black_box.RbfoptBlackBox, 1D numpy.ndarray[float], 
             List[(int, float)])
 
         A triple or list with three elements (black_box, point,
-        fixed_vars) containing an object derived from class BlackBox,
-        that describes the problem, the point at which we want to
-        apply the evaluate() method, and a list of fixed variables
-        given as pairs (index, value).
+        fixed_vars) containing an object derived from class
+        RbfoptBlackBox, that describes the problem, the point at which
+        we want to apply the evaluate() method, and a list of fixed
+        variables given as pairs (index, value).
     
     Returns
     -------
@@ -2386,7 +2386,7 @@ def objfun(data):
 
     """
     assert(len(data)==3)
-    assert(isinstance(data[0], BlackBox))
+    assert(isinstance(data[0], RbfoptBlackBox))
     if (data[2]):
         point = data[1].tolist()
         for (i, val) in data[2]:
@@ -2398,22 +2398,22 @@ def objfun(data):
 # -- end function
 
 def objfun_fast(data):
-    """Call the evaluate_fast() method of a BlackBox object.
+    """Call the evaluate_fast() method of a RbfoptBlackBox object.
     
-    Apply the evaluate_fast() method of the given BlackBox object to
+    Apply the evaluate_fast() method of the given RbfoptBlackBox object to
     the given point. This way of calling the method indirectly is
     necessary for parallelization.
 
     Parameters
     ----------
-    data : (rbfopt_black_box.BlackBox, 1D numpy.array[float], 
+    data : (rbfopt_black_box.RbfoptBlackBox, 1D numpy.array[float], 
             List[(int, float)])
 
         A triple or list with three elements (black_box, point,
-        fixed_vars) containing an object derived from class BlackBox,
-        that describes the problem, the point at which we want to
-        apply the evaluate() method, and a list of fixed variables
-        given as pairs (index, value).
+        fixed_vars) containing an object derived from class
+        RbfoptBlackBox, that describes the problem, the point at which
+        we want to apply the evaluate() method, and a list of fixed
+        variables given as pairs (index, value).
 
     Returns
     -------
@@ -2422,7 +2422,7 @@ def objfun_fast(data):
 
     """
     assert(len(data)==3)
-    assert(isinstance(data[0], BlackBox))
+    assert(isinstance(data[0], RbfoptBlackBox))
     if (data[2]):
         point = data[1].tolist()
         for (i, val) in data[2]:
