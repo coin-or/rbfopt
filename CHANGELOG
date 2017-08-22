@@ -13,7 +13,8 @@
 	(rbfopt_test_interface.py) is now a script.
 	Documentation and examples are now distributed within the rbfopt
 	module.
-	README updated with new installation instructions.
+	README updated with new installation instructions and minimal
+	examples.
 
 2017-08-18  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 3.0.2 released. List of major changes:

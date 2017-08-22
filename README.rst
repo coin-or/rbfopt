@@ -21,73 +21,69 @@ derivative-free optimization). It supports Python 2.7 and Python 3.
 
 Contents of this directory:
 
-* ./
+* LICENSE: Licensing information.
+* VERSION: Version of the library.
+* AUTHORS: Authors of the library.
+* README.rst: This file.
+* CHANGELOG: Changelog.
+* requirements.txt: List of dependencies for this project.
+* bin/
 
-  * LICENSE: Licensing information.
-  * VERSION: Version of the library.
-  * AUTHORS: Authors of the library.
-  * README: This file.
-  * CHANGELOG: Changelog.
-  * requirements.txt: List of dependencies for this project.
-  * bin/
+  * rbfopt_cl_interface.py: Script for the command-line interface,
+    to run the library on a user-defined black-box function
+    implemented in a user-specified file.
+  * rbfopt_test_interface.py: Script to test the library on a
+    standard global optimization test set.
 
-    * rbfopt_cl_interface.py: Script for the command-line interface,
-      to run the library on a user-defined black-box function
-      implemented in a user-specified file.
-    * rbfopt_test_interface.py: Script to test the library on a
-      standard global optimization test set.
+* src/
 
-  * src/
+  * rbfopt/
+  
+    * rbfopt_black_box.py: Description of an abstract black-box
+      function.
+    * rbfopt_algorithm.py: Main optimization algorithm, both
+      serial and parallel.
+    * rbfopt_aux_problems.py: Interface for the auxiliary problems
+      solved during the optimization process.
+    * rbfopt_config.py: (Static) configuration file for the machine.
+    * rbfopt_degreeX_models.py: PyOmo models for the auxiliary
+      problems necessary for RBF functions with minimum required
+      polynomial degree X.
+    * rbfopt_refinement: Routines for trust-region based refinement
+      phase.
+    * rbfopt_settings.py: Global and algorithmic settings.
+    * rbfopt_test_functions.py: Mathematical test functions.
+    * rbfopt_user_black_box.py: A black-box class constructed from
+      user data.
+    * rbfopt_utils.py: Utility routines.
+    * doc/
 
-      * rbfopt/
-    
-        * rbfopt_black_box.py: Description of an abstract black-box
-	  function.
-	* rbfopt_algorithm.py: Main optimization algorithm, both
-	  serial and parallel.
-	* rbfopt_aux_problems.py: Interface for the auxiliary problems
-	  solved during the optimization process.
-	* rbfopt_config.py: (Static) configuration file for the
-	  machine.
-	* rbfopt_degreeX_models.py: PyOmo models for the auxiliary
-	  problems necessary for RBF functions with minimum required
-	  polynomial degree X.
-	* rbfopt_refinement: Routines for trust-region based
-	  refinement phase.
-	* rbfopt_settings.py: Global and algorithmic settings.
-	* rbfopt_test_functions.py: Mathematical test functions.
-	* rbfopt_user_black_box.py: A black-box class constructed from
-	  user data.
-	* rbfopt_utils.py: Utility routines.
+      * conf.py: Configuration file for Sphinx.
+      * Makefile: Makefile (for Linux/Mac) to build the
+	documentation.
+      * make.bat: Batch file (for Windows) to build the
+	documentation.
+      * \*.rst: ReStructured Text files for the documentation.
 
-	* doc/
+    * examples/
 
-	  * conf.py: Configuration file for Sphinx.
-	  * Makefile: Makefile (for Linux/Mac) to build the
-	    documentation.
-	  * make.bat: Batch file (for Windows) to build the
-	    documentation.
-	  * \*.rst: ReStructured Text files for the documentation.
-
-	* examples/
-
-	  * rbfopt_black_box_example.py: Example of an implementation
-	    of a simple black-box function.
+      * rbfopt_black_box_example.py: Example of an implementation
+	of a simple black-box function.
 	  
-  * tests/
+* tests/
 
-    * test_functions.py: Global optimization test functions.
-    * test_rbfopt_algorithm.py: Testing module for
-      rbfopt_algorithm.py.
-    * test_rbfopt_aux_problems.py: Testing module for
-      rbfopt_aux_problems.py.
-    * test_rbfopt_degreeX_models.py: Testing module for
-      rbfopt_degreeX_models.py.
-    * test_rbfopt_env.py: Environment variables for testing
-      environment.
-    * test_rbfopt_refinement: Testing module for rbfopt_refinement.py
-    * test_rbfopt_settings.py: Testing module for rbfopt_settings.py.
-    * test_rbfopt_utils.py Testing module for rbfopt_utils.py.
+  * test_functions.py: Global optimization test functions.
+  * test_rbfopt_algorithm.py: Testing module for
+    rbfopt_algorithm.py.
+  * test_rbfopt_aux_problems.py: Testing module for
+    rbfopt_aux_problems.py.
+  * test_rbfopt_degreeX_models.py: Testing module for
+    rbfopt_degreeX_models.py.
+  * test_rbfopt_env.py: Environment variables for testing
+    environment.
+  * test_rbfopt_refinement: Testing module for rbfopt_refinement.py
+  * test_rbfopt_settings.py: Testing module for rbfopt_settings.py.
+  * test_rbfopt_utils.py Testing module for rbfopt_utils.py.
 
 =========================
 Installation requirements
