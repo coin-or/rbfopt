@@ -133,12 +133,11 @@ have the right to use whatever solver they employs.
 To obtain pre-compiled binaries for Bonmin and Ipopt for several
 platforms, we suggest having a look at the AMPL `opensource solvers
 <http://ampl.com/products/solvers/open-source/>` (also `here
-<http://ampl.com/dl/open/>`) for static binaries.
-.. note:: These binaries are quite outdated: *much* better performance
-   can be obtained compiling Bonmin from scratch (Bonmin contains
-   Ipopt as well), especially if using a different solver from the
-   default Mumps, e.g., ma27. Remember to compile Bonmin and Ipopt
-   with ASL support.
+<http://ampl.com/dl/open/>`) for static binaries. **Note:** These
+binaries are quite outdated: *much* better performance can be obtained
+compiling Bonmin from scratch (Bonmin contains Ipopt as well),
+especially if using a different solver from the default Mumps, e.g.,
+ma27. Remember to compile Bonmin and Ipopt with ASL support.
 
 In case any of the packages indicated above is missing, some features
 may be disabled, not function properly, or the software may not run at
