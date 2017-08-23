@@ -224,48 +224,47 @@ class TestAuxProblems(unittest.TestCase):
         conditions.
         """
         ref = [0.0]
-        fast_node_index = np.array([2, 3, 4])
-        fast_node_err_bounds = [(-1.0, 1.0), (-1.0, 1.0), (-1.0, 1.0)]
+        node_err_bounds = np.array([[0, 0], [0, 0], [-1.0, 1.0],
+                                    [-1.0, 1.0], [-1.0, 1.0]])
         (l, h) = aux.get_noisy_rbf_coefficients(self.settings, self.n, self.k, 
                                                 self.Amat[:self.k, :self.k],
                                                 self.Amat[:self.k, self.k:],
-                                                self.node_val,
-                                                fast_node_index, 
-                                                fast_node_err_bounds,
+                                                self.node_val, node_err_bounds,
                                                 self.rbf_lambda, self.rbf_h)
-        # Verify interpolation conditions for noisy nodes
-        for (i, j) in enumerate(fast_node_index):
-            val = ru.evaluate_rbf(self.settings, self.node_pos[j],
-                                  self.n, self.k, self.node_pos, l, h)
-            lb = self.node_val[j] + fast_node_err_bounds[i][0]
-            ub = self.node_val[j] + fast_node_err_bounds[i][1]
-            self.assertLessEqual(lb, val, msg='Node value outside bounds')
-            self.assertGreaterEqual(ub, val, msg='Node value outside bounds')
-        # Verify interpolation conditions for regular (exact) nodes
         for i in range(self.k):
-            if i in fast_node_index:
-                continue
-            val = ru.evaluate_rbf(self.settings, self.node_pos[j],
-                                  self.n, self.k, self.node_pos, l, h)
-            self.assertAlmostEqual(self.node_val[j], val,
-                                   msg='Node value does not match')
+            if (node_err_bounds[i, 1] - node_err_bounds[i, 0] > 0):
+                # Verify interpolation conditions for noisy nodes
+                val = ru.evaluate_rbf(self.settings, self.node_pos[i],
+                                      self.n, self.k, self.node_pos, l, h)
+                lb = self.node_val[i] + node_err_bounds[i, 0]
+                ub = self.node_val[i] + node_err_bounds[i, 1]
+                self.assertLessEqual(lb, val, msg='Node value outside bounds')
+                self.assertGreaterEqual(ub, val,
+                                        msg='Node value outside bounds')
+            else:
+                # Verify interpolation conditions for regular (exact) nodes
+                val = ru.evaluate_rbf(self.settings, self.node_pos[i],
+                                      self.n, self.k, self.node_pos, l, h)
+                self.assertAlmostEqual(self.node_val[i], val,
+                                       msg='Node value does not match')
     # -- end function
 
     def test_get_min_bump_node(self):
         """Verify get_min_bump_node is resilient to limit cases.
 
-        Verify that when fast_node_index is empty, (None, +inf) is
+        Verify that when all nodes are exact, (None, +inf) is
         returned, and for a small problem with 3 variables and 5
         nodes, the corect answer is reached when there is only one
         possible point that could be replaced.
 
         """
         settings = RbfoptSettings(rbf = 'cubic')
-        ind, bump = aux.get_min_bump_node(settings, 1, 10, np.matrix((1,1)),
-                                          np.array([0] * 10), np.array([]), 
-                                          [], 0)
-        self.assertIsNone(ind, msg='Failed whith empty list')
-        self.assertEqual(bump, float('+inf'), msg='Failed whith empty list')
+        ind, bump = aux.get_min_bump_node(
+            settings, 1, 10, np.matrix((1,1)), np.array([0] * 10),
+            np.array([[0,0] for i in range(10)]), 0)
+        self.assertIsNone(ind, msg='Failed with all nodes exact')
+        self.assertEqual(bump, float('+inf'),
+                         msg='Failed with all nodes exact')
 
         n = 3
         k = 5
@@ -274,8 +273,7 @@ class TestAuxProblems(unittest.TestCase):
         node_pos = np.array([var_lower, var_upper,
                     [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
         node_val = np.array([2*i for i in range(k)])
-        fast_node_index = np.array([i for i in range(k)])
-        fast_node_err_bounds = [(-1, +1) for i in range(k)]
+        node_err_bounds = np.array([(-1, +1) for i in range(k)])
         Amat = [[0.0, 5196.152422706633, 5.196152422706631,
                  1714.338065908822, 2143.593744305343, 0.0, 1.0, 2.0, 1.0],
                 [5196.152422706633, 0.0, 3787.995116153135, 324.6869498824983,
@@ -293,8 +291,7 @@ class TestAuxProblems(unittest.TestCase):
         Amat = np.matrix(Amat)
         for j in range(k):
             ind, bump = aux.get_min_bump_node(settings, n, k, Amat, 
-                                              node_val, fast_node_index,
-                                              fast_node_err_bounds,
+                                              node_val, node_err_bounds,
                                               node_val[j] - 0.5)
             self.assertEqual(ind, j, msg='Only one point is a candidate' +
                              'for replacement, but it was not returned!')
@@ -317,8 +314,6 @@ class TestAuxProblems(unittest.TestCase):
         node_pos = np.array([var_lower, var_upper,
                              [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
         node_val = np.array([2*i for i in range(k)])
-        fast_node_index = np.array([i for i in range(k)])
-        fast_node_err_bounds = [(-1, +1) for i in range(k)]
         Amat = [[0.0, 5196.152422706633, 5.196152422706631,
                  1714.338065908822, 2143.593744305343, 0.0, 1.0, 2.0, 1.0],
                 [5196.152422706633, 0.0, 3787.995116153135, 324.6869498824983,
@@ -334,18 +329,19 @@ class TestAuxProblems(unittest.TestCase):
                 [2.0, 12.0, 3.0, 8.8, 12.0, 0.0, 0.0, 0.0, 0.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
         Amat = np.matrix(Amat)
-        fast_node_index = np.array([0, 1])
-        fast_node_err_bounds = [(-1, 1), (-1, 1)]
+        node_err_bounds = np.array([[-1, 1], [-1, 1], [0, 0],
+                                    [0, 0], [0, 0]])
+        new_node = np.array([(var_lower[i] + var_upper[i])/2
+                             for i in range(n)])
         # Previous bumpiness
-        new_node = np.array([(var_lower[i] + var_upper[i])/2 for i in range(n)])
         bump = 0.0
         for i in range(5):
             # Set increasing target values
             target_val = 5 + i*10000
             # Compute new bumpiness
-            nbump = aux.get_bump_new_node(settings, n, k, node_pos, node_val,
-                                          new_node, fast_node_index,
-                                          fast_node_err_bounds, target_val)
+            nbump = aux.get_bump_new_node(settings, n, k, node_pos,
+                                          node_val, new_node,
+                                          node_err_bounds, target_val)
             self.assertGreaterEqual(nbump, bump,
                                     msg='Bumpiness not increasing')
             # Store new bumpiness
@@ -370,7 +366,8 @@ class TestAuxProblems(unittest.TestCase):
                 self.assertAlmostEqual(abs(sample[i] - round(sample[i])),
                                        0.0, msg=msg)
         # Now test some limit cases
-        samples = aux.generate_sample_points(self.settings, 0, np.array([]), np.array([]),
+        samples = aux.generate_sample_points(self.settings, 0, np.array([]),
+                                             np.array([]),
                                              np.array([]), 45)
         self.assertListEqual(samples.tolist(), [[] for i in range(45)],
                              msg='Samples are not empty when n = 0')

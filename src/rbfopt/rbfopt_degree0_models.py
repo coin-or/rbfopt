@@ -454,13 +454,12 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
 
 
 def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val, 
-                          fast_node_index, fast_node_err_bounds):
+                          node_err_bounds):
     """Create a model to find RBF coefficients with min bumpiness.
 
     Create a quadratic problem to compute the coefficients of the RBF
-    interpolant that minimizes bumpiness and lets all points with
-    index in fast_node_index deviate by a specified percentage from
-    their value.
+    interpolant that minimizes bumpiness and lets all points deviate
+    by a specified amount from their value.
 
     Parameters
     ----------
@@ -481,30 +480,26 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
 
     node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
-    
-    fast_node_index : 1D numpy.ndarray[float]
-        List of indices of nodes whose function value should be
-        considered variable withing the allowed range.
-    
-    fast_node_err_bounds : List[(float, float)]
+
+    node_err_bounds : 2D numpy.ndarray[float]
         Allowed deviation from node values for nodes affected by
-        error. This is a list of pairs (lower, upper) of the same
-        length as fast_node_index.
+        error. This is a matrix with rows (lower_deviation, 
+        upper_deviation).
 
     Returns
     -------
     pyomo.ConcreteModel
         The concrete model describing the problem.
     """
-    assert(isinstance(node_val, np.ndarray))
-    assert(isinstance(fast_node_index, np.ndarray))
     assert(isinstance(settings, RbfoptSettings))
+    assert(isinstance(node_val, np.ndarray))
+    assert(isinstance(node_err_bounds, np.ndarray))
     assert(len(node_val) == k)
     assert(isinstance(Phimat, np.matrix))
     assert(isinstance(Pmat, np.matrix))
     assert(Phimat.shape == (k, k))
     assert(Pmat.shape == (k, 1))
-    assert(len(fast_node_index) == len(fast_node_err_bounds))
+    assert(len(node_val) == len(node_err_bounds))
     assert(ru.get_degree_polynomial(settings) == 0)
 
     model = ConcreteModel()
@@ -530,10 +525,11 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
 
     # Variable bounds
     slack_lower_param = {}
-    slack_upper_param = {}
-    for (pos, var_index) in enumerate(fast_node_index):
-        slack_lower_param[var_index] = float(fast_node_err_bounds[pos][0])
-        slack_upper_param[var_index] = float(fast_node_err_bounds[pos][1])
+    slack_upper_param = {}    
+    for i in np.where(node_err_bounds[:, 1] - node_err_bounds[:, 0] >
+                      settings.eps_zero)[0]:
+        slack_lower_param[i] = float(node_err_bounds[i, 0])
+        slack_upper_param[i] = float(node_err_bounds[i, 1])
     model.slack_lower = Param(model.K, initialize=slack_lower_param,
                               default=0.0)
     model.slack_upper = Param(model.K, initialize=slack_upper_param,

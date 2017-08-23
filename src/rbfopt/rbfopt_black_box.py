@@ -93,11 +93,12 @@ class RbfoptBlackBox:
     # -- end function
 
     @abstractmethod
-    def evaluate_fast(self, x):
+    def evaluate_noisy(self, x):
         """Evaluate a fast approximation of the black-box function.
 
         Returns an approximation of the value of evaluate(), hopefully
-        much more quickly. If has_evaluate_fast() returns False, this
+        much more quickly, and provides error bounds on the
+        evaluation. If has_evaluate_noisy() returns False, this
         function will never be queried and therefore it does not have
         to return any value.
 
@@ -108,27 +109,32 @@ class RbfoptBlackBox:
 
         Returns
         -------
-        float
-            Approximate value of the function at x.
+        1D numpy.ndarray[float]
+            A numpy array with three floats (value, lower, upper)
+            containing the approximate value of the function at x, the
+            lower error bound, and the upper error bound, such that
+            the true function value is contained between value + lower
+            and value + upper. Hence, lower should be <= 0 while upper
+            should be >= 0.
 
         """
         pass
     # -- end function
 
     @abstractmethod
-    def has_evaluate_fast(self):
-        """Indicate whether evaluate_fast is available.
+    def has_evaluate_noisy(self):
+        """Indicate whether evaluate_noisy is available.
 
         Indicate if a fast but potentially noisy version of evaluate
-        is available through the function evaluate_fast. If True, such
+        is available through the function evaluate_noisy. If True, such
         function will be used to try to accelerate convergence of the
-        optimization algorithm. If False, the function evaluate_fast
+        optimization algorithm. If False, the function evaluate_noisy
         will never be queried.
 
         Returns
         -------
         bool
-            Is evaluate_fast available?
+            Is evaluate_noisy available?
         """
         pass
     # -- end function

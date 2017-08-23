@@ -966,40 +966,16 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
 
 # -- end function
 
-def get_fast_error_bounds(settings, values):
-    """Compute error bounds for fast interpolation nodes.
-
-    Compute the interval that contains the true value of fast
-    function evaluation, according to the specified relative and
-    absolute error tolerances.
+def compute_gap(settings, fmin):
+    """Compute the optimality gap w.r.t. the target value.
 
     Parameters
     ----------
-
     settings : :class:`rbfopt_settings.RbfoptSettings`
-        Global and algorithmic settings.
-    values : 1D numpy.ndarray
-        The values for which the error interval should be computed.
+       Global and algorithmic settings.
 
-    Returns
-    -------
-    2D numpy.ndarray
-        A 2D matrix (lower_variation, upper_variation) indicating the
-        possible deviation to the left (given as a negative number)
-        and to the right of each of the values, stacked by columns.
-
-    """
-    assert(len(values))
-    res = np.vstack((-np.absolute(values)*settings.fast_objfun_rel_error -
-                     settings.fast_objfun_abs_error,
-                     np.absolute(values)*settings.fast_objfun_rel_error +
-                     settings.fast_objfun_abs_error)).T
-    return res
-# -- end function
-
-
-def compute_gap(settings, fmin, is_best_fast):
-    """Compute the optimality gap w.r.t. the target value.
+    fmin : float
+       Best known function value.
 
     Returns
     -------
@@ -1012,18 +988,14 @@ def compute_gap(settings, fmin, is_best_fast):
     gap_den = (abs(settings.target_objval)
                if (abs(settings.target_objval) >= settings.eps_zero)
                else 1.0)
-    # Shift due to fast function evaluation
-    gap_shift = (get_fast_error_bounds(settings, [fmin])[0, 1]
-                 if is_best_fast else 0.0)
     # Compute current minimum distance from the optimum
-    gap = ((fmin + gap_shift - settings.target_objval) /
-           gap_den)
+    gap = ((fmin - settings.target_objval) / gap_den)
     return gap
 # -- end function
 
 
-def transform_function_values(settings, node_val, fmin, fmax, 
-                              fast_node_index):
+def transform_function_values(settings, node_val, fmin, fmax,
+                              node_err_bounds):
     """Rescale function values.
 
     Rescale and adjust function values according to the chosen
@@ -1045,19 +1017,21 @@ def transform_function_values(settings, node_val, fmin, fmax,
     fmax : float
        Maximum function value found so far.
 
-    fast_node_index : 1D numpy.ndarray[float]
-       Index of function evaluations in 'fast' mode. 
+    node_err_bounds : 2D numpy.ndarray[float]
+        The lower and upper variation of the function value for the
+        nodes in node_pos. The variation is assumed 0 for nodes
+        evaluated in accurate mode.
 
     Returns
     -------
-    (1D numpy.ndarray[float], float, float, List[(float, float)], 
+    (1D numpy.ndarray[float], float, float, 2D numpy.ndarray[float], 
      Callable[float])
         A tuple (scaled_function_values, scaled_fmin, scaled_fmax,
-        fast_error_bounds, rescale_function) containing a list of
+        scaled_error_bounds, rescale_function) containing a list of
         rescaled function values, the rescaled minimum, the rescaled
-        maximum, the rescaled error bounds for function evaluations in
-        'fast' mode, and a callable function to apply the same scaling
-        to further function values if needed.
+        maximum, the rescaled error bounds (one node per row), and a
+        callable function to apply the same scaling to further
+        function values if needed.
 
     Raises
     ------
@@ -1066,7 +1040,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
 
     """
     assert(isinstance(node_val, np.ndarray))
-    assert(isinstance(fast_node_index, np.ndarray))
+    assert(isinstance(node_err_bounds, np.ndarray))
     assert(isinstance(settings, RbfoptSettings))
     # Check dynamism: if too high, replace large function values with
     # the median or clip at maximum dynamism
@@ -1090,10 +1064,7 @@ def transform_function_values(settings, node_val, fmin, fmax,
 
     if (settings.function_scaling == 'off'):
         # We make a copy because the caller may assume that
-        return (clip_val, fmin, fmax, 
-                get_fast_error_bounds(settings, clip_val[fast_node_index])
-                if len(fast_node_index) else np.array([]),
-                lambda x : x)
+        return (clip_val, fmin, fmax, node_err_bounds, lambda x : x)
     elif (settings.function_scaling == 'affine'):
         # Compute denominator separately to make sure that it is not
         # zero. This may happen if the surface is "flat" after median
@@ -1101,26 +1072,19 @@ def transform_function_values(settings, node_val, fmin, fmax,
         denom = (fmax - fmin) if (fmax - fmin > settings.eps_zero) else 1.0
         return ((clip_val - fmin)/denom, 0.0,
                 1.0 if (fmax - fmin > settings.eps_zero) else 0.0,
-                get_fast_error_bounds(settings, 
-                                      clip_val[fast_node_index])/denom
-                if len(fast_node_index) else np.array([]),
-                lambda x : (x - fmin)/denom)
+                node_err_bounds/denom, lambda x : (x - fmin)/denom)
     elif (settings.function_scaling == 'log'):
         # Compute by how much we should translate to make all points >= 1
-        shift = (max(0.0, 1.0 - fmin) if not fast_node_index.size
-                 else max(0.0, 1.0 - fmin -
-                          get_fast_error_bounds(settings, [fmin])[0, 0]))
+        shift = max(0.0, 1 - np.amin(node_val + node_err_bounds[:, 0]))
+        if (shift > 0 and np.amin(node_val) / shift < settings.eps_zero):
+            # If the node values are so small that they could be
+            # absorbed by the shift and therefore become zero,
+            # increase the shift.
+            shift += 1/settings.eps_zero
         # Get the lower bound and the upper bound of the transformed
         # error bounds
-        if (len(fast_node_index)):
-            err_b = get_fast_error_bounds(settings, clip_val[fast_node_index])
-            low = np.log((clip_val[fast_node_index] + shift + err_b[:,0])
-                         / (clip_val[fast_node_index] + shift))
-            up = np.log((clip_val[fast_node_index] + shift + err_b[:,1])
-                        / (clip_val[fast_node_index] + shift))
-            scaled_err_b = np.vstack((low, up)).T
-        else:
-            scaled_err_b = np.array([])
+        scaled_err_b = np.log((node_err_bounds.T + clip_val + shift) /
+                              (clip_val + shift)).T
         return (np.log(clip_val + shift), np.log(fmin + shift), 
                 np.log(fmax + shift), scaled_err_b,
                 lambda x : np.log(x + shift) if (x + shift > 0) else x)

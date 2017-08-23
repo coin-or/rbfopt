@@ -44,7 +44,11 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
     obj_funct_fast : Callable[1D numpy.ndarray[float]] or None
         The noisy but fast version of the function to optimize. If
         given, it must take a numpy array as argument, and return a
-        float. If it is None, we assume that there is no fast version
+        numpy array with three floats, in the following order: the
+        approximate function value, its lower variation, and its upper
+        variation, where where lower <= 0 and upper >= 0 and the true
+        function value is contained between value + lower and value +
+        upper. If it is None, we assume that there is no fast version
         of the objective function.
         
 

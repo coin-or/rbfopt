@@ -82,8 +82,8 @@ class RbfoptAlgorithm:
     evalcount : int
         Total number of function evaluations in accurate mode.
 
-    fast_evalcount : int
-        Total number of function evaluations in fast mode.
+    noisy_evalcount : int
+        Total number of function evaluations in noisy mode.
 
     current_step : int
         Identifier of the current step within the cyclic optimization
@@ -98,8 +98,8 @@ class RbfoptAlgorithm:
     num_cons_discarded : int
         Number of consecutive discarded points.
 
-    num_fast_restarts : int
-        Number of restarts in fast mode.
+    num_noisy_restarts : int
+        Number of restarts in noisy mode.
 
     inf_step : int
         Identifier of the InfStep.
@@ -124,7 +124,7 @@ class RbfoptAlgorithm:
 
     eval_mode : string
         Evaluation mode for the objective function at a given
-        stage. Can be either 'fast' or 'accurate'.
+        stage. Can be either 'noisy' or 'accurate'.
 
     node_pos : 2D numpy.ndarray[float]
         Coordinates of the interpolation nodes (i.e. the points where
@@ -136,9 +136,14 @@ class RbfoptAlgorithm:
         Objective function value at the points in node_pos. This array
         only includes points since the last restart.
 
-    node_is_fast : 1D numpy.ndarray[bool]
+    node_is_noisy : 1D numpy.ndarray[bool]
         For each interpolation node in node_pos, was it evaluated in
-        'fast' mode?
+        'noisy' mode?
+
+    node_err_bounds : 2D numpy.ndarray[float]
+        The lower and upper variation of the function value for the
+        nodes in node_pos. The variation is assumed 0 for nodes
+        evaluated in accurate mode.
 
     all_node_pos : 2D numpy.ndarray[float]
         Coordinates of the interpolation nodes. This matrix contains all
@@ -148,9 +153,14 @@ class RbfoptAlgorithm:
     all_node_val : 1D numpy.ndarray[float]
         Objective function value at the points in all_node_pos.
 
-    all_node_is_fast : 2D numpy.ndarray[bool]
+    all_node_is_noisy : 2D numpy.ndarray[bool]
         For each interpolation node in all_node_pos, was it evaluated
-        in 'fast' mode?
+        in 'noisy' mode?
+
+    all_node_err_bounds : 2D numpy.ndarray[float]
+        The lower and upper variation of the function value for the
+        nodes in all_node_pos. The variation is assumed 0 for nodes
+        evaluated in accurate mode.
 
     num_nodes_at_restart : int
         Index of the first new node in all_node_pos after the latest
@@ -190,12 +200,12 @@ class RbfoptAlgorithm:
     best_gap_shown : float
         Best gap shown on the log.
 
-    is_fmin_fast : bool
+    is_fmin_noisy : bool
         Was the best known objective function since restart evaluated
-        in fast mode?
+        in noisy mode?
 
-    is_fbest_fast : bool
-        Was the best known objective function evaluated in fast mode?
+    is_fbest_noisy : bool
+        Was the best known objective function evaluated in noisy mode?
 
     fixed_vars : List[(int, float)]
         Indices and values of fixed variables. The indices are with
@@ -281,12 +291,12 @@ class RbfoptAlgorithm:
         # Initialize counters
         self.itercount = 0
         self.evalcount = 0
-        self.fast_evalcount = 0
+        self.noisy_evalcount = 0
         self.current_step = 0
         self.num_cons_refinement = 0
         self.num_stalled_cycles = 0
         self.num_cons_discarded = 0
-        self.num_fast_restarts = 0
+        self.num_noisy_restarts = 0
     
         # Initialize identifiers of the search steps
         self.inf_step = 0
@@ -299,15 +309,15 @@ class RbfoptAlgorithm:
                            else self.inf_step + 1)
 
         # Initialize settings for two-phase optimization.
-        if (self.bb.has_evaluate_fast()):
+        if (self.bb.has_evaluate_noisy()):
             self.two_phase_optimization = True
-            self.is_fmin_fast = True
-            self.is_fbest_fast = True
-            self.eval_mode = 'fast'
+            self.is_fmin_noisy = True
+            self.is_fbest_noisy = True
+            self.eval_mode = 'noisy'
         else:
             self.two_phase_optimization = False
-            self.is_fmin_fast = False
-            self.is_fbest_fast = False
+            self.is_fmin_noisy = False
+            self.is_fbest_noisy = False
             self.eval_mode = 'accurate'
 
         # Round variable bounds to integer if necessary
@@ -327,8 +337,11 @@ class RbfoptAlgorithm:
         # Initialize global lists
         self.all_node_pos, self.all_node_val = np.array([]), np.array([])
         self.node_pos, self.node_val = np.array([]), np.array([])
-        # Store if each function evaluation is fast or accurate
-        self.node_is_fast, self.all_node_is_fast = np.array([]), np.array([])
+        # Store if each function evaluation is noisy or accurate
+        self.node_is_noisy, self.all_node_is_noisy = np.array([]), np.array([])
+        # Error bounds
+        self.node_err_bounds = np.array([])
+        self.all_node_err_bounds = np.array([])
         # We need to remember the index of the first node in all_node_pos
         # after every restart
         self.num_nodes_at_restart = 0
@@ -380,7 +393,7 @@ class RbfoptAlgorithm:
         self.output_stream = output_stream
     # -- end function
 
-    def update_log(self, tag, node_is_fast=None, obj_value=None, gap=None):
+    def update_log(self, tag, node_is_noisy=None, obj_value=None, gap=None):
         """Print a single line in the log.
 
         Update the program's log, writing information about an
@@ -392,9 +405,9 @@ class RbfoptAlgorithm:
             Iteration id tag, or unique message if at least one of the
             other arguments are None.
 
-        node_is_fast : bool or None
+        node_is_noisy : bool or None
             Is the objective function value to be printed associated
-            with a node evaluated in fast mode?
+            with a node evaluated in noisy mode?
 
         obj_value : float or None
             Objective function value to print.
@@ -403,7 +416,7 @@ class RbfoptAlgorithm:
             Relative distance from the optimum. This will be
             multiplied by 100 before printing.
         """        
-        if (node_is_fast is None or obj_value is None or gap is None):
+        if (node_is_noisy is None or obj_value is None or gap is None):
             print('Iter {:3d}'.format(self.itercount) + 
                   ' {:38s}'.format(tag) +
                   ' time {:7.2f}'.format(time.time() - self.start_time),
@@ -411,7 +424,7 @@ class RbfoptAlgorithm:
         else:
             print('Iter {:3d}'.format(self.itercount) + 
                   ' {:15s}'.format(tag) +
-                  ': obj{:s}'.format('~' if node_is_fast else ' ') +
+                  ': obj{:s}'.format('~' if node_is_noisy else ' ') +
                   ' {:16.6f}'.format(obj_value) +
                   ' time {:7.2f}'.format(time.time() - self.start_time) +
                   ' gap {:8.2f}'.format(gap*100) +
@@ -423,14 +436,14 @@ class RbfoptAlgorithm:
         self.output_stream.flush()
     # -- end function
 
-    def print_summary_line(self, node_is_fast, gap):
+    def print_summary_line(self, node_is_noisy, gap):
         """Print summary line of the algorithm.
         
         Parameters
         ----------
-        node_is_fast : bool
+        node_is_noisy : bool
             Is the objective function value to be printed associated
-            with a node evaluated in fast mode?
+            with a node evaluated in noisy mode?
 
         gap : float
             Relative distance from the optimum. This will be
@@ -438,10 +451,10 @@ class RbfoptAlgorithm:
         """
         print('Summary: iters {:3d}'.format(self.itercount) + 
               ' evals {:3d}'.format(self.evalcount) + 
-              ' fast_evals {:3d}'.format(self.fast_evalcount) + 
+              ' noisy_evals {:3d}'.format(self.noisy_evalcount) + 
               ' opt_time {:7.2f}'.format(time.time() - self.start_time) + 
               ' tot_time {:7.2f}'.format(self.elapsed_time) + 
-              ' obj{:s}'.format('~' if node_is_fast else ' ') +
+              ' obj{:s}'.format('~' if node_is_noisy else ' ') +
               ' {:15.6f}'.format(self.fbest) + 
               ' gap {:6.2f}'.format(100*gap),
               file=self.output_stream)
@@ -468,16 +481,16 @@ class RbfoptAlgorithm:
         assert(0 <= index + all_node_shift <= len(self.all_node_pos))
         self.node_pos = np.delete(np.atleast_2d(self.node_pos), index, axis=0)
         self.node_val = np.delete(self.node_val, index)
-        self.node_is_fast = np.delete(self.node_is_fast, index)
+        self.node_is_noisy = np.delete(self.node_is_noisy, index)
         self.all_node_pos = np.delete(np.atleast_2d(self.all_node_pos), 
                                       all_node_shift + index, axis=0)
         self.all_node_val = np.delete(self.all_node_val, 
                                       all_node_shift + index)
-        self.all_node_is_fast = np.delete(self.all_node_is_fast, 
+        self.all_node_is_noisy = np.delete(self.all_node_is_noisy, 
                                           all_node_shift + index)
     # -- end function
 
-    def add_node(self, point, orig_point, value, is_fast):
+    def add_node(self, point, orig_point, value):
         """Add a node to the all relevant data structures.
 
         Given the data corresponding to a node, add it to all relevant
@@ -494,33 +507,92 @@ class RbfoptAlgorithm:
 
         value : float
             Objective function value of the node
-
-        is_fast : bool
-            Is the node evaluated in fast mode?
         """
         if not self.node_pos.size:
             self.node_pos = point.copy()
+            self.node_err_bounds = np.array([[0, 0]])
         else:
             self.node_pos = np.vstack((self.node_pos, point))
+            self.node_err_bounds = np.vstack((self.node_err_bounds,
+                                              np.array([[0, 0]])))
         self.node_val = np.append(self.node_val, value)
-        self.node_is_fast = np.append(self.node_is_fast, is_fast)
+        self.node_is_noisy = np.append(self.node_is_noisy, False)
         if not self.all_node_pos.size:
             self.all_node_pos = orig_point.copy()
+            self.all_node_err_bounds = np.array([[0, 0]])
         else:
             self.all_node_pos = np.vstack((self.all_node_pos, orig_point))
+            self.all_node_err_bounds = np.vstack((self.all_node_err_bounds,
+                                                  np.array([[0, 0]])))
         self.all_node_val = np.append(self.all_node_val, value)
-        self.all_node_is_fast = np.append(self.all_node_is_fast, is_fast)
+        self.all_node_is_noisy = np.append(self.all_node_is_noisy, False)
 
         # Update fmin and fmax
         self.fmax = max(self.fmax, value)
         if (value < self.fmin):
             self.fmin_index = len(self.node_pos) - 1
             self.fmin = value
-            self.is_fmin_fast = is_fast
+            self.is_fmin_noisy = False
         if (value < self.fbest):
             self.fbest_index = len(self.all_node_pos) - 1
             self.fbest = value
-            self.is_fbest_fast = is_fast
+            self.is_fbest_noisy = False
+    # -- end function
+
+    def add_noisy_node(self, point, orig_point, value, err_l, err_u):
+        """Add a noisy node to the all relevant data structures.
+
+        Given the data corresponding to a node, add it to all relevant
+        places: the list of current nodes, the list of all
+        nodes. Also, update function minimum and maximum.
+        
+        Parameters
+        ----------
+        point : 1D numpy.ndarray[float]
+            Coordinates of the node.
+
+        orig_point : 1D numpy.ndarray[float]
+            The point coordinates in the original space.
+
+        value : float
+            Objective function value of the node
+
+        err_l : float
+            Lower variation for the error interval of the node.
+
+        err_u : float
+            Upper variation for the error interval of the node
+
+        """
+        if not self.node_pos.size:
+            self.node_pos = point.copy()
+            self.node_err_bounds = np.array([[err_l, err_u]])
+        else:
+            self.node_pos = np.vstack((self.node_pos, point))
+            self.node_err_bounds = np.vstack((self.node_err_bounds,
+                                              np.array([[err_l, err_u]])))
+        self.node_val = np.append(self.node_val, value)
+        self.node_is_noisy = np.append(self.node_is_noisy, True)
+        if not self.all_node_pos.size:
+            self.all_node_pos = orig_point.copy()
+            self.all_node_err_bounds = np.array([[err_l, err_u]])
+        else:
+            self.all_node_pos = np.vstack((self.all_node_pos, orig_point))
+            self.all_node_err_bounds = np.vstack((self.all_node_err_bounds,
+                                                  np.array([err_l, err_u])))
+        self.all_node_val = np.append(self.all_node_val, value)
+        self.all_node_is_noisy = np.append(self.all_node_is_noisy, True)
+
+        # Update fmin and fmax
+        self.fmax = max(self.fmax, value)
+        if (value < self.fmin):
+            self.fmin_index = len(self.node_pos) - 1
+            self.fmin = value
+            self.is_fmin_noisy = True
+        if (value < self.fbest):
+            self.fbest_index = len(self.all_node_pos) - 1
+            self.fbest = value
+            self.is_fbest_noisy = True
     # -- end function
 
     def save_to_file(self, filename):
@@ -602,12 +674,12 @@ class RbfoptAlgorithm:
         -------
         (float, 1D numpy.ndarray[float], int, int, int)
             A quintuple (value, point, itercount, evalcount,
-            fast_evalcount) containing the objective function value of
+            noisy_evalcount) containing the objective function value of
             the best solution found, the corresponding value of the
             decision variables, the number of iterations of the
             algorithm, the total number of function evaluations, and
             the number of these evaluations that were performed in
-            'fast' mode.
+            'noisy' mode.
 
         """
         self.start_time = time.time()
@@ -615,8 +687,7 @@ class RbfoptAlgorithm:
             # There is nothing to do in this case
             self.update_log('All variables fixed, nothing to do!')
             self.add_node(self.var_lower, self.var_lower, 
-                          objfun([self.bb, self.var_lower, self.fixed_vars]), 
-                          False)
+                          objfun([self.bb, self.var_lower, self.fixed_vars]))
             self.evalcount += 1
         elif (self.l_settings.num_cpus == 1):
             self.optimize_serial(pause_after_iters)
@@ -626,15 +697,15 @@ class RbfoptAlgorithm:
         start_time_retrieve_min = time.time()
         # Find best point and return it
         i = self.all_node_val.argmin()
-        gap = ru.compute_gap(self.l_settings, self.fbest,
-                             self.all_node_is_fast[i])
+        gap = ru.compute_gap(self.l_settings, self.fbest +
+                             self.all_node_err_bounds[i, 0])
         # Update timer
         self.elapsed_time += time.time() - start_time_retrieve_min
 
         # Print summary and return
-        self.print_summary_line(self.all_node_is_fast[i], gap)
+        self.print_summary_line(self.all_node_is_noisy[i], gap)
         return (self.all_node_val[i], self.all_node_pos[i],
-                self.itercount, self.evalcount, self.fast_evalcount)
+                self.itercount, self.evalcount, self.noisy_evalcount)
 
     def optimize_serial(self, pause_after_iters=sys.maxsize):
         """Optimize a black-box function. Serial engine.
@@ -669,10 +740,9 @@ class RbfoptAlgorithm:
         # If this is the first iteration, initialize the algorithm
         if (self.itercount == 0):
             self.restart()
-            # We need to update the gap
-            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
-        else: 
-            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
+        # We need to update the gap
+        gap = ru.compute_gap(l_settings, self.fbest +
+                             self.all_node_err_bounds[self.fbest_index, 1])
 
         # Main loop
         while (self.itercount - itercount_at_start < pause_after_iters and
@@ -700,11 +770,6 @@ class RbfoptAlgorithm:
             # Number of nodes at current iteration
             k = len(self.node_pos)
 
-            # Compute indices of fast node evaluations (sparse format)
-            fast_node_index = (np.nonzero(self.node_is_fast)[0] 
-                               if self.two_phase_optimization
-                               else np.array([]))
-
             # If function scaling is automatic, determine which one to use
             if (settings.function_scaling == 'auto' and
                 self.current_step <= self.first_step):
@@ -718,9 +783,9 @@ class RbfoptAlgorithm:
             # Rescale nodes if necessary
             tfv = ru.transform_function_values(l_settings, self.node_val,
                                                self.fmin, self.fmax,
-                                               fast_node_index)
+                                               self.node_err_bounds)
             (scaled_node_val, scaled_fmin, scaled_fmax, 
-             node_err_bounds, rescale_function) = tfv
+             scaled_err_bounds, rescale_function) = tfv
 
             # If RBF selection is automatic, at the beginning of each
             # cycle check if a different RBF yields a better model
@@ -752,15 +817,14 @@ class RbfoptAlgorithm:
                         Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
                     # Compute RBF interpolant at current stage
-                    if (fast_node_index.size):
+                    if (np.any(self.node_is_noisy)):
                         # Get coefficients for the exact RBF
                         rbf_l, rbf_h = ru.get_rbf_coefficients(
                             l_settings, n, k, Amat, scaled_node_val)
-                        # RBF with some fast function evaluations
+                        # RBF with some noisy function evaluations
                         rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
                             l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
-                            scaled_node_val, fast_node_index,
-                            node_err_bounds, rbf_l, rbf_h)
+                            scaled_node_val, scaled_err_bounds, rbf_l, rbf_h)
                     else:
                         # Fully accurate RBF
                         rbf_l, rbf_h = ru.get_rbf_coefficients(
@@ -819,10 +883,10 @@ class RbfoptAlgorithm:
                 # Local search
                 (adj, next_p, ind) = local_step(
                     l_settings, n, k, l_lower, l_upper, integer_vars,
-                    self.node_pos, rbf_l, rbf_h, tfv[:4], fast_node_index, 
+                    self.node_pos, rbf_l, rbf_h, tfv[:4], 
                     Amat, Amatinv, self.fmin_index, 
                     self.two_phase_optimization, self.eval_mode, 
-                    self.node_is_fast)
+                    self.node_err_bounds)
 
                 # Re-evaluate point if necessary
                 if (ind is not None):
@@ -865,7 +929,7 @@ class RbfoptAlgorithm:
                 # Transform back to original space if necessary
                 next_p_orig = ru.transform_domain(l_settings, var_lower,
                                                   var_upper, next_p, True)
-                # Evaluate the new point, in accurate mode or fast
+                # Evaluate the new point, in accurate mode or noisy
                 # mode. If we performed a restart, we also check if the
                 # same node was evaluated before the restart happened,
                 # to make sure we do not evaluate it twice.
@@ -876,13 +940,13 @@ class RbfoptAlgorithm:
                             next_p_orig, 
                             self.all_node_pos[:self.num_nodes_at_restart])
                         if (min_dist < l_settings.eps_zero and
-                            not self.all_node_is_fast[i]):
+                            not self.all_node_is_noisy[i]):
                             next_val = self.all_node_val[i]
                     if (next_val is None):
                         next_val = objfun([self.bb, next_p_orig, 
                                            self.fixed_vars])
                         self.evalcount += 1
-                    curr_is_fast = False
+                    curr_is_noisy = False
                 else: 
                     if (self.num_nodes_at_restart):
                         min_dist, i = ru.get_min_distance_and_index(
@@ -890,25 +954,30 @@ class RbfoptAlgorithm:
                             self.all_node_pos[:self.num_nodes_at_restart])
                         if (min_dist < l_settings.eps_zero):
                             next_val = self.all_node_val[i]
-                            curr_is_fast = self.all_node_is_fast[i]
+                            curr_is_noisy = self.all_node_is_noisy[i]
                     if (next_val is None):
-                        next_val = objfun_fast([self.bb, next_p_orig, 
-                                                self.fixed_vars])
-                        self.fast_evalcount += 1
-                        curr_is_fast = True
-                    if (curr_is_fast and
-                        self.require_accurate_evaluation(next_val)):
+                        next_val, err_l, err_u = objfun_noisy(
+                            [self.bb, next_p_orig, self.fixed_vars])
+                        self.noisy_evalcount += 1
+                        curr_is_noisy = True
+                    if (curr_is_noisy and
+                        self.require_accurate_evaluation(next_val + err_l)):
                         self.update_log(iteration_id, True, next_val, gap)
                         next_val = objfun([self.bb, next_p_orig, 
                                            self.fixed_vars])
                         self.evalcount += 1
-                        curr_is_fast = False
+                        curr_is_noisy = False
 
                 # Add to the lists
-                self.add_node(next_p, next_p_orig, next_val, curr_is_fast)
-                gap = ru.compute_gap(l_settings, self.fbest, 
-                                     self.is_fbest_fast)
-                self.update_log(iteration_id, self.node_is_fast[-1], 
+                if (curr_is_noisy):
+                    self.add_noisy_node(next_p, next_p_orig, next_val,
+                                       err_l, err_u)
+                else:
+                    self.add_node(next_p, next_p_orig, next_val)
+                gap = ru.compute_gap(
+                    l_settings, self.fbest +
+                    self.all_node_err_bounds[self.fbest_index, 1])
+                self.update_log(iteration_id, self.node_is_noisy[-1], 
                                 next_val, gap)
                 if (self.current_step == self.refinement_step):
                     real_impr = (scaled_node_val[self.tr_iterate_index] - 
@@ -979,12 +1048,12 @@ class RbfoptAlgorithm:
         pool = Pool(l_settings.num_cpus, ru.init_rand_seed,
                     (l_settings.rand_seed, ))
         # List of new point evaluations. A new point evaluation has
-        # the format: [result, point, is_node_fast, iteration_id],
+        # the format: [result, point, is_node_noisy, iteration_id],
         # where result is an object of class AsyncResult, and point is
         # in the transformed space.
         res_eval = list()
         # List of new points to be explored. A new search request has
-        # the format: [result, is_node_fast, iteration_id], where
+        # the format: [result, is_node_noisy, iteration_id], where
         # result is an object of class AsyncResult.
         res_search = list()
         # List of point evaluations removed from the computation
@@ -998,7 +1067,7 @@ class RbfoptAlgorithm:
         # evaluation. A position will be none if unfilled.
         temp_node_pos = np.array([])
         temp_node_val = np.array([])
-        temp_node_is_fast = np.array([])
+        temp_node_is_noisy = np.array([])
 
         if (l_settings.algorithm == 'MSRSM'):
             Amatinv = None
@@ -1015,10 +1084,9 @@ class RbfoptAlgorithm:
         # If this is the first iteration, initialize the algorithm
         if (self.itercount == 0):
             self.restart(pool=pool)
-            # We need to update the gap
-            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
-        else: 
-            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
+        # We need to update the gap
+        gap = ru.compute_gap(l_settings, self.fbest +
+                             self.all_node_err_bounds[self.fbest_index, 1])
 
         # Main loop
         while (self.itercount - itercount_at_start < pause_after_iters and
@@ -1031,29 +1099,37 @@ class RbfoptAlgorithm:
             while (ru.results_ready(res_eval)):
                 # Obtain one point evaluation that is ready
                 j = ru.get_one_ready_index(res_eval)
-                res, next_p, node_is_fast, iid = res_eval.pop(j)
-                next_val = res.get()
+                res, next_p, node_is_noisy, iid = res_eval.pop(j)
+                if (node_is_noisy):
+                    next_val, err_l, err_u = res.get()
+                else:
+                    next_val = res.get()
                 min_dist = ru.get_min_distance(next_p, self.node_pos)
                 # Transform back to original space if necessary
                 next_p_orig = ru.transform_domain(l_settings, var_lower,
                                                   var_upper, next_p, True)
-                if (node_is_fast and
-                    self.require_accurate_evaluation(next_val)):
+                if (node_is_noisy and
+                    self.require_accurate_evaluation(next_val + err_l)):
                     # Evaluate again
-                    node_is_fast = False
+                    node_is_noisy = False
                     new_res = pool.apply_async(
                         objfun,  
                         ([self.bb, next_p_orig, self.fixed_vars], ))
                     self.evalcount += 1
-                    res_eval.append([new_res, next_p, node_is_fast, iid])
+                    res_eval.append([new_res, next_p, node_is_noisy, iid])
                     # Update temporary node value
                     temp_node_val[j] = next_val
                 else:
                     # Add to data structures.
-                    self.add_node(next_p, next_p_orig, next_val, node_is_fast)
-                    gap = ru.compute_gap(l_settings, self.fbest, 
-                                         self.is_fbest_fast)
-                    self.update_log(iid, node_is_fast, next_val, gap)
+                    if (node_is_noisy):
+                        self.add_noisy_node(next_p, next_p_orig, next_val,
+                                           err_l, err_u)
+                    else:
+                        self.add_node(next_p, next_p_orig, next_val)
+                    gap = ru.compute_gap(
+                        l_settings, self.fbest +
+                        self.all_node_err_bounds[self.fbest_index, 1])
+                    self.update_log(iid, node_is_noisy, next_val, gap)
                     # Perform refinement updates if necessary
                     if (iid == 'RefinementStep'):
                         real_impr = (ref_rescale_function(
@@ -1067,7 +1143,7 @@ class RbfoptAlgorithm:
                     temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
                                               j, axis=0)
                     temp_node_val = np.delete(temp_node_val, j)
-                    temp_node_is_fast = np.delete(temp_node_is_fast, j)
+                    temp_node_is_noisy = np.delete(temp_node_is_noisy, j)
                 # Perform main updates
                 self.itercount += 1
                 self.stalling_update()
@@ -1086,7 +1162,7 @@ class RbfoptAlgorithm:
             while (ru.results_ready(res_search)):
                 # Obtain one search point that is ready
                 j = ru.get_one_ready_index(res_search)
-                (res, node_is_fast, iteration_id) = res_search.pop(j)
+                (res, node_is_noisy, iteration_id) = res_search.pop(j)
                 # Local search is treated differently, because it
                 # may require re-evaluation of previous points
                 if (iteration_id == 'LocalStep'):
@@ -1141,15 +1217,20 @@ class RbfoptAlgorithm:
                             next_p_orig, 
                             self.all_node_pos[:self.num_nodes_at_restart])
                         if (min_dist < l_settings.eps_zero and
-                            (node_is_fast or not self.all_node_is_fast[i])):
+                            (node_is_noisy or not self.all_node_is_noisy[i])):
                             next_val = self.all_node_val[i]
-                            node_is_fast = self.all_node_is_fast[i]
+                            node_is_noisy = self.all_node_is_noisy[i]
                             # Add to the data structures.
-                            self.add_node(next_p, next_p_orig, next_val, 
-                                          node_is_fast)
-                            gap = ru.compute_gap(l_settings, self.fbest, 
-                                                 self.is_fbest_fast)
-                            self.update_log(iid, node_is_fast, next_val, gap)
+                            if (node_is_noisy):
+                                self.add_noisy_node(
+                                    next_p, next_p_orig, next_val,
+                                    err_l, err_u)
+                            else:
+                                self.add_node(next_p, next_p_orig, next_val)
+                            gap = ru.compute_gap(
+                                l_settings, self.fbest +
+                                self.all_node_err_bounds[self.fbest_index, 1])
+                            self.update_log(iid, node_is_noisy, next_val, gap)
                             # Update iteration number
                             self.itercount += 1
                             # Check if we should save the state.
@@ -1160,17 +1241,17 @@ class RbfoptAlgorithm:
                             self.stalling_update()
                             self.phase_update()
                     if (next_val is None):
-                        if (node_is_fast):
+                        if (node_is_noisy):
                             new_res = pool.apply_async(
-                                objfun_fast, 
+                                objfun_noisy, 
                                 ([self.bb, next_p_orig, self.fixed_vars], ))
-                            self.fast_evalcount += 1
+                            self.noisy_evalcount += 1
                         else: 
                             new_res = pool.apply_async(
                                 objfun,  
                                 ([self.bb, next_p_orig, self.fixed_vars], ))
                             self.evalcount += 1
-                        res_eval.append([new_res, next_p, node_is_fast, 
+                        res_eval.append([new_res, next_p, node_is_noisy, 
                                          iteration_id])
                         self.num_cons_discarded = 0
                         # Append point to the list of temporary nodes
@@ -1182,8 +1263,8 @@ class RbfoptAlgorithm:
                             temp_node_pos = np.atleast_2d(next_p)
                         temp_node_val = np.append(
                             temp_node_val, np.clip(val, self.fmin, self.fmax))
-                        temp_node_is_fast = np.append(temp_node_is_fast,
-                                                      node_is_fast)
+                        temp_node_is_noisy = np.append(temp_node_is_noisy,
+                                                      node_is_noisy)
             # -- end while
             
             # If no CPUs are available, wait a bit and try again.
@@ -1221,16 +1302,14 @@ class RbfoptAlgorithm:
             # Nodes at current iteration, including temporary ones
             if (temp_node_pos.size):
                 node_pos = np.vstack((self.node_pos, temp_node_pos))
+                node_err_bounds = np.vstack(
+                    (self.node_err_bounds, np.zeros((len(temp_node_pos), 2))))
             else:
-                node_pos = np.atleast_2d(self.node_pos)
+                node_pos = self.node_pos
+                node_err_bounds = self.node_err_bounds
             node_val = np.append(self.node_val, temp_node_val)
-            node_is_fast = np.append(self.node_is_fast, temp_node_is_fast)
+            node_is_noisy = np.append(self.node_is_noisy, temp_node_is_noisy)
             k = len(node_pos)
-
-            # Compute indices of fast node evaluations (sparse format)
-            fast_node_index = (np.nonzero(self.node_is_fast)[0] 
-                               if self.two_phase_optimization
-                               else np.array([]))
 
             # Make a copy as there might be parallel access
             l_settings = copy.deepcopy(l_settings)
@@ -1248,9 +1327,9 @@ class RbfoptAlgorithm:
             # Rescale nodes if necessary
             tfv = ru.transform_function_values(l_settings, node_val,
                                                self.fmin, self.fmax,
-                                               fast_node_index)
+                                               node_err_bounds)
             (scaled_node_val, scaled_fmin, scaled_fmax, 
-             node_err_bounds, rescale_function) = tfv
+             scaled_err_bounds, rescale_function) = tfv
 
             # If RBF selection is automatic, at the beginning of each
             # cycle check if a different RBF yields a better model
@@ -1281,15 +1360,14 @@ class RbfoptAlgorithm:
                     Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
                 # Compute RBF interpolant at current stage
-                if (fast_node_index.size):
+                if (np.any(self.node_is_noisy)):
                     # Get coefficients for the exact RBF
                     rbf_l, rbf_h = ru.get_rbf_coefficients(
                         l_settings, n, k, Amat, scaled_node_val)
-                    # RBF with some fast function evaluations
+                    # RBF with some noisy function evaluations
                     rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
                         l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
-                        scaled_node_val, fast_node_index,
-                        node_err_bounds, rbf_l, rbf_h)
+                        scaled_node_val, scaled_err_bounds, rbf_l, rbf_h)
                 else:
                     # Fully accurate RBF
                     rbf_l, rbf_h = ru.get_rbf_coefficients(
@@ -1306,7 +1384,7 @@ class RbfoptAlgorithm:
         
             # Initialize the new point to None
             next_p = None
-            curr_is_fast = (self.eval_mode == 'fast')
+            curr_is_noisy = (self.eval_mode == 'noisy')
 
             if (self.current_step == self.restoration_step):
                 # Restoration
@@ -1322,7 +1400,7 @@ class RbfoptAlgorithm:
                     temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
                                               j, axis=0)
                     temp_node_val = np.delete(temp_node_val, j)
-                    temp_node_is_fast = np.delete(temp_node_is_fast, j)
+                    temp_node_is_noisy = np.delete(temp_node_is_noisy, j)
                     res_removed.append(res_eval.pop(j))
                 iteration_id = 'Restoration'
 
@@ -1353,7 +1431,7 @@ class RbfoptAlgorithm:
                          self.tr_radius))
                     iteration_id = 'RefinementStep'
                     ref_rescale_function = rescale_function
-                    res_search.append([new_res, curr_is_fast, iteration_id])
+                    res_search.append([new_res, curr_is_noisy, iteration_id])
                     refinement_in_progress = True
                 except np.linalg.LinAlgError:
                     # Error in the solution of the linear system. We
@@ -1367,19 +1445,18 @@ class RbfoptAlgorithm:
                     (l_settings, n, k, l_lower, l_upper, integer_vars, 
                      node_pos, Amatinv))
                 iteration_id = 'InfStep'
-                res_search.append([new_res, curr_is_fast, iteration_id])
+                res_search.append([new_res, curr_is_noisy, iteration_id])
             
             elif (self.current_step == self.local_search_step):
                 # Local search
                 new_res = pool.apply_async(
                     local_step,
                     (l_settings, n, k, l_lower, l_upper, integer_vars, 
-                     node_pos, rbf_l, rbf_h, tfv[:4], fast_node_index, 
-                     Amat, Amatinv, self.fmin_index, 
-                     self.two_phase_optimization, self.eval_mode, 
-                     node_is_fast))
+                     node_pos, rbf_l, rbf_h, tfv[:4], Amat, Amatinv,
+                     self.fmin_index, self.two_phase_optimization,
+                     self.eval_mode, node_is_noisy))
                 iteration_id = 'LocalStep'
-                res_search.append([new_res, curr_is_fast, iteration_id])
+                res_search.append([new_res, curr_is_noisy, iteration_id])
             else:
                 # Global search
                 new_res = pool.apply_async(
@@ -1388,7 +1465,7 @@ class RbfoptAlgorithm:
                      node_pos, rbf_l, rbf_h, tfv[:4], Amatinv, 
                      self.fmin_index, self.current_step))
                 iteration_id = 'GlobalStep'
-                res_search.append([new_res, curr_is_fast, iteration_id])
+                res_search.append([new_res, curr_is_noisy, iteration_id])
             # -- end if
 
             # Move forward, without waiting for results
@@ -1401,16 +1478,22 @@ class RbfoptAlgorithm:
         pool.close()
         pool.join()
         # Obtain all point evaluations that are ready
-        for (res, next_p, node_is_fast, iid) in res_eval + res_removed:
+        for (res, next_p, node_is_noisy, iid) in res_eval + res_removed:
             next_val = res.get()
             min_dist = ru.get_min_distance(next_p, self.node_pos)
             # Transform back to original space if necessary
             next_p_orig = ru.transform_domain(l_settings, var_lower,
                                               var_upper, next_p, True)
             # Add to the lists.
-            self.add_node(next_p, next_p_orig, next_val, node_is_fast)
-            gap = ru.compute_gap(l_settings, self.fbest, self.is_fbest_fast)
-            self.update_log(iid, self.node_is_fast[-1], next_val, gap)
+            if (node_is_noisy):
+                self.add_noisy_node(next_p, next_p_orig, next_val,
+                                    err_l, err_u)
+            else:
+                self.add_node(next_p, next_p_orig, next_val)
+            gap = ru.compute_gap(
+                l_settings, self.fbest +
+                self.all_node_err_bounds[self.fbest_index, 1])
+            self.update_log(iid, self.node_is_noisy[-1], next_val, gap)
             # Update iteration number
             self.itercount += 1
         # -- end for
@@ -1433,11 +1516,11 @@ class RbfoptAlgorithm:
             parallel. If None, parallel evaluation will not be
             performed.
         """
-        # We update the number of fast restarts here, so that if
-        # we hit the limit on fast restarts, we can evaluate
+        # We update the number of noisy restarts here, so that if
+        # we hit the limit on noisy restarts, we can evaluate
         # points in accurate mode after restarting (even if
         # eval_mode is updated in a subsequent block of code)
-        self.num_fast_restarts += (1 if self.eval_mode == 'fast' 
+        self.num_noisy_restarts += (1 if self.eval_mode == 'noisy' 
                                    else 0)
         # Store the current number of nodes
         self.num_nodes_at_restart = len(self.all_node_pos)
@@ -1453,21 +1536,23 @@ class RbfoptAlgorithm:
             indices = np.where(dist <= self.l_settings.eps_zero)[0]
             prev_node_pos = list()
             prev_node_val = list()
-            prev_node_is_fast = list()
+            prev_node_is_noisy = list()
+            prev_node_err_bounds = list()
             for i in reversed(sorted(indices)):
                 val, j = ru.get_min_distance_and_index(
                     node_pos[i], self.all_node_pos[:self.num_nodes_at_restart])
-                if (self.eval_mode == 'fast' or 
-                    not self.all_node_is_fast[j]):
+                if (self.eval_mode == 'noisy' or 
+                    not self.all_node_is_noisy[j]):
                     prev_node_pos.append(self.all_node_pos[j])
                     prev_node_val.append(self.all_node_val[j])
-                    prev_node_is_fast.append(self.all_node_is_fast[j])
+                    prev_node_is_noisy.append(self.all_node_is_noisy[j])
+                    prev_node_err_bounds.append(self.all_node_err_bounds[j])
                     node_pos = np.delete(np.atleast_2d(node_pos), i, axis=0)
         # Evaluate new points
         if (self.eval_mode == 'accurate' or
-            self.num_fast_restarts > self.l_settings.max_fast_restarts or
-            (self.fast_evalcount + self.n + 1 >=
-             self.l_settings.max_fast_evaluations)):
+            self.num_noisy_restarts > self.l_settings.max_noisy_restarts or
+            (self.noisy_evalcount + self.n + 1 >=
+             self.l_settings.max_noisy_evaluations)):
             if (pool is None):
                 node_val = np.array([objfun([self.bb, point, self.fixed_vars])
                                      for point in node_pos])
@@ -1475,25 +1560,29 @@ class RbfoptAlgorithm:
                 map_arg = [[self.bb, point, self.fixed_vars] 
                            for point in node_pos]
                 node_val = np.array(pool.map(objfun, map_arg))
+            node_err_bounds = np.zeros((len(node_val), 2))
             self.evalcount += len(node_val)
         else:
             if (pool is None):
-                node_val = np.array([objfun_fast([self.bb, point, 
-                                                  self.fixed_vars])
-                            for point in node_pos])
+                res = np.array([objfun_noisy([self.bb, point, self.fixed_vars])
+                                for point in node_pos])
             else:
                 map_arg = [[self.bb, point, self.fixed_vars] 
                            for point in node_pos]
-                node_val = np.array(pool.map(objfun_fast, map_arg))
-            self.fast_evalcount += len(node_val)
-        node_is_fast = np.array([self.eval_mode == 'fast'
+                res = np.array(pool.map(objfun_noisy, map_arg))
+            node_val = res[:, 0]
+            node_err_bounds = res[:, 1:]
+            self.noisy_evalcount += len(node_val)
+        node_is_noisy = np.array([self.eval_mode == 'noisy'
                                  for val in node_val])
         # Add previously evaluated points, if any
         if (self.num_nodes_at_restart and prev_node_pos):
             node_pos = np.vstack((node_pos, np.array(prev_node_pos)))
             node_val = np.append(node_val, np.array(prev_node_val))
-            node_is_fast = np.append(node_is_fast,
-                                     np.array(prev_node_is_fast, dtype = bool))
+            node_is_noisy = np.append(node_is_noisy,
+                                     np.array(prev_node_is_noisy, dtype = bool))
+            node_err_bounds = np.vstack((node_err_bounds,
+                                         np.array(prev_node_err_bounds)))
         # Add user-provided points if this is the first iteration
         if (self.init_node_pos.size and self.itercount == 0):
             # Determine which points can be added
@@ -1520,24 +1609,29 @@ class RbfoptAlgorithm:
                 node_pos = np.vstack((node_pos, init_node_pos))
                 node_val = np.append(node_val, init_node_val)
 
-            node_is_fast = np.append(node_is_fast, 
-                                     np.zeros(init_node_val.shape[0],
-                                              dtype=bool))
+            node_is_noisy = np.append(node_is_noisy, 
+                                     np.zeros(len(init_node_val), dtype=bool))
+            node_err_bounds = np.vstack((node_err_bounds,
+                                         np.zeros((len(init_node_val), 2))))
 
         if (self.all_node_pos.size == 0):
             self.all_node_pos = node_pos.copy()
+            self.all_node_err_bounds = node_err_bounds.copy()
         else:
             self.all_node_pos = np.vstack((self.all_node_pos, node_pos))
+            self.all_node_err_bounds = np.vstack((self.all_node_err_bounds,
+                                                  node_err_bounds))
         self.all_node_val = np.append(self.all_node_val, node_val)
-        self.all_node_is_fast = np.append(self.all_node_is_fast, 
-                                          node_is_fast)
+        self.all_node_is_noisy = np.append(self.all_node_is_noisy, 
+                                          node_is_noisy)
 
         # Rescale the domain of the function
         node_pos = ru.bulk_transform_domain(self.l_settings, self.var_lower,
                                             self.var_upper, node_pos)
         # Update references
         self.node_pos, self.node_val = node_pos, node_val
-        self.node_is_fast = node_is_fast
+        self.node_is_noisy = node_is_noisy
+        self.node_err_bounds = node_err_bounds
         # Update all counters and values to restart properly
         self.fmin_index = np.argmin(node_val)
         self.fmin = node_val[self.fmin_index]
@@ -1548,20 +1642,21 @@ class RbfoptAlgorithm:
         self.num_stalled_cycles = 0
         self.num_cons_discarded = 0
         self.num_cons_refinement = 0
-        self.is_fmin_fast = self.node_is_fast[self.fmin_index]
+        self.is_fmin_noisy = self.node_is_noisy[self.fmin_index]
         if (self.fmin < self.fbest):
             self.fbest = self.fmin
             self.fbest_index = self.fmin_index + self.num_nodes_at_restart
-            self.is_fbest_fast = self.node_is_fast[self.fmin_index]
+            self.is_fbest_noisy = self.node_is_noisy[self.fmin_index]
 
-        gap = ru.compute_gap(self.l_settings, self.fbest, self.is_fbest_fast)
+        gap = ru.compute_gap(self.l_settings, self.fbest +
+                             self.all_node_err_bounds[self.fbest_index, 1])
 
         # Print the initialization points
         for (i, val) in enumerate(self.node_val):
             min_dist = ru.get_min_distance(self.node_pos[i],
                                            np.vstack((self.node_pos[:i],
                                                       self.node_pos[(i+1):])))
-            self.update_log('Initialization', self.node_is_fast[i], val, gap)
+            self.update_log('Initialization', self.node_is_noisy[i], val, gap)
         self.current_step = self.first_step
     # -- end function
 
@@ -1583,7 +1678,7 @@ class RbfoptAlgorithm:
         cons_restoration = 0
         self.node_val = np.delete(self.node_val, -1)
         self.node_pos = np.delete(np.atleast_2d(self.node_pos), -1, axis=0)
-        self.node_is_fast = np.delete(self.node_is_fast, -1)
+        self.node_is_noisy = np.delete(self.node_is_noisy, -1)
 
         while (not restoration_done and cons_restoration < 
                self.l_settings.max_consecutive_restoration):
@@ -1693,15 +1788,15 @@ class RbfoptAlgorithm:
 
         Check if we should switch to the second phase of two-phase
         optimization. The conditions for switching are:
-        1) Optimization in fast mode restarted too many times.
-        2) We reached the limit of fast mode iterations.
+        1) Optimization in noisy mode restarted too many times.
+        2) We reached the limit of noisy mode iterations.
         If both are met, the switch is performed.
         """
         if ((self.two_phase_optimization == True) and 
-            (self.eval_mode == 'fast') and
-            ((self.num_fast_restarts > self.l_settings.max_fast_restarts) or
-             (self.itercount >= self.l_settings.max_fast_iterations) or
-             (self.fast_evalcount >= self.l_settings.max_fast_evaluations))):
+            (self.eval_mode == 'noisy') and
+            ((self.num_noisy_restarts > self.l_settings.max_noisy_restarts) or
+             (self.itercount >= self.l_settings.max_noisy_iterations) or
+             (self.noisy_evalcount >= self.l_settings.max_noisy_evaluations))):
             self.update_log('Switching to accurate mode')
             self.eval_mode = 'accurate'            
     # -- end function
@@ -1840,16 +1935,16 @@ class RbfoptAlgorithm:
                 self.num_stalled_cycles += 1
     # -- end function
 
-    def require_accurate_evaluation(self, fast_val):
-        """Check if a given fast value qualifies for accurate evaluation.
+    def require_accurate_evaluation(self, noisy_val):
+        """Check if a given noisy value qualifies for accurate evaluation.
 
         Verify if a point with the given objective function value in
-        fast mode qualifies for an immediate accurate re-evaluation.
+        noisy mode qualifies for an immediate accurate re-evaluation.
 
         Parameters
         ----------
-        fast_val : float
-            Value of the point to be tested, in fast mode.
+        noisy_val : float
+            Value of the point to be tested, in noisy mode.
 
         Returns
         -------
@@ -1860,15 +1955,11 @@ class RbfoptAlgorithm:
         # Check if the point improves over existing points, 
         # or if it could be optimal according to tolerances. 
         # In this case, perform a double evaluation.
-        best_possible = ((ru.get_fast_error_bounds(self.l_settings,
-                                                   [self.fmin])[0, 0]
-                          if self.is_fmin_fast else 0.0) + self.fmin)
         best_possible = self.fmin
-        if ((fast_val <= best_possible -
+        if ((noisy_val <= best_possible -
              self.l_settings.eps_impr*max(1.0, abs(best_possible))) or
-            (fast_val <= self.l_settings.target_objval +
-             self.l_settings.eps_opt*abs(self.l_settings.target_objval) -
-             ru.get_fast_error_bounds(self.l_settings, [fast_val])[0, 0])):
+            (noisy_val <= self.l_settings.target_objval +
+             self.l_settings.eps_opt*abs(self.l_settings.target_objval))):
             return True
         else:
             return False
@@ -1936,9 +2027,9 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
 # -- end function
 
 def local_step(settings, n, k, var_lower, var_upper, integer_vars, 
-               node_pos, rbf_lambda, rbf_h, tfv, fast_node_index,
+               node_pos, rbf_lambda, rbf_h, tfv,
                Amat, Amatinv, fmin_index, two_phase_optimization, 
-               eval_mode, node_is_fast):
+               eval_mode, node_is_noisy):
     """Perform local search step, possibly adjusted.
     
     Perform a local search step. This typically accepts the
@@ -1982,14 +2073,9 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
-    tfv : (1D numpy.ndarray[float], float, float, List[(float, float)])
-
+    tfv : (1D numpy.ndarray[float], float, float, 2D numpy.ndarray[float])
         Transformed function values: scaled node values, scaled
-        minimum, scaled maximum, node error bounds.
-
-    fast_node_index : 1D numpy.ndarray[int]
-        List of indices of nodes whose function value should be
-        considered variable withing the allowed range.
+        minimum, scaled maximum, scaled node error bounds.
 
     Amat : numpy.matrix
         RBF matrix, i.e. [Phi P; P^T 0].
@@ -2002,15 +2088,15 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
         Index of the minimum value among the nodes.
 
     two_phase_optimization : bool
-        Is the fast but noisy objective function is available?
+        Is the noisy but fast objective function is available?
 
     eval_mode : string
         Evaluation mode for the objective function at a given
-        stage. Can be either 'fast' or 'accurate'.
+        stage. Can be either 'noisy' or 'accurate'.
 
-    node_is_fast : List[bool]
+    node_is_noisy : List[bool]
         For each interpolation node in node_pos, was it evaluated in
-        'fast' mode?
+        'noisy' mode?
 
     Returns
     -------
@@ -2036,14 +2122,14 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(var_upper)==n)
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
-    assert(len(node_is_fast)==k)
+    assert(len(node_is_noisy)==k)
     assert(0 <= fmin_index < k)
-    assert((eval_mode=='fast') or (eval_mode=='accurate'))
+    assert((eval_mode=='noisy') or (eval_mode=='accurate'))
     assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(Amat, np.matrix))
     assert((Amatinv is None and settings.algorithm == 'MSRSM') or 
            isinstance(Amatinv, np.matrix) )
-    scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
+    scaled_node_val, scaled_fmin, scaled_fmax, scaled_err_bounds = tfv
     # Local search: compute the minimum of the RBF.
     min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper,
                                integer_vars, node_pos, rbf_lambda, rbf_h)
@@ -2089,8 +2175,8 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     # a previously known point.
     if ((two_phase_optimization == True) and (eval_mode == 'accurate')):
         ind, bump = aux.get_min_bump_node(settings, n, k, Amat,
-                                          scaled_node_val, fast_node_index, 
-                                          node_err_bounds, target_val)
+                                          scaled_node_val, 
+                                          scaled_err_bounds, target_val)
         
         if (ind is not None and next_p is not None):
             # Check if the newly proposed point is very close to an
@@ -2100,13 +2186,12 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
                 # If not, compute bumpiness of the newly proposed point.
                 n_bump = aux.get_bump_new_node(settings, n, k, node_pos,
                                                scaled_node_val, next_p,
-                                               fast_node_index, 
-                                               node_err_bounds,
+                                               scaled_err_bounds,
                                                target_val)
             else:
                 # If yes, we will simply reevaluate the existing point
                 # (if it can be reevaluated).
-                n_bump = (float('inf') if node_is_fast[ind] else
+                n_bump = (float('inf') if node_is_noisy[ind] else
                           float('-inf'))
             if (n_bump > bump):
                 # In this case we want to put the new point at the
@@ -2185,7 +2270,7 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(h)==n)
     assert(tr_radius>=0)
     assert(isinstance(settings, RbfoptSettings))
-    scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
+    scaled_node_val, scaled_fmin, scaled_fmax, scaled_err_bounds = tfv
     found_model_impr = False
     if (rank_deficient):
         point, found_model_impr, to_replace = ref.get_model_improving_point(
@@ -2287,7 +2372,7 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(isinstance(settings, RbfoptSettings))
     assert(0 <= current_step <= settings.num_global_searches)
 
-    scaled_node_val, scaled_fmin, scaled_fmax, node_err_bounds = tfv
+    scaled_node_val, scaled_fmin, scaled_fmax, scaled_err_bounds = tfv
 
     assert (isinstance(scaled_node_val, np.ndarray))
 
@@ -2396,10 +2481,10 @@ def objfun(data):
     return data[0].evaluate(point)
 # -- end function
 
-def objfun_fast(data):
-    """Call the evaluate_fast() method of a RbfoptBlackBox object.
+def objfun_noisy(data):
+    """Call the evaluate_noisy() method of a RbfoptBlackBox object.
     
-    Apply the evaluate_fast() method of the given RbfoptBlackBox object to
+    Apply the evaluate_noisy() method of the given RbfoptBlackBox object to
     the given point. This way of calling the method indirectly is
     necessary for parallelization.
 
@@ -2416,8 +2501,9 @@ def objfun_fast(data):
 
     Returns
     -------
-    float
-        The value of the function evaluate_fast() at the point.
+    (float, float, float)
+        The value of the function evaluate_noisy() at the point, and
+        the possible variation given as lower and upper variation.
 
     """
     assert(len(data)==3)
@@ -2429,5 +2515,5 @@ def objfun_fast(data):
         point = np.array(point)
     else:
         point = data[1]
-    return data[0].evaluate_fast(point)
+    return data[0].evaluate_noisy(point)
 # -- end function

@@ -275,8 +275,6 @@ class TestUtils(unittest.TestCase):
         produce valid results and can handle extreme cases.
         """
         settings = RbfoptSettings()
-        settings.fast_objfun_rel_error = 0.01
-        settings.fast_objfun_abs_error = 0.01
         list_scaling = [val for val in RbfoptSettings._allowed_function_scaling
                         if val != 'auto']
         list_clipping = [val for val in 
@@ -284,26 +282,28 @@ class TestUtils(unittest.TestCase):
                          if val != 'auto']
         transf = ru.transform_function_values
         # Create list of values to test: node_val and corresponding
-        # fast_node_index
+        # node_err_bound
         to_test = [(np.array([0, -100, settings.dynamism_threshold * 10]), 
-                    np.array([])),
-                   (np.array([0.0]), np.array([0])),
-                   (np.array([0.0 for i in range(10)]), np.array([8, 9])),
+                    np.array([[0,0], [0,0], [0,0]])),
+                   (np.array([0.0]), np.array([[0, 0]])),
+                   (np.array([0.0 for i in range(10)]),
+                    np.array([[-i, i] for i in range(10)])),
                    (np.array([100.0 for i in range(10)]), 
-                    np.array([i for i in range(10)])),
-                   (np.array([10.0**i for i in range(-20, 20)]), np.array([])),
+                    np.array([[-1,1] for i in range(10)])),
+                   (np.array([10.0**i for i in range(-20, 20)]),
+                    np.array([[0,0] for i in range(-20, 20)])),
                    (np.append(np.array([-10.0**i for i in range(-20, 20)]),
                               np.array([10.0**i for i in range(-20, 20)])),
-                    np.array([i for i in range(50, 60)]))]
+                    np.array([[-2**i,2**i] for i in range(-40, 40)]))]
         for scaling in list_scaling:
             for clipping in list_clipping:
                 header = '({:s}, {:s}):'.format(scaling, clipping)
-                for (node_val, fast_node_index) in to_test:
+                for (node_val, node_err_bounds) in to_test:
                     settings.function_scaling = scaling
                     settings.dynamism_clipping = clipping
                     (scaled, minval, maxval, errbounds,
                      rescale_func) = transf(settings, node_val, min(node_val),
-                                            max(node_val), fast_node_index)
+                                            max(node_val), node_err_bounds)
                     # Check that the number of scaled values is the
                     # same as the number of input values
                     msg='Number of output values is different from input'
@@ -316,7 +316,7 @@ class TestUtils(unittest.TestCase):
                     c2 = v1 <= 1.0e-10 and v2 <= settings.dynamism_threshold
                     self.assertTrue(clipping == 'off' or c1 or c2,
                                     msg=header + msg)
-                    for (i, j) in enumerate(fast_node_index):
+                    for i in range(len(node_val)):
                         msg='Fast_node_index have wrong sign'
                         self.assertLessEqual(errbounds[i][0], 0, msg=msg)
                         self.assertGreaterEqual(errbounds[i][1], 0, msg=msg)

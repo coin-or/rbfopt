@@ -597,14 +597,13 @@ def initialize_msrsm_aux_variables(settings, instance):
 
 
 def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
-                               fast_node_index, fast_node_err_bounds,
-                               init_rbf_lambda=None, init_rbf_h=None):
+                               node_err_bounds, init_rbf_lambda=None,
+                               init_rbf_h=None):
     """Obtain coefficients for the noisy RBF interpolant.
 
     Solve a quadratic problem to compute the coefficients of the RBF
     interpolant that minimizes bumpiness and lets all points with
-    index in fast_node_index deviate by a specified percentage from
-    their value.
+    deviate by a given amount from their value.
 
     Parameters
     ----------
@@ -627,14 +626,10 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
-    fast_node_index : 1D numpy.ndarray[int]
-        List of indices of nodes whose function value should be
-        considered variable within the allowed range.
-
-    fast_node_err_bounds : List[(float, float)]
+    node_err_bounds : 2D numpy.ndarray[float]
         Allowed deviation from node values for nodes affected by
-        error. This is a list of pairs (lower, upper) of the same
-        length as fast_node_index.
+        error. This is a matrix with rows (lower_deviation, 
+        upper_deviation).
 
     init_rbf_lambda : 1D numpy.ndarray[float] or None
         Initial values that should be used for the lambda coefficients
@@ -662,11 +657,11 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     """
     assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(node_val, np.ndarray))
+    assert(isinstance(node_err_bounds, np.ndarray))
     assert(len(node_val) == k)
     assert(isinstance(Phimat, np.matrix))
     assert(isinstance(Pmat, np.matrix))
-    assert(isinstance(fast_node_index, np.ndarray))
-    assert(len(fast_node_index) == len(fast_node_err_bounds))
+    assert(len(node_val) == len(node_err_bounds))
     assert(init_rbf_lambda is None or (isinstance(init_rbf_lambda, 
                                                   np.ndarray) and
                                        len(init_rbf_lambda) == k))
@@ -682,8 +677,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
     instance = model.create_min_bump_model(settings, n, k, Phimat, Pmat,
-                                           node_val, fast_node_index,
-                                           fast_node_err_bounds)
+                                           node_val, node_err_bounds)
 
     # Instantiate optimizer
     opt = pyomo.opt.SolverFactory('ipopt',
@@ -730,8 +724,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
 # -- end function
 
 
-def get_min_bump_node(settings, n, k, Amat, node_val,
-                      fast_node_index, fast_node_err_bounds,
+def get_min_bump_node(settings, n, k, Amat, node_val, node_err_bounds,
                       target_val):
     """Compute the bumpiness obtained by moving an interpolation point.
 
@@ -758,14 +751,10 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
     node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
-    fast_node_index : 1D numpy.ndarray[int]
-        List of indices of nodes whose function value should be
-        considered variable withing the allowed range.
-
-    fast_node_err_bounds : List[int]
+    node_err_bounds : 2D numpy.ndarray[float]
         Allowed deviation from node values for nodes affected by
-        error. This is a list of tuples (lower, upper) of the same
-        length as fast_node_index.
+        error. This is a matrix with rows (lower_deviation, 
+        upper_deviation).
 
     target_val : float
         Target function value at which we want to move the node.
@@ -776,43 +765,47 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
         The index of the node and corresponding bumpiness value
         indicating the sought node in the list node_pos.
     """
-    assert (isinstance(node_val, np.ndarray))
-    assert (isinstance(fast_node_index, np.ndarray))
-    assert (isinstance(settings, RbfoptSettings))
-    assert (len(node_val) == k)
-    assert (isinstance(Amat, np.matrix))
-    assert (len(fast_node_index) == len(fast_node_err_bounds))
+    assert(isinstance(settings, RbfoptSettings))
+    assert(isinstance(node_val, np.ndarray))
+    assert(isinstance(node_err_bounds, np.ndarray))
+    assert(len(node_val) == k)
+    assert(isinstance(Amat, np.matrix))
+    assert(len(node_val) == len(node_err_bounds))
 
     # Extract the matrices Phi and P from
     Phimat = Amat[:k, :k]
     Pmat = Amat[:k, k:]
 
     min_bump_index, min_bump = None, float('Inf')
-    for (pos, i) in enumerate(fast_node_index):
-        # Check if we are within the allowed range
-        if (node_val[i] + fast_node_err_bounds[pos][0] <= target_val and
-            node_val[i] + fast_node_err_bounds[pos][1] >= target_val):
-            # If so, compute bumpiness. Save original data.
-            orig_node_val = node_val[i]
-            orig_node_err_bounds = fast_node_err_bounds[pos]
-            # Fix this node at the target value.
-            node_val[i] = target_val
-            fast_node_err_bounds[pos] = (0.0, 0.0)
-            # Compute RBF interpolant.
-            # Get coefficients for the exact RBF first
-            rbf_l, rbf_h = ru.get_rbf_coefficients(settings, n, k,
-                                                     Amat, node_val)
-            # And now the noisy version
-            rbf_l, rbf_h = get_noisy_rbf_coefficients(
-                settings, n, k, Phimat, Pmat, node_val, fast_node_index, 
-                fast_node_err_bounds, rbf_l, rbf_h)
-            # Restore original values
-            node_val[i] = orig_node_val
-            fast_node_err_bounds[pos] = orig_node_err_bounds
-            # Compute bumpiness using the formula \lambda^T \Phi \lambda
-            bump = np.dot(np.dot(rbf_l, Phimat), rbf_l)
-            if (bump < min_bump):
-                min_bump_index, min_bump = i, bump
+    # We only look at nodes that have some allowed variation, and for
+    # which target_val falls within the specified range.
+    nodes_to_process = np.where(
+        (node_err_bounds[:,1] - node_err_bounds[:,0] > settings.eps_zero) *
+        (node_val + node_err_bounds[:, 0] <= target_val) *
+        (node_val + node_err_bounds[:, 0] <= target_val))[0]
+
+    for i in nodes_to_process:
+        # Compute bumpiness. Save original data.
+        orig_node_val = node_val[i]
+        orig_node_err_bounds = node_err_bounds[i]
+        # Fix this node at the target value.
+        node_val[i] = target_val
+        node_err_bounds[i, :] = 0.0
+        # Compute RBF interpolant.
+        # Get coefficients for the exact RBF first
+        rbf_l, rbf_h = ru.get_rbf_coefficients(settings, n, k,
+                                               Amat, node_val)
+        # And now the noisy version
+        rbf_l, rbf_h = get_noisy_rbf_coefficients(
+            settings, n, k, Phimat, Pmat, node_val, node_err_bounds,
+            rbf_l, rbf_h)
+        # Restore original values
+        node_val[i] = orig_node_val
+        node_err_bounds[i] = orig_node_err_bounds
+        # Compute bumpiness using the formula \lambda^T \Phi \lambda
+        bump = np.dot(np.dot(rbf_l, Phimat), rbf_l)
+        if (bump < min_bump):
+            min_bump_index, min_bump = i, bump
 
     return (min_bump_index, min_bump)
 
@@ -820,7 +813,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val,
 
 
 def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
-                      fast_node_index, fast_node_err_bounds, target_val):
+                      node_err_bounds, target_val):
     """Compute the bumpiness with a new interpolation point.
 
     Computes the bumpiness of the interpolant obtained by setting a
@@ -846,14 +839,10 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     new_node : 1D numpy.ndarray[float]
         Location of new interpolation node.
 
-    fast_node_index : 1D numpy.ndarray[float]
-        List of indices of nodes whose function value should be
-        considered variable withing the allowed range.
-
-    fast_node_err_bounds : List[int]
+    node_err_bounds : 2D numpy.ndarray[float]
         Allowed deviation from node values for nodes affected by
-        error. This is a list of tuples (lower, upper) of the same
-        length as fast_node_index.
+        error. This is a matrix with rows (lower_deviation, 
+        upper_deviation).
 
     target_val : float
         Target function value at which we want to move the node.
@@ -867,16 +856,17 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     assert(isinstance(node_pos, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(new_node, np.ndarray))
-    assert(isinstance(fast_node_index, np.ndarray))
+    assert(isinstance(node_err_bounds, np.ndarray))
     assert(isinstance(settings, RbfoptSettings))
     assert(len(node_val) == k)
     assert(len(node_pos) == k)
-    assert(len(fast_node_index) == len(fast_node_err_bounds))
+    assert(len(node_val) == len(node_err_bounds))
     assert(new_node is not None)
 
     # Add the new node to existing ones
     n_node_pos = np.vstack((node_pos, new_node))
     n_node_val = np.append(node_val, target_val)
+    n_node_err_bounds = np.vstack((node_err_bounds, np.array([[0, 0]])))
 
     # Compute the matrices necessary for the algorithm
     Amat = ru.get_rbf_matrix(settings, n, k + 1, n_node_pos)
@@ -887,8 +877,8 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
     # Get RBF coefficients for noisy interpolant
     rbf_l, rbf_h = get_noisy_rbf_coefficients(
         settings, n, k + 1, Amat[:(k + 1), :(k + 1)],
-        Amat[:(k + 1), (k + 1):], n_node_val, fast_node_index,
-        fast_node_err_bounds, rbf_l, rbf_h)
+        Amat[:(k + 1), (k + 1):], n_node_val,
+        n_node_err_bounds, rbf_l, rbf_h)
 
     bumpiness = np.dot(np.dot(rbf_l, Amat[:(k+1), :(k+1)]), rbf_l)
 

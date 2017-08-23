@@ -4,6 +4,10 @@
 	Installation script setup.py.
 	Class to construct RbfoptBlackBox from user data
 	(rbfopt_user_black_box).
+	The shape of the multiquadric RBF can now be set at runtime using
+	the rbf_shape_parameter option in RbfoptSettings.
+	The path to the solvers bonmin and ipopt can now be set at runtime
+	using minlp_solver_path and nlp_solver_path in RbfoptSettings.
 	* Changed:
 	Directory structure reorganized to allow installation as a module
 	in Python's site-packages.
@@ -15,6 +19,8 @@
 	module.
 	README updated with new installation instructions and minimal
 	examples.
+	* Removed:
+	Module rbfopt_config is no longer necessary.
 
 2017-08-18  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 3.0.2 released. List of major changes:

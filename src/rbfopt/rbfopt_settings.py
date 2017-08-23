@@ -37,8 +37,8 @@ class RbfoptSettings:
         Maximum number of function evaluations in accurate mode. 
         Default 300.
 
-    max_fast_evaluations : int
-        Maximum number of function evaluations in fast mode.
+    max_noisy_evaluations : int
+        Maximum number of function evaluations in noisy mode.
         Default 150.
 
     max_clock_time : float
@@ -159,21 +159,21 @@ class RbfoptSettings:
         Maximum number of consecutive nonsingularity restoration
         phases before the algorithm fails. Default 15.
 
-    fast_objfun_rel_error : float
-        An estimate of the relative error by which the fast version of
+    noisy_objfun_rel_error : float
+        An estimate of the relative error by which the noisy version of
         the objective function is affected. Default 0.0.
         
-    fast_objfun_abs_error : float
-        An estimate of the absolute error by which the fast
+    noisy_objfun_abs_error : float
+        An estimate of the absolute error by which the noisy
         version of the objective function is affected. Default
         0.0.
         
-    max_fast_restarts : int
-        Maximum number of restarts in fast mode before we switch
+    max_noisy_restarts : int
+        Maximum number of restarts in noisy mode before we switch
         to accurate mode. Default 2.
     
-    max_fast_iterations : int
-        Maximum number of iterations in fast mode before switching
+    max_noisy_iterations : int
+        Maximum number of iterations in noisy mode before switching
         to accurate mode. Default 100.
     
     algorithm : string
@@ -339,7 +339,7 @@ class RbfoptSettings:
     def __init__(self,
                  max_iterations=1000,
                  max_evaluations=300,
-                 max_fast_evaluations=150,
+                 max_noisy_evaluations=150,
                  max_clock_time=1.0e30,
                  num_cpus=1,
                  parallel_wakeup_time=0.1,
@@ -365,10 +365,10 @@ class RbfoptSettings:
                  max_stalled_cycles=30,
                  max_consecutive_discarded=10,
                  max_consecutive_restoration=15,
-                 fast_objfun_rel_error=0.0,
-                 fast_objfun_abs_error=0.0,
-                 max_fast_restarts=2,
-                 max_fast_iterations=100,
+                 noisy_objfun_rel_error=0.0,
+                 noisy_objfun_abs_error=0.0,
+                 max_noisy_restarts=2,
+                 max_noisy_iterations=100,
                  algorithm='MSRSM',
                  targetval_clipping=True,
                  global_search_method='genetic',
@@ -396,7 +396,7 @@ class RbfoptSettings:
         """
         self.max_iterations = max_iterations
         self.max_evaluations = max_evaluations
-        self.max_fast_evaluations = max_fast_evaluations
+        self.max_noisy_evaluations = max_noisy_evaluations
         self.max_clock_time = max_clock_time
         self.num_cpus = num_cpus
         self.parallel_wakeup_time = parallel_wakeup_time
@@ -422,10 +422,10 @@ class RbfoptSettings:
         self.max_stalled_cycles = max_stalled_cycles
         self.max_consecutive_discarded = max_consecutive_discarded
         self.max_consecutive_restoration = max_consecutive_restoration
-        self.fast_objfun_rel_error = fast_objfun_rel_error
-        self.fast_objfun_abs_error = fast_objfun_abs_error
-        self.max_fast_restarts = max_fast_restarts
-        self.max_fast_iterations = max_fast_iterations
+        self.noisy_objfun_rel_error = noisy_objfun_rel_error
+        self.noisy_objfun_abs_error = noisy_objfun_abs_error
+        self.max_noisy_restarts = max_noisy_restarts
+        self.max_noisy_iterations = max_noisy_iterations
         self.algorithm = algorithm
         self.targetval_clipping = targetval_clipping
         self.global_search_method = global_search_method

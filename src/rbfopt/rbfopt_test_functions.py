@@ -1912,10 +1912,10 @@ class TestBlackBox(RbfoptBlackBox):
     def evaluate(self, point):
         return self._function.evaluate(point)
 
-    def evaluate_fast(self, point):
-        raise NotImplementedError('evaluate_fast() not implemented')
+    def evaluate_noisy(self, point):
+        raise NotImplementedError('evaluate_noisy() not implemented')
 
-    def has_evaluate_fast(self):
+    def has_evaluate_noisy(self):
         return False
 # -- end class
 
@@ -1961,14 +1961,16 @@ class TestNoisyBlackBox(RbfoptBlackBox):
     def evaluate(self, point):
         return self._function.evaluate(point)
 
-    def evaluate_fast(self, point):
+    def evaluate_noisy(self, point):
         value = self._function.evaluate(point)
         rel_noise = np.random.uniform(-self._max_rel_error,
                                       self._max_rel_error)
         abs_noise = np.random.uniform(-self._max_abs_error,
                                       self._max_abs_error)
-        return (value + rel_noise*abs(value) + abs_noise)
-        
-    def has_evaluate_fast(self):
+        return np.array([value + rel_noise*abs(value) + abs_noise,
+                         - rel_noise*abs(value) - abs_noise,
+                         + rel_noise*abs(value) + abs_noise])
+
+    def has_evaluate_noisy(self):
         return True
 # -- end class

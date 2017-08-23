@@ -139,11 +139,12 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
         return np.sum(x)**self.exponent        
     # -- end function
     
-    def evaluate_fast(self, x):
-        """Evaluate a fast approximation of the black-box function.
+    def evaluate_noisy(self, x):
+        """Evaluate a noisy approximation of the black-box function.
 
         Returns an approximation of the value of evaluate(), hopefully
-        much more quickly. If has_evaluate_fast() returns False, this
+        much more quickly, and provides error bounds on the
+        evaluation. If has_evaluate_noisy() returns False, this
         function will never be queried and therefore it does not have
         to return any value.
 
@@ -158,22 +159,22 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
             Approximate value of the function at x.
 
         """
-        raise NotImplementedError('evaluate_fast not available')
+        raise NotImplementedError('evaluate_noisy not available')
     # -- end function
 
-    def has_evaluate_fast(self):
-        """Indicate whether evaluate_fast is available.
+    def has_evaluate_noisy(self):
+        """Indicate whether evaluate_noisy is available.
 
-        Indicate if a fast but potentially noisy version of evaluate
-        is available through the function evaluate_fast. If True, such
+        Indicate if a noisy but potentially noisy version of evaluate
+        is available through the function evaluate_noisy. If True, such
         function will be used to try to accelerate convergence of the
-        optimization algorithm. If False, the function evaluate_fast
+        optimization algorithm. If False, the function evaluate_noisy
         will never be queried.
 
         Returns
         -------
         bool
-            Is evaluate_fast available?
+            Is evaluate_noisy available?
         """
         return False
     # -- end function
