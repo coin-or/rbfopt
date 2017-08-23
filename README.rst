@@ -45,7 +45,6 @@ Contents of this directory:
       serial and parallel.
     * rbfopt_aux_problems.py: Interface for the auxiliary problems
       solved during the optimization process.
-    * rbfopt_config.py: (Static) configuration file for the machine.
     * rbfopt_degreeX_models.py: PyOmo models for the auxiliary
       problems necessary for RBF functions with minimum required
       polynomial degree X.
@@ -72,6 +71,7 @@ Contents of this directory:
 	  
 * tests/
 
+  * context.py: Configuration file for nose.
   * test_functions.py: Global optimization test functions.
   * test_rbfopt_algorithm.py: Testing module for
     rbfopt_algorithm.py.
@@ -153,10 +153,18 @@ Installation instructions and getting started
    by pip for this purpose), as well as the module files in your
    site-packages directory.
 
-2) Make sure Bonmin and Ipopt are in your path; otherwise, edit the
-   source file rbfopt_config.py to point to the correct location for
-   the NLP and MINLP solvers, using the MINLP_SOLVER_PATH and
-   NLP_SOLVER PATH variables.
+2) Make sure Bonmin and Ipopt are in your path; otherwise, use the
+   options minlp_solver_path and nlp_solver_path in RbfoptSettings to
+   indicate the full path to the solvers. If you use RBFOpt as a
+   library and create your own RbfoptSettings object, these options
+   can be given as::
+
+     import rbfopt
+     settings = rbfopt.RbfoptSettings(minlp_solver_option='full/path/to/bonmin', nlp_solver_option='full/path/to/ipopt')
+
+   If you use the command-line tools, you can simply provide the option preceded by double hyphen, as in::
+
+     rbfopt_test_interface.py --minlp_solver_option='full/path/to/bonmin' branin
 
 3) Enjoy!
 
@@ -180,7 +188,11 @@ Installation instructions and getting started
 
    or::
 
-     python -m unittest discover -s tests/
+     python setup.py nosetests
+
+   or::
+
+     nosetests
 
    from the current (main) directory. This may take some time. If some
    of the tests fail, the library may or may not work correctly. Some

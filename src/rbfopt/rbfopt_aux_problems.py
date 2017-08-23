@@ -21,11 +21,10 @@ import numpy as np
 import scipy.spatial as ss
 import pyomo.environ
 import pyomo.opt
-from . import rbfopt_utils as ru
-from . import rbfopt_config as config
-from . import rbfopt_degree1_models
-from . import rbfopt_degree0_models
-from .rbfopt_settings import RbfoptSettings
+import rbfopt.rbfopt_utils as ru
+import rbfopt.rbfopt_degree1_models as rbfopt_degree1_models
+import rbfopt.rbfopt_degree0_models as rbfopt_degree0_models
+from rbfopt.rbfopt_settings import RbfoptSettings
 
 
 def pure_global_search(settings, n, k, var_lower, var_upper,
@@ -153,12 +152,11 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
         # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME,
-                                      executable=config.MINLP_SOLVER_PATH,
+        opt = pyomo.opt.SolverFactory('bonmin',
+                                      executable=settings.minlp_solver_path,
                                       solver_io='nl')
         if opt is None:
-            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME +
-                               ' not found')
+            raise RuntimeError('Solver ' + 'bonmin' + ' not found')
         set_minlp_solver_options(opt)
 
         # Solve and load results
@@ -271,12 +269,11 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     initialize_instance_variables(settings, instance)
 
     # Instantiate optimizer
-    opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME,
-                                  executable=config.MINLP_SOLVER_PATH,
+    opt = pyomo.opt.SolverFactory('bonmin',
+                                  executable=settings.minlp_solver_path,
                                   solver_io='nl')
     if opt is None:
-        raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME +
-                           'not found')
+        raise RuntimeError('Solver ' + 'bonmin' + 'not found')
     set_minlp_solver_options(opt)
 
     # Solve and load results
@@ -468,12 +465,11 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
         # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory(config.MINLP_SOLVER_NAME,
-                                      executable=config.MINLP_SOLVER_PATH,
+        opt = pyomo.opt.SolverFactory('bonmin',
+                                      executable=settings.minlp_solver_path,
                                       solver_io='nl')
         if opt is None:
-            raise RuntimeError('Solver ' + config.MINLP_SOLVER_NAME +
-                               ' not found')
+            raise RuntimeError('Solver ' + 'bonmin' + ' not found')
         set_minlp_solver_options(opt)
 
         # Solve and load results
@@ -690,11 +686,11 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
                                            fast_node_err_bounds)
 
     # Instantiate optimizer
-    opt = pyomo.opt.SolverFactory(config.NLP_SOLVER_NAME,
-                                  executable=config.NLP_SOLVER_PATH,
+    opt = pyomo.opt.SolverFactory('ipopt',
+                                  executable=settings.nlp_solver_path,
                                   solver_io='nl')
     if opt is None:
-        raise RuntimeError('Solver ' + config.NLP_SOLVER_NAME + ' not found')
+        raise RuntimeError('Solver ' + 'ipopt' + ' not found')
     set_nlp_solver_options(opt)
 
     # Initialize instance variables with the solution provided (if
@@ -904,18 +900,27 @@ def get_bump_new_node(settings, n, k, node_pos, node_val, new_node,
 def set_minlp_solver_options(solver):
     """Set MINLP solver options.
 
-    Set the options of the MINLP solver, using the options indicated
-    in the `rbfopt_config` module.
+    Set the options of the MINLP solver.
 
     Parameters
     ----------
     solver: pyomo.opt.SolverFactory
         The solver interface.
     """
-    for (opt_name, opt_value) in config.MINLP_SOLVER_OPTIONS:
+    minlp_solver_options = [('bonmin.num_resolve_at_root', 10),
+                            ('bonmin.num_retry_unsolved_random_point', 5),
+                            ('bonmin.num_resolve_at_infeasibles', 5),
+                            ('bonmin.algorithm', 'B-BB'),
+                            ('bonmin.time_limit', 45),
+                            ('max_cpu_time', 20),
+                            ('max_iter', 1000)]
+    minlp_solver_rand_seed_option = 'bonmin.random_generator_seed'
+    minlp_solver_max_seed = 2**31 - 2
+
+    for (opt_name, opt_value) in minlp_solver_options:
         solver.options[opt_name] = opt_value
-    if (config.MINLP_SOLVER_RAND_SEED_OPTION is not None):
-        solver.options[config.MINLP_SOLVER_RAND_SEED_OPTION] = np.random.randint(config.MINLP_SOLVER_MAX_SEED)
+    if (minlp_solver_rand_seed_option is not None):
+        solver.options[minlp_solver_rand_seed_option] = np.random.randint(minlp_solver_max_seed)
 
 # -- end function
 
@@ -923,8 +928,7 @@ def set_minlp_solver_options(solver):
 def set_nlp_solver_options(solver):
     """Set NLP solver options.
 
-    Set the options of the NLP solver, using the options indicated in
-    the `rbfopt_config` module.
+    Set the options of the NLP solver.
 
     Parameters
     ----------
@@ -932,10 +936,17 @@ def set_nlp_solver_options(solver):
         The solver interface.
     """
 
-    for (opt_name, opt_value) in config.NLP_SOLVER_OPTIONS:
+    nlp_solver_options = [('acceptable_tol', 1.0e-3),
+                          ('honor_original_bounds', 'no'),
+                          ('max_cpu_time', 20),
+                          ('max_iter', 1000)]
+    nlp_solver_rand_seed_option = None
+    nlp_solver_max_seed = 2**31 - 2
+
+    for (opt_name, opt_value) in nlp_solver_options:
         solver.options[opt_name] = opt_value
-    if (config.NLP_SOLVER_RAND_SEED_OPTION is not None):
-        solver.options[config.NLP_SOLVER_RAND_SEED_OPTION] = np.random.randint(config.NLP_SOLVER_MAX_SEED)
+    if (nlp_solver_rand_seed_option is not None):
+        solver.options[nlp_solver_rand_seed_option] = np.random.randint(nlp_solver_max_seed)
 
 # -- end function
 

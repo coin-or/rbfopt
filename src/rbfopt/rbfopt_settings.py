@@ -30,12 +30,6 @@ class RbfoptSettings:
     Parameters
     ----------
 
-    rbf : str
-        Radial basis function used by the method. Choice of 'cubic',
-        'thin_plate_spline', 'linear', 'multiquadric', 'auto'. In case
-        of 'auto', the type of rbf will be dynamically selected by the
-        algorithm. Default 'auto'.
-
     max_iterations : int
         Maximum number of iterations. Default 1000.
 
@@ -58,6 +52,17 @@ class RbfoptSettings:
         checks the arrival of results from workers busy with function
         evaluations or other computations. This parameter is only used
         by the parallel optimizer. Default 0.1.
+
+    rbf : str
+        Radial basis function used by the method. Choice of 'cubic',
+        'thin_plate_spline', 'linear', 'multiquadric', 'auto'. In case
+        of 'auto', the type of rbf will be dynamically selected by the
+        algorithm. Default 'auto'.
+
+    rbf_shape_parameter : float
+        Shape parameter for the radial basis function. Used only by
+        the multiquadric RBF at the moment, this is also knows as the
+        gamma parameter. Default 1.0.
 
     target_objval : float
         The objective function value we want to reach, i.e. the value
@@ -102,6 +107,12 @@ class RbfoptSettings:
         'lower_corners', 'rand_corners', 'lhd_maximin',
         'lhd_corr'. Default 'lhd_maximin'.
 
+    max_random_init : int
+        Maximum number of trials for the random initialization
+        strategies, in case they generate a linearly dependent set of
+        samples. After this number of trials, the initialization
+        algorithm will bail out. Default 50.
+
     function_scaling : str
         Rescaling method for the function values. Choice of 'off',
         'affine', 'log', 'auto'. Default 'auto'.
@@ -123,6 +134,12 @@ class RbfoptSettings:
         Minimum value of the ratio between the largest and the
         smallest absolute function values before the dynamism clipping
         strategy is applied. Default 1.0e3.
+
+    local_search_threshold : float
+        Threshold used to determines what is a local search. If the
+        scaling factor used in the computation of f_n^* is less than
+        this value, it is assumed that the search is a local search.
+        Default 0.25.
 
     local_search_box_scaling : float
         Rescaling factor for the hyperbox used for local search. See
@@ -271,6 +288,18 @@ class RbfoptSettings:
         cannot be redirected to file so it will go to
         stdout. Default False.
 
+    minlp_solver_path : string
+        Full path to the MINLP solver executable, i.e., bonmin. If
+        only the name solver is specified, it is assumed that the
+        solver is part of your system path and can be called from
+        anywhere. Default 'bonmin'.
+
+    nlp_solver_path : string
+        Full path to the NLP solver executable, i.e., ipopt. If
+        only the name solver is specified, it is assumed that the
+        solver is part of your system path and can be called from
+        anywhere. Default 'ipopt'.
+
     rand_seed : int
         Seed for the random number generator. The maximum number
         supported by numpy on all platforms is 2^32. Default
@@ -308,13 +337,14 @@ class RbfoptSettings:
     _allowed_global_search_method = {'genetic', 'sampling', 'solver'}
 
     def __init__(self,
-                 rbf='auto',
                  max_iterations=1000,
                  max_evaluations=300,
                  max_fast_evaluations=150,
                  max_clock_time=1.0e30,
                  num_cpus=1,
                  parallel_wakeup_time=0.1,
+                 rbf='auto',
+                 rbf_shape_parameter=1.0,
                  target_objval=-1.0e10,
                  eps_opt=1.0e-2,
                  eps_zero=1.0e-15,
@@ -324,11 +354,13 @@ class RbfoptSettings:
                  do_infstep=False,
                  num_global_searches=5,
                  init_strategy='lhd_maximin',
+                 max_random_init=50,
                  function_scaling='auto',
                  log_scaling_threshold=1.0e6,
                  domain_scaling='auto',
                  dynamism_clipping='auto',
                  dynamism_threshold=1.0e3,
+                 local_search_threshold=0.25,
                  local_search_box_scaling=0.5,
                  max_stalled_cycles=30,
                  max_consecutive_discarded=10,
@@ -357,16 +389,19 @@ class RbfoptSettings:
                  print_solver_output=False,
                  save_state_interval=100000,
                  save_state_file='rbfopt_algorithm_state.dat',
+                 minlp_solver_path='bonmin',
+                 nlp_solver_path='ipopt',
                  rand_seed=937627691):
         """Class constructor with default values. 
         """
-        self.rbf = rbf
         self.max_iterations = max_iterations
         self.max_evaluations = max_evaluations
         self.max_fast_evaluations = max_fast_evaluations
         self.max_clock_time = max_clock_time
         self.num_cpus = num_cpus
         self.parallel_wakeup_time = parallel_wakeup_time
+        self.rbf = rbf
+        self.rbf_shape_parameter = rbf_shape_parameter
         self.target_objval = target_objval
         self.eps_opt = eps_opt
         self.eps_zero = eps_zero
@@ -376,11 +411,13 @@ class RbfoptSettings:
         self.do_infstep = do_infstep
         self.num_global_searches = num_global_searches
         self.init_strategy = init_strategy
+        self.max_random_init = max_random_init
         self.function_scaling = function_scaling
         self.log_scaling_threshold = log_scaling_threshold
         self.domain_scaling = domain_scaling
         self.dynamism_clipping = dynamism_clipping
         self.dynamism_threshold = dynamism_threshold
+        self.local_search_threshold = local_search_threshold
         self.local_search_box_scaling = local_search_box_scaling
         self.max_stalled_cycles = max_stalled_cycles
         self.max_consecutive_discarded = max_consecutive_discarded
@@ -409,6 +446,8 @@ class RbfoptSettings:
         self.print_solver_output = print_solver_output
         self.save_state_interval = save_state_interval
         self.save_state_file = save_state_file
+        self.minlp_solver_path = minlp_solver_path
+        self.nlp_solver_path = nlp_solver_path
         self.rand_seed = rand_seed
 
         if (self.rbf not in RbfoptSettings._allowed_rbf):

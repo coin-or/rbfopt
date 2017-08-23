@@ -16,10 +16,10 @@ from __future__ import absolute_import
 from pyomo.environ import *
 import sys
 import numpy as np
-from . import rbfopt_utils as ru
-from . import rbfopt_config as config
-from .rbfopt_settings import RbfoptSettings
+import rbfopt.rbfopt_utils as ru
+from rbfopt.rbfopt_settings import RbfoptSettings
 
+_DISTANCE_SHIFT = 1.0e-40
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
                          integer_vars, node_pos, rbf_lambda, rbf_h):
@@ -896,7 +896,7 @@ def _x_bounds(model, i):
 # for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)^3;
 def _udef_cubic_constraint_rule(model, i):
     return (model.u_pi[i] == 
-            (config.DISTANCE_SHIFT +
+            (_DISTANCE_SHIFT +
              sum((model.x[j] - model.node[i, j])**2 for j in model.N))**1.5)
 
 
@@ -908,7 +908,7 @@ def _udef_thinplate_constraint_rule(model, i):
     return (model.u_pi[i] == 
             (sum((model.x[j] - model.node[i, j])**2 for j in model.N)) *
             log(sqrt(sum((model.x[j] - model.node[i, j])**2
-                         for j in model.N) + config.DISTANCE_SHIFT)))
+                         for j in model.N) + _DISTANCE_SHIFT)))
 
 
 # Constraints: definition of the pi component of u_pi. The expression is:
@@ -957,7 +957,7 @@ def _unis_constraint_rule(model, i):
 # Constraints: definition of the minimum distance constraint.
 # for i in K: mindistsq <= dist(x, x^i)^2
 def _mdistdef_constraint_rule(model, i):
-    return (model.mindistsq <= config.DISTANCE_SHIFT + 
+    return (model.mindistsq <= _DISTANCE_SHIFT + 
             sum((model.x[j] - model.node[i, j])**2 for j in model.N))
 
 

@@ -15,11 +15,9 @@ import unittest
 import math
 import random
 import numpy as np
-import src
-import src.rbfopt
-import src.rbfopt.rbfopt_utils as ru
-import src.rbfopt.rbfopt_config as config
-from src.rbfopt.rbfopt_settings import RbfoptSettings
+import rbfopt
+import rbfopt.rbfopt_utils as ru
+from rbfopt.rbfopt_settings import RbfoptSettings
 
 class TestUtils(unittest.TestCase):
     """Test the rbfopt_utils module."""

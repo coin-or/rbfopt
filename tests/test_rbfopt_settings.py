@@ -14,9 +14,8 @@ from __future__ import absolute_import
 import unittest
 import ast
 import numpy as np
-import src
-import src.rbfopt
-import src.rbfopt.rbfopt_settings as rs
+import rbfopt
+import rbfopt.rbfopt_settings as rs
 
 
 class TestRbfoptSettings(unittest.TestCase):

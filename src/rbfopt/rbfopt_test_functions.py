@@ -17,7 +17,7 @@ from __future__ import absolute_import
 import sys
 import math
 import numpy as np
-from .rbfopt_black_box import RbfoptBlackBox
+from rbfopt.rbfopt_black_box import RbfoptBlackBox
 
 
 class branin:
@@ -916,9 +916,9 @@ class schaeffer_f7_12_1:
     @staticmethod
     def evaluate(x):
         assert(len(x)==12)
-        opt = [-3.432567, -3.498896, 0.769262, 3.03388, -4.824371, 
-               2.318355, 2.493374, 3.207436, 4.686153, 0.464872, 
-               2.564591, -1.669128] * 10
+        opt = np.array([-34.32567, -34.98896, 07.69262, 30.3388, -48.24371, 
+                        23.18355, 24.93374, 32.07436, 46.86153, 04.64872, 
+                        25.64591, -16.69128])
         value = 0        
         normalizer = 1.0/float(len(x)-1)
         for i in range(len(x)-1):
@@ -930,9 +930,9 @@ class schaeffer_f7_12_1:
     dimension = 12
     var_lower = np.array([-50 for i in range(12)])
     var_upper = np.array([50 for i in range(12)])
-    optimum_point = np.array([-3.432567, -3.498896, 0.769262, 3.03388,
-                              -4.824371, 2.318355, 2.493374, 3.207436, 
-                              4.686153, 0.464872, 2.564591, -1.669128]) * 10
+    optimum_point = np.array([-34.32567, -34.98896, 07.69262, 30.3388,
+                              -48.24371, 23.18355, 24.93374, 32.07436, 
+                              46.86153, 04.64872, 25.64591, -16.69128])
     optimum_value = -10
     integer_vars = np.array([])
 # -- end class
@@ -945,9 +945,9 @@ class schaeffer_f7_12_2:
     @staticmethod
     def evaluate(x):
         assert(len(x)==12)
-        opt = [-0.8214, 3.069133, 4.826095, -0.494219, 
-               1.515357, 0.04841, -1.354025, -4.078766, 
-               -1.602916, 1.642138, 3.930248, -4.956986] * 10
+        opt = np.array([-08.214, 30.69133, 48.26095, -04.94219, 
+                        15.15357, 00.4841, -13.54025, -40.78766, 
+                        -16.02916, 16.42138, 39.30248, -49.56986])
         value = 0        
         normalizer = 1.0/float(len(x)-1)
         for i in range(len(x)-1):
@@ -959,9 +959,9 @@ class schaeffer_f7_12_2:
     dimension = 12
     var_lower = np.array([-50 for i in range(12)])
     var_upper = np.array([50 for i in range(12)])
-    optimum_point = np.array([-0.8214, 3.069133, 4.826095, -0.494219, 
-                              1.515357, 0.04841, -1.354025, -4.078766, 
-                              -1.602916, 1.642138, 3.930248, -4.956986]) * 10
+    optimum_point = np.array([-08.214, 30.69133, 48.26095, -04.94219, 
+                              15.15357, 00.4841, -13.54025, -40.78766, 
+                              -16.02916, 16.42138, 39.30248, -49.56986])
     optimum_value = 10
     integer_vars = np.array([])
 # -- end class
@@ -1494,7 +1494,7 @@ class schoen_6_1_int:
     dimension = 6
     var_lower = np.array([0 for i in range(6)])
     var_upper = np.array([10 for i in range(6)])
-    optimum_point = np.array([0.4, 0.6, 0.1, 0.4, 0.637412, 0.204038]) * 10
+    optimum_point = np.array([04., 06., 01., 04., 06.37412, 02.04038])
     optimum_value = -1000
     integer_vars = np.array([0, 1, 2, 3])
 
@@ -1586,7 +1586,7 @@ class schoen_6_2_int:
     dimension = 6
     var_lower = np.array([0 for i in range(6)])
     var_upper = np.array([10 for i in range(6)])
-    optimum_point = np.array([0.3, 0.7, 0.4, 0.1, 0.258563, 0.932004]) * 10
+    optimum_point = np.array([03., 07., 04., 01., 02.58563, 09.32004])
     optimum_value = -1000
     integer_vars = np.array([0, 1, 2, 3])
 
@@ -1728,8 +1728,8 @@ class schoen_10_1_int:
     dimension = 10
     var_lower = np.array([0 for i in range(10)])
     var_upper = np.array([10 for i in range(10)])
-    optimum_point = np.array([0.6, 0.7, 0.0, 0.355500, 0.294700, 
-                              0.3, 0.5, 0.5, 0.759223, 0.508432]) * 10
+    optimum_point = np.array([06., 07., 00., 03.55500, 02.94700, 
+                              03., 05., 05., 07.59223, 05.08432])
     optimum_value = -1000
     integer_vars = np.array([0, 1, 2, 5, 6, 7])
 
@@ -1871,8 +1871,8 @@ class schoen_10_2_int:
     dimension = 10
     var_lower = np.array([0 for i in range(10)])
     var_upper = np.array([10 for i in range(10)])
-    optimum_point = np.array([0.0, 0.6, 0.8, 0.677718, 0.961189, 
-                              0.2, 0.8, 0.8, 0.524970, 0.815489]) * 10
+    optimum_point = np.array([00., 06., 08., 06.77718, 09.61189, 
+                              02., 08., 08., 05.24970, 08.15489])
     optimum_value = -1000
     integer_vars = np.array([0, 1, 2, 5, 6, 7])
 

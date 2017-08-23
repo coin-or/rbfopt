@@ -23,12 +23,11 @@ import pickle
 import copy
 import numpy as np
 from multiprocessing import Pool
-from . import rbfopt_utils as ru
-from . import rbfopt_aux_problems as aux
-from . import rbfopt_config as config
-from . import rbfopt_refinement as ref
-from .rbfopt_black_box import RbfoptBlackBox
-from .rbfopt_settings import RbfoptSettings
+import rbfopt.rbfopt_utils as ru
+import rbfopt.rbfopt_aux_problems as aux
+import rbfopt.rbfopt_refinement as ref
+from rbfopt.rbfopt_black_box import RbfoptBlackBox
+from rbfopt.rbfopt_settings import RbfoptSettings
 
 class RbfoptAlgorithm:
     """Optimization algorithm.
@@ -2341,7 +2340,7 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
 
     # If the global search is almost a local search, we restrict the
     # search to a box following Regis and Shoemaker (2007)
-    if (scaling <= config.LOCAL_SEARCH_THRESHOLD):
+    if (scaling <= settings.local_search_threshold):
         local_varl = np.maximum(min_rbf - settings.local_search_box_scaling * 
                                 0.33 * (var_upper - var_lower),
                                 var_lower)

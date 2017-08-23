@@ -16,10 +16,10 @@ from __future__ import absolute_import
 from pyomo.environ import *
 import sys
 import numpy as np
-from . import rbfopt_utils as ru
-from . import rbfopt_config as config
-from .rbfopt_settings import RbfoptSettings
+import rbfopt.rbfopt_utils as ru
+from rbfopt.rbfopt_settings import RbfoptSettings
 
+_DISTANCE_SHIFT = 1.0e-40
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
                          integer_vars, node_pos, rbf_lambda, rbf_h):
@@ -131,6 +131,7 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
         model.UdefConstraint = Constraint(model.K, 
                                           rule=_udef_linear_constraint_rule)
     elif (settings.rbf == 'multiquadric'):
+        model.gamma = Param(initialize=settings.rbf_shape_parameter)
         model.UdefConstraint = Constraint(model.K, 
                                           rule=_udef_multiquad_constraint_rule)
     model.NonhomoConstraint = Constraint(model.Qlast, 
@@ -249,7 +250,8 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     if (settings.rbf == 'linear'):
         model.phi_0 = Param(initialize=0.0)
     elif (settings.rbf == 'multiquadric'):
-        model.phi_0 = Param(initialize=config.GAMMA)
+        model.phi_0 = Param(initialize=settings.rbf_shape_parameter)
+        model.gamma = Param(initialize=settings.rbf_shape_parameter)
 
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
@@ -411,7 +413,8 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     if (settings.rbf == 'linear'):
         model.phi_0 = Param(initialize=0.0)
     elif (settings.rbf == 'multiquadric'):
-        model.phi_0 = Param(initialize=config.GAMMA)
+        model.phi_0 = Param(initialize=settings.rbf_shape_parameter)
+        model.gamma = Param(initialize=settings.rbf_shape_parameter)
 
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
@@ -807,7 +810,8 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     if (settings.rbf == 'linear'):
         model.phi_0 = Param(initialize=0.0)
     elif (settings.rbf == 'multiquadric'):
-        model.phi_0 = Param(initialize=config.GAMMA)
+        model.phi_0 = Param(initialize=settings.rbf_shape_parameter)
+        model.gamma = Param(initialize=settings.rbf_shape_parameter)
 
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
@@ -897,7 +901,7 @@ def _x_bounds(model, i):
 # The expression is:
 # for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)
 def _udef_multiquad_constraint_rule(model, i):
-    return (model.u_pi[i]**2 == config.GAMMA +
+    return (model.u_pi[i]**2 == model.gamma +
             sum((model.x[j] - model.node[i, j])**2 for j in model.N))
 
 
@@ -949,7 +953,7 @@ def _unis_constraint_rule(model, i):
 # Constraints: definition of the minimum distance constraint.
 # for i in K: mindistsq <= dist(x, x^i)^2
 def _mdistdef_constraint_rule(model, i):
-    return (model.mindistsq <= config.DISTANCE_SHIFT + 
+    return (model.mindistsq <= _DISTANCE_SHIFT + 
             sum((model.x[j] - model.node[i, j])**2 for j in model.N))
 
 

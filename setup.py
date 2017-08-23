@@ -7,11 +7,6 @@ import unittest
 def readme():
     with open('README.rst') as f:
         return f.read()
-
-def my_test_suite():
-    test_loader = unittest.TestLoader()
-    test_suite = test_loader.discover('tests', pattern='test_*.py')
-    return test_suite
                 
 setup(name='rbfopt',
       version='3.1.0',
@@ -33,7 +28,8 @@ setup(name='rbfopt',
       package_data={'rbfopt': ['doc/*.rst', 'doc/conf.py', 'doc/Makefile',
                                'doc/make.bat', 'examples/*.py']},
       install_requires=['numpy', 'scipy', 'pyomo'],
-      test_suite='setup.my_test_suite',
+      setup_requires=['nose>=1.0'],
+      test_suite='nose.collector',
       scripts=['bin/rbfopt_cl_interface.py', 'bin/rbfopt_test_interface.py'],
       zip_safe=False)
 

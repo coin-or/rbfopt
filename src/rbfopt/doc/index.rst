@@ -12,12 +12,11 @@ Contents:
    rbfopt_algorithm
    rbfopt_aux_problems
    rbfopt_black_box
-   rbfopt_config
    rbfopt_degree0_models
    rbfopt_degree1_models
    rbfopt_refinement
    rbfopt_settings
-   rbfopt_test_function
+   rbfopt_test_functions
    rbfopt_user_black_box
    rbfopt_utils
 

@@ -17,12 +17,11 @@ import time
 import tempfile
 import os
 import numpy as np
-import src
-import src.rbfopt
-import src.rbfopt.rbfopt_algorithm as ra
-import src.rbfopt.rbfopt_test_functions as tf
-from src.rbfopt.rbfopt_settings import RbfoptSettings
-from src.rbfopt.rbfopt_black_box import RbfoptBlackBox
+import rbfopt
+import rbfopt.rbfopt_algorithm as ra
+import rbfopt.rbfopt_test_functions as tf
+from rbfopt.rbfopt_settings import RbfoptSettings
+from rbfopt.rbfopt_black_box import RbfoptBlackBox
 
 class TestGutmann(unittest.TestCase):
     """Test Gutmann's algorithm on a small set of problems."""
@@ -141,7 +140,7 @@ class TestGutmann(unittest.TestCase):
     # -- end function
 
     def test_gutmann_branin_noisy_with_init(self):
-        """Check solution of noisy braning with Gutmann, solver."""
+        """Check solution of noisy branin with Gutmann, solver."""
         bb = tf.TestNoisyBlackBox('branin', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
@@ -261,7 +260,7 @@ class TestGutmannParallel(unittest.TestCase):
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving ex8_1_4 with random seed ' +
+            print('Solving ex8_1_4 with log and random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
                                       global_search_method='genetic',
@@ -761,7 +760,7 @@ class TestFixedVariables(unittest.TestCase):
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve braning with fixed variables'
+            msg = 'Could not solve branin with fixed variables'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero
                                 else self.eps_opt)

@@ -25,9 +25,7 @@ import numpy as np
 import scipy.spatial as ss
 import scipy.linalg as la
 from scipy.special import xlogy
-from . import rbfopt_config as config
-from .rbfopt_settings import RbfoptSettings
-from .rbfopt_config import GAMMA
+from rbfopt.rbfopt_settings import RbfoptSettings
 
 def get_rbf_function(settings):
     """Return a radial basis function.
@@ -55,8 +53,8 @@ def get_rbf_function(settings):
     elif (settings.rbf == 'linear'):
         return _linear
     elif (settings.rbf == 'multiquadric'):
-        return _multiquadric
-
+        mq = _MultiquadricRbf(settings.rbf_shape_parameter)
+        return mq._multiquadric
 
 # -- List of radial basis functions
 def _cubic(r):
@@ -71,9 +69,14 @@ def _linear(r):
     """Linear RBF: :math: `f(x) = x`"""
     return r
 
-def _multiquadric(r):
-    """Multiquadric RBF: :math: `f(x) = \sqrt{x^2 + \gamma^2}`"""
-    return (r*r + GAMMA*GAMMA)**0.5
+class _MultiquadricRbf:
+    def __init__(self, gamma):
+        self._gamma = gamma
+
+    def _multiquadric(self, r):
+        return (r*r + self._gamma*self._gamma)**0.5
+# -- end class
+
 # -- end list of radial basis functions
 
 
@@ -430,7 +433,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     # not, we perform a given number of iterations
     dependent = True
     itercount = 0
-    while (dependent and itercount < config.MAX_RANDOM_INIT):
+    while (dependent and itercount < settings.max_random_init):
         itercount += 1
         if (settings.init_strategy == 'all_corners'):
             nodes = get_all_corners(var_lower, var_upper)
@@ -450,7 +453,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         if (min(s) > settings.eps_linear_dependence):
             dependent = False
 
-    if (itercount == config.MAX_RANDOM_INIT):
+    if (itercount == settings.max_random_init):
         raise RuntimeError('Exceeded number of random initializations')
 
     return nodes

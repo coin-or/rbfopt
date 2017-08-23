@@ -11,8 +11,8 @@ from __future__ import print_function
 from __future__ import division
 from __future__ import absolute_import
 
-from . import rbfopt_black_box as bb
 import numpy as np
+import rbfopt.rbfopt_black_box as bb
 
 
 class RbfoptUserBlackBox(bb.RbfoptBlackBox):
