@@ -975,13 +975,16 @@ def compute_gap(settings, fmin):
        Global and algorithmic settings.
 
     fmin : float
-       Best known function value.
+       Best known function value discovered so far. Note that this
+       value should already take into account possible noise at the
+       best point.
 
     Returns
     -------
     float
         The current optimality gap, i.e. relative distance from target
         value.
+
     """
     assert(isinstance(settings, RbfoptSettings))
     # Denominator of errormin

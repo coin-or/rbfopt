@@ -39,7 +39,7 @@ class RbfoptSettings:
 
     max_noisy_evaluations : int
         Maximum number of function evaluations in noisy mode.
-        Default 150.
+        Default 200.
 
     max_clock_time : float
         Maximum wall clock time in seconds. Default 1.0e30.
@@ -158,15 +158,6 @@ class RbfoptSettings:
     max_consecutive_restoration : int
         Maximum number of consecutive nonsingularity restoration
         phases before the algorithm fails. Default 15.
-
-    noisy_objfun_rel_error : float
-        An estimate of the relative error by which the noisy version of
-        the objective function is affected. Default 0.0.
-        
-    noisy_objfun_abs_error : float
-        An estimate of the absolute error by which the noisy
-        version of the objective function is affected. Default
-        0.0.
         
     max_noisy_restarts : int
         Maximum number of restarts in noisy mode before we switch
@@ -174,7 +165,7 @@ class RbfoptSettings:
     
     max_noisy_iterations : int
         Maximum number of iterations in noisy mode before switching
-        to accurate mode. Default 100.
+        to accurate mode. Default 200.
     
     algorithm : string
         Optimization algorithm used. Choice of 'Gutmann' and 'MSRSM',
@@ -339,7 +330,7 @@ class RbfoptSettings:
     def __init__(self,
                  max_iterations=1000,
                  max_evaluations=300,
-                 max_noisy_evaluations=150,
+                 max_noisy_evaluations=200,
                  max_clock_time=1.0e30,
                  num_cpus=1,
                  parallel_wakeup_time=0.1,
@@ -365,10 +356,8 @@ class RbfoptSettings:
                  max_stalled_cycles=30,
                  max_consecutive_discarded=10,
                  max_consecutive_restoration=15,
-                 noisy_objfun_rel_error=0.0,
-                 noisy_objfun_abs_error=0.0,
                  max_noisy_restarts=2,
-                 max_noisy_iterations=100,
+                 max_noisy_iterations=200,
                  algorithm='MSRSM',
                  targetval_clipping=True,
                  global_search_method='genetic',
@@ -422,8 +411,6 @@ class RbfoptSettings:
         self.max_stalled_cycles = max_stalled_cycles
         self.max_consecutive_discarded = max_consecutive_discarded
         self.max_consecutive_restoration = max_consecutive_restoration
-        self.noisy_objfun_rel_error = noisy_objfun_rel_error
-        self.noisy_objfun_abs_error = noisy_objfun_abs_error
         self.max_noisy_restarts = max_noisy_restarts
         self.max_noisy_iterations = max_noisy_iterations
         self.algorithm = algorithm

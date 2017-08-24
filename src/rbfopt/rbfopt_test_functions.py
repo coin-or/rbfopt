@@ -40,7 +40,7 @@ class branin:
     additional_optima = np.array([ [-3.14159265, 12.27500000],
                                    [3.14159265, 2.27500000] ])
     optimum_value = 0.397887357729739
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 2)
 
 # -- end class
 
@@ -71,7 +71,7 @@ class hartman3:
     var_upper = np.array([1, 1, 1])
     optimum_point = np.array([0.1, 0.55592003, 0.85218259])
     optimum_value = -3.86278214782076
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 3)
 
 # -- end class
 
@@ -109,7 +109,7 @@ class hartman6:
     optimum_point = np.array([0.20168952, 0.15001069, 0.47687398,
                               0.27533243, 0.31165162, 0.65730054])
     optimum_value = -3.32236801141551
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 6)
 
 # -- end class
 
@@ -130,7 +130,7 @@ class camel:
     var_upper = np.array([3, 2])
     optimum_point = np.array([0.08984201, -0.08984201])
     optimum_value = -1.0316284535
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 2)
 
 # -- end class
 
@@ -155,7 +155,7 @@ class goldsteinprice:
     var_upper = np.array([2, 2])
     optimum_point = np.array([0.0, -1.0])
     optimum_value = 3
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 2)
 
 # -- end class
 
@@ -185,7 +185,7 @@ class shekel5:
     var_upper = np.array([10, 10, 10, 10])
     optimum_point = np.array([4, 4, 4, 4])
     optimum_value = -10.1531996790582
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 4)
 
 # -- end class
 
@@ -215,7 +215,7 @@ class shekel7:
     var_upper = np.array([10, 10, 10, 10])
     optimum_point = np.array([4, 4, 4, 4])
     optimum_value = -10.4029405668187
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 4)
 
 # -- end class
 
@@ -245,7 +245,7 @@ class shekel10:
     var_upper = np.array([10, 10, 10, 10])
     optimum_point = np.array([4, 4, 4, 4])
     optimum_value = -10.5364098166920
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 4)
 
 # -- end class
 
@@ -268,7 +268,7 @@ class ex4_1_1:
     var_upper = np.array([11])
     optimum_point = np.array([-1.19131])
     optimum_value = -7.4873
-    integer_vars = np.array([])
+    var_type = np.array(['R'])
 
 # -- end class
 
@@ -300,7 +300,7 @@ class ex4_1_2:
     var_upper = np.array([2])
     optimum_point = np.array([1.09106])
     optimum_value = -663.4993631230575
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 1)
 
 # -- end class
 
@@ -321,7 +321,7 @@ class ex8_1_1:
     var_upper = np.array([2, 1])
     optimum_point = np.array([2.0, 0.105783])
     optimum_value = -2.02181
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 2)
 
 # -- end class
 
@@ -342,7 +342,7 @@ class ex8_1_4:
     var_upper = np.array([4, 2])
     optimum_point = np.array([0.0, 0.0])
     optimum_value = 0.0
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 2)
 
 # -- end class
 
@@ -368,7 +368,7 @@ class least:
     var_upper = np.array([600, 200, 5] )
     optimum_point = np.array([516.651174172, -149.351893696, -0.206642767973])
     optimum_value = 14085.1398
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 3)
 
 # -- end class
 
@@ -390,7 +390,7 @@ class rbrock:
     var_upper = np.array([5, 10])
     optimum_point = np.array([1.0, 1.0])
     optimum_value = 0.0
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 2)
 
 # -- end class
 
@@ -416,7 +416,7 @@ class perm_6:
     var_upper = np.array([6 for i in range(6)])
     optimum_point = np.array([(i+1) for i in range(6)])
     optimum_value = 1000.0
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 6)
 
 # -- end class
 
@@ -442,7 +442,7 @@ class perm0_8:
     var_upper = np.array([1 for i in range(8)])
     optimum_point = np.array([1.0/(i+1) for i in range(8)])
     optimum_value = 1000.0
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 8)
 
 # -- end class
 
@@ -532,7 +532,7 @@ class schoen_6_1:
     optimum_point = np.array([0.298854, 0.181010, 0.984817,
                      0.125272, 0.548396, 0.894658])
     optimum_value = -1000
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 6)
 
 # -- end class
 
@@ -622,7 +622,7 @@ class schoen_6_2:
     optimum_point = np.array([0.669711, 0.815540, 0.646120,
                      0.377447, 0.111538, 0.040529])
     optimum_value = -1000
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 6)
 
 # -- end class
 
@@ -763,7 +763,7 @@ class schoen_10_1:
                               0.823635, 0.794003, 0.801171, 0.568811,
                               0.279434, 0.540422])
     optimum_value = -1000
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 10)
 
 # -- end class
 
@@ -904,7 +904,7 @@ class schoen_10_2:
                               0.719813, 0.827542, 0.662422, 0.570546, 
                               0.578707, 0.013264])
     optimum_value = -1000
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 10)
 
 # -- end class
 
@@ -934,7 +934,7 @@ class schaeffer_f7_12_1:
                               -48.24371, 23.18355, 24.93374, 32.07436, 
                               46.86153, 04.64872, 25.64591, -16.69128])
     optimum_value = -10
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 12)
 # -- end class
 
 class schaeffer_f7_12_2:
@@ -963,7 +963,7 @@ class schaeffer_f7_12_2:
                               15.15357, 00.4841, -13.54025, -40.78766, 
                               -16.02916, 16.42138, 39.30248, -49.56986])
     optimum_value = 10
-    integer_vars = np.array([])
+    var_type = np.array(['R'] * 12)
 # -- end class
 
 # After this point, all functions are MINLP
@@ -985,7 +985,7 @@ class gear:
     var_upper = np.array([60, 60, 60, 60])
     optimum_point = np.array([12.0, 23.0, 58.0, 33.0])
     optimum_value = 0.0
-    integer_vars = np.array([0, 1, 2, 3])
+    var_type = np.array(['I'] * 4)
 
 # -- end class
 
@@ -1010,7 +1010,7 @@ class gear4:
     var_upper = np.array([60, 60, 60, 60, 100])
     optimum_point = np.array([19.0, 16.0, 43.0, 49.0, 1.64342847396619])
     optimum_value = 1.643428
-    integer_vars = np.array([0, 1, 2, 3])
+    var_type = np.array(['I'] * 4 + ['R'])    
 
 # -- end class
 
@@ -1052,7 +1052,7 @@ class nvs02:
     var_upper = np.array([200, 200, 200, 200, 200])
     optimum_point = np.array([0.0, 9.0, 9.0, 200.0, 197.0])
     optimum_value = -5.964184
-    integer_vars = np.array([0, 1, 2, 3, 4])
+    var_type = np.array(['I'] * 5)
 
 # -- end class
 
@@ -1080,7 +1080,7 @@ class nvs03:
     var_upper = np.array([200, 200])
     optimum_point = np.array([4.0, 2.0])
     optimum_value = 16.0
-    integer_vars = np.array([0, 1])
+    var_type = np.array(['I'] * 2)
 
 # -- end class
 
@@ -1101,7 +1101,7 @@ class nvs04:
     var_upper = np.array([200, 200])
     optimum_point = np.array([1.0, 2.0])
     optimum_value = 0.72
-    integer_vars = np.array([0, 1])
+    var_type = np.array(['I'] * 2)
 
 # -- end class
 
@@ -1123,7 +1123,7 @@ class nvs06:
     var_upper = np.array([200, 200])
     optimum_point = np.array([2.0, 2.0])
     optimum_value = 1.7703125
-    integer_vars = np.array([0, 1])
+    var_type = np.array(['I'] * 2)
 
 # -- end class
 
@@ -1150,7 +1150,7 @@ class nvs07:
     var_upper = np.array([200, 200, 200])
     optimum_point = np.array([1.0, 0.0, 0.0])
     optimum_value = 0.0
-    integer_vars = np.array([0, 1, 2])
+    var_type = np.array(['I'] * 3)
 
 # -- end class
 
@@ -1181,7 +1181,7 @@ class nvs09:
     var_upper = np.array([9 for i in range(10)])
     optimum_point = np.array([9, 9, 9, 9, 9, 9, 9, 9, 9, 9])
     optimum_value = -43.134336918035
-    integer_vars = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
+    var_type = np.array(['I'] * 10)
 
 # -- end class
 
@@ -1223,7 +1223,7 @@ class nvs14:
     var_upper = np.array([200, 200, 200, 200, 200])
     optimum_point = np.array([0.0, 7.0, 9.0, 175.0, 200.0])
     optimum_value = -40358.154770
-    integer_vars = np.array([0, 1, 2, 3, 4])
+    var_type = np.array(['I'] * 5)
 
 # -- end class
 
@@ -1249,7 +1249,7 @@ class nvs15:
     var_upper = np.array([200, 200, 200])
     optimum_point = np.array([2.0, 0.0, 0.0])
     optimum_value = 1.0
-    integer_vars = np.array([0, 1, 2])
+    var_type = np.array(['I'] * 3)
 
 # -- end class
 
@@ -1272,7 +1272,7 @@ class nvs16:
     var_upper = np.array([200, 200])
     optimum_point = np.array([2.0, 0.0])
     optimum_value = 0.703125
-    integer_vars = np.array([0, 1])
+    var_type = np.array(['I'] * 2)
 
 # -- end class
 
@@ -1296,7 +1296,7 @@ class prob03:
     var_upper = np.array([5, 5])
     optimum_point = np.array([2.0, 2.0])
     optimum_value = 10.0
-    integer_vars = np.array([0, 1])
+    var_type = np.array(['I'] * 2)
 
 # -- end class
 
@@ -1326,8 +1326,7 @@ class sporttournament06:
     optimum_point = np.array([0.0, 1.0, 1.0, 1.0, 0.0, 1.0, 1.0, 1.0,
                               0.0, 0.0, 1.0, 0.0, 0.0, 1.0, 0.0])
     optimum_value = -12.0
-    integer_vars = np.array([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 
-                             13, 14])
+    var_type = np.array(['I'] * 15)
 
 # -- end class
 
@@ -1354,7 +1353,7 @@ class st_miqp1:
     var_upper = np.array([1, 1, 1, 1, 1])
     optimum_point = np.array([1.0, 1.0, 1.0, 0.0, 0.0])
     optimum_value = 281.0
-    integer_vars = np.array([0, 1, 2, 3, 4])
+    var_type = np.array(['I'] * 5)
 
 # -- end class
 
@@ -1378,7 +1377,7 @@ class st_miqp3:
     var_upper = np.array([3, 50])
     optimum_point = np.array([1.0, 4.0])
     optimum_value = -6.0
-    integer_vars = np.array([0, 1])
+    var_type = np.array(['I'] * 2)
 
 # -- end class
 
@@ -1404,7 +1403,7 @@ class st_test1:
     var_upper = np.array([1, 1, 1, 1, 1])
     optimum_point = np.array([0.0, 0.0, 0.0, 0.0, 0.0])
     optimum_value = 0.0
-    integer_vars = np.array([0, 1, 2, 3, 4])
+    var_type = np.array(['I'] * 5)
 
 # -- end class
 
@@ -1496,7 +1495,7 @@ class schoen_6_1_int:
     var_upper = np.array([10 for i in range(6)])
     optimum_point = np.array([04., 06., 01., 04., 06.37412, 02.04038])
     optimum_value = -1000
-    integer_vars = np.array([0, 1, 2, 3])
+    var_type = np.array(['I'] * 4 + ['R'] * 2)
 
 # -- end class
 
@@ -1566,7 +1565,7 @@ class schoen_6_2_int:
              691.6, 933.1, 590.7, 246.2, 370.0, 54.3, 719.4, 95.2,
              276.0, 829.1, 613.6, 242.8, 424.6, 320.6, 666.1, 479.2,
              420.0, 956.6, 241.0, 21.1, 169.8, 178.1, 394.4, -1000,
-             -1000, -1000]
+             -1000, -1000, ]
 
         numerator = 0.0
         denominator = 0.0
@@ -1577,8 +1576,8 @@ class schoen_6_2_int:
                 if (i != j):
                     prod *= math.fsum([ (x[k]/10 - z[j][k])**2
                                         for k in range(6) ])
-                    numerator += f[i]*prod
-                    denominator += prod
+            numerator += f[i]*prod
+            denominator += prod
                     
         value = numerator/denominator
         return(value)
@@ -1588,8 +1587,8 @@ class schoen_6_2_int:
     var_upper = np.array([10 for i in range(6)])
     optimum_point = np.array([03., 07., 04., 01., 02.58563, 09.32004])
     optimum_value = -1000
-    integer_vars = np.array([0, 1, 2, 3])
-
+    var_type = np.array(['I'] * 4 + ['R'] * 2)
+    
 # -- end class
 
 class schoen_10_1_int:
@@ -1731,7 +1730,7 @@ class schoen_10_1_int:
     optimum_point = np.array([06., 07., 00., 03.55500, 02.94700, 
                               03., 05., 05., 07.59223, 05.08432])
     optimum_value = -1000
-    integer_vars = np.array([0, 1, 2, 5, 6, 7])
+    var_type = np.array(['I'] * 3 + ['R'] * 2 + ['I'] * 3 + ['R'] * 2)
 
 # -- end class
 
@@ -1874,7 +1873,7 @@ class schoen_10_2_int:
     optimum_point = np.array([00., 06., 08., 06.77718, 09.61189, 
                               02., 08., 08., 05.24970, 08.15489])
     optimum_value = -1000
-    integer_vars = np.array([0, 1, 2, 5, 6, 7])
+    var_type = np.array(['I'] * 3 + ['R'] * 2 + ['I'] * 3 + ['R'] * 2)
 
 # -- end class
 
@@ -1906,8 +1905,8 @@ class TestBlackBox(RbfoptBlackBox):
     def get_var_upper(self):
         return self._function.var_upper
 
-    def get_integer_vars(self):
-        return self._function.integer_vars
+    def get_var_type(self):
+        return self._function.var_type
 
     def evaluate(self, point):
         return self._function.evaluate(point)
@@ -1955,8 +1954,8 @@ class TestNoisyBlackBox(RbfoptBlackBox):
     def get_var_upper(self):
         return self._function.var_upper
 
-    def get_integer_vars(self):
-        return self._function.integer_vars
+    def get_var_type(self):
+        return self._function.var_type
 
     def evaluate(self, point):
         return self._function.evaluate(point)
@@ -1968,8 +1967,8 @@ class TestNoisyBlackBox(RbfoptBlackBox):
         abs_noise = np.random.uniform(-self._max_abs_error,
                                       self._max_abs_error)
         return np.array([value + rel_noise*abs(value) + abs_noise,
-                         - rel_noise*abs(value) - abs_noise,
-                         + rel_noise*abs(value) + abs_noise])
+                         - abs(rel_noise*abs(value) + abs_noise),
+                         + abs(rel_noise*abs(value) + abs_noise)])
 
     def has_evaluate_noisy(self):
         return True

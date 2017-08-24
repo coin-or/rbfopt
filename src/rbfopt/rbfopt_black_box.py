@@ -61,14 +61,16 @@ class RbfoptBlackBox:
         pass
     # -- end function
 
-    def get_integer_vars(self):
-        """Return the list of integer variables.
+    def get_var_type(self):
+        """Return the type of each variable.
         
         Returns
         -------
-        1D numpy.ndarray[int]
-            A list of indices of the variables that must assume
-            integer values. Can be empty.
+        1D numpy.ndarray[char]
+            An array of length equal to dimension, specifying the type
+            of each variable. Possible types are 'R' for real
+            (continuous) variables, and 'I' for integer (discrete)
+            variables.
         """
         pass
     # -- end function

@@ -27,7 +27,7 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
 
     A class that implements the necessary methods to describe a
     black-box function. The user can implement a similar class and use
-    it to compute the function that must be optimized. The attributs
+    it to compute the function that must be optimized. The attributes
     and functions below are required.
 
     Attributes
@@ -41,6 +41,11 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
 
     var_upper : 1D numpy.ndarray[float]
         Upper bounds of the decision variables.
+
+    var_type : 1D numpy.ndarray[char]
+        An array of length equal to dimension, specifying the type of
+        each variable. Possible types are 'R' for real (continuous)
+        variables, and 'I' for integer (discrete) variables.
 
     integer_vars : 1D numpy.ndarray[int]
         A list of indices of the variables that must assume integer
@@ -61,7 +66,7 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
     :class:`rbfopt_black_box.BlackBox`
     """
 
-    def __init__(self, exponent=1):
+    def __init__(self, exponent=2):
         """Constructor.
         """
         assert(exponent >= 0)
@@ -73,7 +78,7 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
         self.var_lower = np.array([0, 0, 0])
         self.var_upper = np.array([10, 10, 10])
 
-        self.integer_vars = np.array([0, 1])
+        self.var_type = np.array(['I', 'I', 'R'])
     # -- end function
 
     def get_dimension(self):
@@ -109,16 +114,18 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
         return self.var_upper
     # -- end function
 
-    def get_integer_vars(self):
-        """Return the list of integer variables.
+    def get_var_type(self):
+        """Return the type of each variable.
         
         Returns
         -------
-        List[int]
-            A list of indices of the variables that must assume
-            integer values. Can be empty.
+        1D numpy.ndarray[char]
+            An array of length equal to dimension, specifying the type
+            of each variable. Possible types are 'R' for real
+            (continuous) variables, and 'I' for integer (discrete)
+            variables.
         """
-        return self.integer_vars
+        return self.var_type
     # -- end function
     
     def evaluate(self, x):
@@ -136,6 +143,7 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
             Value of the function at x.
 
         """
+        assert(len(x) == self.dimension)
         return np.sum(x)**self.exponent        
     # -- end function
     

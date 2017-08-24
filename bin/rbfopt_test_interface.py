@@ -113,6 +113,16 @@ if (__name__ == "__main__"):
     parser.add_argument('function', action = 'store', 
                         metavar = 'function_name',
                         help = 'test function to optimize')
+    parser.add_argument('--noisy_objfun_rel_error', action = 'store',
+                        type = float, dest = 'noisy_objfun_rel_error',
+                        default = 0.0, help = 'The maximum relative ' +
+                        'error by which the noisy version of the ' +
+                        'objective function is affected. Default 0.0.')
+    parser.add_argument('--noisy_objfun_abs_error', action = 'store',
+                        type = float, dest = 'noisy_objfun_abs_error',
+                        default = 0.0, help = 'The maximum absolute ' +
+                        'error by which the noisy version of the ' +
+                        'objective function is affected. Default 0.0.')
     # Add additional options to parser and parse arguments
     register_options(parser)
     args = parser.parse_args()
@@ -129,6 +139,8 @@ if (__name__ == "__main__"):
     # Obtain parameters in dictionary format for easier unpacking
     dict_args = vars(args)
     del dict_args['function']
+    del dict_args['noisy_objfun_rel_error']
+    del dict_args['noisy_objfun_abs_error']
     dict_args['target_objval'] = bb._function.optimum_value
 
     rbfopt_test_interface(dict_args, bb)

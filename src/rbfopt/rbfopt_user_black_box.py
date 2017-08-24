@@ -33,9 +33,10 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
     var_upper : 1D numpy.ndarray[float]
         Upper bounds of the decision variables.
 
-    integer_vars : 1D numpy.ndarray[int]
-        A list of indices of the variables that must assume integer
-        values. Can be empty.
+    var_type : 1D numpy.ndarray[char]
+        An array of length equal to dimension, specifying the type of
+        each variable. Possible types are 'R' for real (continuous)
+        variables, and 'I' for integer (discrete) variables.
 
     obj_funct : Callable[1D numpy.ndarray[float]]
         The function to optimize. Must take a numpy array as argument,
@@ -58,18 +59,18 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
 
     """
 
-    def __init__(self, dimension, var_lower, var_upper, integer_vars,
+    def __init__(self, dimension, var_lower, var_upper, var_type,
                  obj_funct, obj_funct_fast=None):
         """Constructor.
         """
         assert(len(var_lower) == dimension)
         assert(len(var_upper) == dimension)
-        assert(len(integer_vars) <= dimension)
+        assert(len(var_type) == dimension)
 
         self.dimension = dimension
         self.var_lower = np.array(var_lower)
         self.var_upper = np.array(var_upper)
-        self.integer_vars = np.array(integer_vars)
+        self.var_type = np.array(var_type)
         self.obj_funct = obj_funct
         self.obj_funct_fast = obj_funct_fast
     # -- end function
@@ -107,16 +108,18 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
         return self.var_upper
     # -- end function
 
-    def get_integer_vars(self):
-        """Return the list of integer variables.
+    def get_var_type(self):
+        """Return the type of each variable.
         
         Returns
         -------
-        List[int]
-            A list of indices of the variables that must assume
-            integer values. Can be empty.
+        1D numpy.ndarray[char]
+            An array of length equal to dimension, specifying the type
+            of each variable. Possible types are 'R' for real
+            (continuous) variables, and 'I' for integer (discrete)
+            variables.
         """
-        return self.integer_vars
+        return self.var_type
     # -- end function
     
     def evaluate(self, x):

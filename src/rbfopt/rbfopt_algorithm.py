@@ -240,10 +240,18 @@ class RbfoptAlgorithm:
         self.bb = black_box
         dimension = black_box.get_dimension()
         assert(dimension >= 1)
-        # We make sure this vectors are Numpy arrays
-        var_lower = np.array(black_box.get_var_lower(), dtype=np.float_)
-        var_upper = np.array(black_box.get_var_upper(), dtype=np.float_)
-        integer_vars = np.array(black_box.get_integer_vars(), dtype=np.int_)
+        var_lower = black_box.get_var_lower()
+        var_upper = black_box.get_var_upper()
+        var_type = black_box.get_var_type()
+        assert(len(var_lower) == dimension)
+        assert(len(var_upper) == dimension)
+        assert(len(var_type) == dimension)
+        # We make sure these vectors are Numpy arrays
+        var_lower = np.array(var_lower, dtype=np.float_)
+        var_upper = np.array(var_upper, dtype=np.float_)
+        integer_vars = np.array([i for i in range(dimension)
+                                 if var_type[i].upper() == 'I'],
+                                dtype=np.int_)
         # Check for fixed variables
         fixed_vars = np.isclose(var_lower, var_upper, 0,
                                 settings.eps_zero).nonzero()[0]
@@ -698,7 +706,7 @@ class RbfoptAlgorithm:
         # Find best point and return it
         i = self.all_node_val.argmin()
         gap = ru.compute_gap(self.l_settings, self.fbest +
-                             self.all_node_err_bounds[i, 0])
+                             self.all_node_err_bounds[i, 1])
         # Update timer
         self.elapsed_time += time.time() - start_time_retrieve_min
 
@@ -971,7 +979,7 @@ class RbfoptAlgorithm:
                 # Add to the lists
                 if (curr_is_noisy):
                     self.add_noisy_node(next_p, next_p_orig, next_val,
-                                       err_l, err_u)
+                                        err_l, err_u)
                 else:
                     self.add_node(next_p, next_p_orig, next_val)
                 gap = ru.compute_gap(
@@ -1123,7 +1131,7 @@ class RbfoptAlgorithm:
                     # Add to data structures.
                     if (node_is_noisy):
                         self.add_noisy_node(next_p, next_p_orig, next_val,
-                                           err_l, err_u)
+                                            err_l, err_u)
                     else:
                         self.add_node(next_p, next_p_orig, next_val)
                     gap = ru.compute_gap(
