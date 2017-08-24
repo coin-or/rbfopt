@@ -2,7 +2,7 @@
 
 This module creates all the auxiliary problems that rely on
 zero-degree polynomials. The models are created and instantiated using
-Pyomo. This module does *not* solve the problems.
+Pyomo. This module does not solve the problems.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
@@ -260,9 +260,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     # see equations (6) and (7) in the paper by Costa and Nannicini
     model.u_pi = Var(model.Q, domain=Reals)
 
-    # Objective function. Remember that there should be a constant
-    # term \phi(0) at the beginning, but because this is zero in this
-    # case we take it out.
+    # Objective function. 
     model.OBJ = Objective(rule=_max_one_over_mu_obj_expression,
                           sense=maximize)
 
@@ -923,8 +921,7 @@ def _rbfdef_constraint_rule(model):
     return (model.rbfval == summation(model.lambda_h, model.u_pi))
 
 
-# Constraints: Definition of \mu_k. There should be a constant term
-# \phi(0). Removed because it is zero in this case. Expression:
+# Constraints: Definition of \mu_k. Expression:
 # -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j
 def _mukdef_constraint_rule(model):
     return (sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 

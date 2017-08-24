@@ -9,7 +9,7 @@ def readme():
         return f.read()
                 
 setup(name='rbfopt',
-      version='3.1.0',
+      version='4.0.0alpha',
       description='Library for black-box (derivative-free) optimization',
       long_description=readme(),
       classifiers=[

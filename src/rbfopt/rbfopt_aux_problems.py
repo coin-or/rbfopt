@@ -24,6 +24,7 @@ import pyomo.opt
 import rbfopt.rbfopt_utils as ru
 import rbfopt.rbfopt_degree1_models as rbfopt_degree1_models
 import rbfopt.rbfopt_degree0_models as rbfopt_degree0_models
+import rbfopt.rbfopt_degreem1_models as rbfopt_degreem1_models
 from rbfopt.rbfopt_settings import RbfoptSettings
 
 
@@ -104,6 +105,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         model = rbfopt_degree1_models
     elif (ru.get_degree_polynomial(settings) == 0):
         model = rbfopt_degree0_models
+    elif (ru.get_degree_polynomial(settings) == -1):
+        model = rbfopt_degreem1_models
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
@@ -258,6 +261,8 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
         model = rbfopt_degree1_models
     elif (ru.get_degree_polynomial(settings) == 0):
         model = rbfopt_degree0_models
+    elif (ru.get_degree_polynomial(settings) == -1):
+        model = rbfopt_degreem1_models
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
@@ -402,6 +407,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         model = rbfopt_degree1_models
     elif (ru.get_degree_polynomial(settings) == 0):
         model = rbfopt_degree0_models
+    elif (ru.get_degree_polynomial(settings) == -1):
+        model = rbfopt_degreem1_models
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
@@ -673,6 +680,8 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
         model = rbfopt_degree1_models
     elif (ru.get_degree_polynomial(settings) == 0):
         model = rbfopt_degree0_models
+    elif (ru.get_degree_polynomial(settings) == -1):
+        model = rbfopt_degreem1_models
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
@@ -707,7 +716,10 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
             instance.solutions.load_from(results)
             rbf_lambda = np.array([instance.rbf_lambda[i].value 
                                    for i in instance.K])
-            rbf_h = np.array([instance.rbf_h[i].value for i in instance.P])
+            if (ru.get_size_P_matrix(settings, n) > 0):
+                rbf_h = np.array([instance.rbf_h[i].value for i in instance.P])
+            else:
+                rbf_h = np.array([])
         else:
             # If we have initialization information, return it. It is
             # a feasible solution. Otherwise, this will be None.
@@ -1450,10 +1462,13 @@ class GutmannHkObj:
             part2 = np.dot(points, self.rbf_h[:-1])
             u_pi_mat = np.concatenate((u_mat, points,
                                        np.ones((len(points), 1))), axis=1)
-        else:
+        elif (ru.get_degree_polynomial(self.settings) == 0):
             part2 = np.zeros(len(points))
             u_pi_mat = np.concatenate((u_mat, np.ones((len(points), 1))),
                                       axis=1)
+        else:
+            part2 = np.zeros(len(points))
+            u_pi_mat = u_mat
         part3 = self.rbf_h[-1] if (p > 0) else 0.0
         # The vector rbf_value contains the value of the RBF interpolant
         rbf_value = part1 + part2 + part3
@@ -1547,7 +1562,7 @@ class GutmannMukObj:
         if (ru.get_degree_polynomial(self.settings) == 1):
             u_pi_mat = np.concatenate((u_mat, points,
                                        np.ones((len(points), 1))), axis=1)
-        else:
+        elif (ru.get_degree_polynomial(self.settings) == 0):
             u_pi_mat = np.concatenate((u_mat, np.ones((len(points), 1))),
                                       axis=1)
         # This is the shift in the computation of \mu_k

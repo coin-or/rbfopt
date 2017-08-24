@@ -67,11 +67,13 @@ class RbfoptAlgorithm:
     elapsed_time : float
         Elapsed CPU time up to the point where state was last saved.
 
-    best_local_rbf : string
-        Best RBF type to construct model for local search.
+    best_local_rbf : (string, float)
+        Best RBF type to construct model for local search, and the
+        corresponding shape parameter.
 
-    best_global_rbf : string
-        Best RBF type to construct model for global search.
+    best_global_rbf : (string, float)
+        Best RBF type to construct model for global search, and the
+        corresponding shape parameter.
 
     n : int
         Dimension of the problem.
@@ -284,8 +286,8 @@ class RbfoptAlgorithm:
         self.l_settings = l_settings
 
         # Local and global RBF models are usually the same
-        self.best_local_rbf = l_settings.rbf
-        self.best_global_rbf = l_settings.rbf
+        self.best_local_rbf = (l_settings.rbf, l_settings.rbf_shape_parameter)
+        self.best_global_rbf = (l_settings.rbf, l_settings.rbf_shape_parameter)
     
         # We use n to denote the dimension of the problem, same notation
         # of the paper. This is redundant but it simplifies our life.
@@ -812,10 +814,12 @@ class RbfoptAlgorithm:
             # If we are in local search or just before local search, use a
             # local model.
             if (self.current_step >= (self.local_search_step - 1)):
-                l_settings.rbf = self.best_local_rbf
+                l_settings.rbf = self.best_local_rbf[0]
+                l_settings.rbf_shape_parameter = self.best_local_rbf[1]
             # Otherwise, global.
             else:
-                l_settings.rbf = self.best_global_rbf
+                l_settings.rbf = self.best_global_rbf[0]
+                l_settings.rbf_shape_parameter = self.best_global_rbf[1]
 
             if (self.current_step <= self.local_search_step):
                 try:
@@ -1356,10 +1360,12 @@ class RbfoptAlgorithm:
             # If we are in local search or just before local search, use a
             # local model.
             if (self.current_step >= (self.local_search_step - 1)):
-                l_settings.rbf = self.best_local_rbf
+                l_settings.rbf = self.best_local_rbf[0]
+                l_settings.rbf_shape_parameter = self.best_local_rbf[1]
             # Otherwise, global.
             else:
-                l_settings.rbf = self.best_global_rbf
+                l_settings.rbf = self.best_global_rbf[0]
+                l_settings.rbf_shape_parameter = self.best_global_rbf[1]
 
             try:
                 # Compute the matrices necessary for the algorithm

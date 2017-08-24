@@ -14,6 +14,7 @@ Contents:
    rbfopt_black_box
    rbfopt_degree0_models
    rbfopt_degree1_models
+   rbfopt_degreem1_models
    rbfopt_refinement
    rbfopt_settings
    rbfopt_test_functions

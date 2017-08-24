@@ -13,7 +13,6 @@ from __future__ import absolute_import
 
 import unittest
 import math
-import random
 import numpy as np
 import rbfopt
 import rbfopt.rbfopt_utils as ru
@@ -25,7 +24,8 @@ class TestUtils(unittest.TestCase):
     def setUp(self):
         """Initialize data used by several functions."""
         np.random.seed(71294123)
-        self.rbf_types = [rbf_type for rbf_type in RbfoptSettings._allowed_rbf
+        self.rbf_types = [rbf_type for rbf_type
+                          in RbfoptSettings._allowed_rbf
                           if rbf_type != 'auto']
     # -- end function
 
@@ -35,9 +35,11 @@ class TestUtils(unittest.TestCase):
         # Set up values of the RBF at 0 and at 1
         rbf_values = dict()
         rbf_values['linear'] = (0.0, 1.0)
-        rbf_values['multiquadric'] = (1.0, math.sqrt(1 + 1.0))
+        rbf_values['multiquadric'] = (1.0, np.sqrt(
+            1 + settings.rbf_shape_parameter))
         rbf_values['cubic'] = (0.0, 1.0)
         rbf_values['thin_plate_spline'] = (0.0, 0.0)
+        rbf_values['gaussian'] = (1.0, np.exp(-settings.rbf_shape_parameter))
         for rbf_type in self.rbf_types:
             settings.rbf = rbf_type
             rbf = ru.get_rbf_function(settings)
@@ -54,7 +56,7 @@ class TestUtils(unittest.TestCase):
         for rbf_type in self.rbf_types:
             settings.rbf = rbf_type
             degree = ru.get_degree_polynomial(settings)
-            self.assertTrue(degree == 0 or degree == 1)
+            self.assertTrue(-1 <= degree <= 1)
     # -- end function
 
     def test_get_size_P_matrix(self):
@@ -223,14 +225,12 @@ class TestUtils(unittest.TestCase):
         result as the regular version.
         """
         for i in range(50):
-            dim = random.randint(1, 20)
-            num_points_1 = random.randint(10, 50)
-            num_points_2 = random.randint(10, 50)
-            points = np.array([[random.uniform(-100, 100) for j in range(dim)]
-                      for k in range(num_points_1)])
-            other_points = np.array([[random.uniform(-100, 100) 
-                                      for j in range(dim)]
-                            for k in range(num_points_2)])
+            dim = np.random.randint(1, 20)
+            num_points_1 = np.random.randint(10, 50)
+            num_points_2 = np.random.randint(10, 50)
+            points = np.random.uniform(-100, 100, size=(num_points_1,dim))
+            other_points = np.random.uniform(-100, 100,
+                                             size=(num_points_2,dim))
             dist1 = [ru.get_min_distance(point, other_points)
                      for point in points]
             dist2 = ru.bulk_get_min_distance(points, other_points)
@@ -247,10 +247,9 @@ class TestUtils(unittest.TestCase):
         """
         settings = RbfoptSettings()
         for i in range(50):
-            dim = random.randint(1, 20)
-            num_points = random.randint(10, 50)
-            node_pos = np.array([[random.uniform(-100, 100) for j in range(dim)]
-                      for k in range(num_points)])
+            dim = np.random.randint(1, 20)
+            num_points = np.random.randint(10, 50)
+            node_pos = np.random.uniform(-100, 100, size=(num_points,dim))
             # Possible shapes of the matrix
             for rbf_type in self.rbf_types:
                 settings.rbf = rbf_type
@@ -258,7 +257,9 @@ class TestUtils(unittest.TestCase):
                 self.assertIsInstance(mat, np.matrix)
                 self.assertAlmostEqual(np.max(mat - mat.transpose()), 0.0,
                                        msg='RBF matrix is not symmetric')
-                size = num_points + 1
+                size = num_points
+                if (ru.get_degree_polynomial(settings) >= 0):
+                    size += 1
                 if (ru.get_degree_polynomial(settings) > 0):
                     size += dim ** ru.get_degree_polynomial(settings)
                 self.assertEqual(mat.shape, (size, size))
@@ -266,6 +267,31 @@ class TestUtils(unittest.TestCase):
         settings.rbf = 'unknown'
         self.assertRaises(ValueError, ru.get_rbf_matrix, settings, 
                           dim, num_points, node_pos)
+    # -- end function
+
+    def test_rbf_interpolation(self):
+        """Test interpolation conditions.
+
+        Verify that the RBF interpolates at points.
+        """
+        settings = RbfoptSettings()
+        for i in range(20):
+            dim = np.random.randint(1, 20)
+            num_points = np.random.randint(10, 50)
+            node_pos = np.random.uniform(-100, 100, size=(num_points,dim))
+            node_val = np.random.uniform(0, 100, num_points)
+            # Possible shapes of the matrix
+            for rbf_type in self.rbf_types:
+                settings.rbf = rbf_type
+                mat = ru.get_rbf_matrix(settings, dim, num_points, node_pos)
+                rbf_l, rbf_h = ru.get_rbf_coefficients(
+                    settings, dim, num_points, mat, node_val)
+                for i in range(num_points):
+                    value = ru.evaluate_rbf(settings, node_pos[i], dim,
+                                            num_points, node_pos, rbf_l, rbf_h)
+                    self.assertAlmostEqual(value, node_val[i], places=4,
+                                           msg='Interpolation failed' +
+                                           'with rbf ' + rbf_type)
     # -- end function
 
     def test_transform_function_values(self):
@@ -376,10 +402,9 @@ class TestUtils(unittest.TestCase):
             self.assertEqual(len(vu), 0, msg=msg)
             msg='Bounds inconsistent with random bounds'
             for i in range(10):
-                dim = random.randint(0, 20)
-                var_lower = np.array([random.uniform(-100, 100) for j in range(dim)])
-                var_upper = np.array([var_lower[j] + random.uniform(0, 100)
-                             for j in range(dim)])
+                dim = np.random.randint(0, 20)
+                var_lower = np.random.uniform(-100, 100, dim) 
+                var_upper = var_lower + np.random.uniform(0, 100, dim)
                 vl, vu = ru.transform_domain_bounds(settings, var_lower,
                                                     var_upper)
                 self.assertEqual(len(vl), len(var_lower), msg=msg)
@@ -441,17 +466,18 @@ class TestModelSelection(unittest.TestCase):
         """Test the get_best_rbf_model function.
         """
         settings = RbfoptSettings()
-        res = ru.get_best_rbf_model(settings, self.n, self.k, 
+        rbf, gamma = ru.get_best_rbf_model(settings, self.n, self.k, 
                                     self.node_pos, self.node_val,
                                     self.k)
-        self.assertEqual(res, 'linear',
+        self.assertEqual(rbf, 'linear',
                          msg='Did not obtain expected model')
     # -- end function
 
     def test_get_model_quality_estimate(self):
         """Test the get_model_quality_estimate function.
         """
-        for rbf in ['cubic', 'thin_plate_spline', 'multiquadric', 'linear']:
+        for rbf in ['cubic', 'thin_plate_spline', 'multiquadric',
+                    'linear', 'gaussian']:
             settings = RbfoptSettings(rbf=rbf)
             error = ru.get_model_quality_estimate(
                 settings, self.n, self.k, self.node_pos, 

@@ -148,6 +148,8 @@ class TestGutmann(unittest.TestCase):
             print('Solving branin with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
+                                      rbf='gaussian',
+                                      rbf_shape_parameter=0.1,
                                       global_search_method='solver',
                                       target_objval=optimum,
                                       eps_opt=self.eps_opt,

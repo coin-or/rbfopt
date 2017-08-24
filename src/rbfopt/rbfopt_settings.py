@@ -55,14 +55,16 @@ class RbfoptSettings:
 
     rbf : str
         Radial basis function used by the method. Choice of 'cubic',
-        'thin_plate_spline', 'linear', 'multiquadric', 'auto'. In case
-        of 'auto', the type of rbf will be dynamically selected by the
+        'thin_plate_spline', 'linear', 'multiquadric', 'gaussian',
+        'auto'. In case of 'auto', the type of rbf and the shape
+        parameter will be dynamically selected by the
         algorithm. Default 'auto'.
 
     rbf_shape_parameter : float
         Shape parameter for the radial basis function. Used only by
-        the multiquadric RBF at the moment, this is also knows as the
-        gamma parameter. Default 1.0.
+        the gaussian and multiquadric RBF, this is also known as the
+        gamma parameter. If the rbf is 'auto', this will be
+        automatically selected from a finite set. Default 0.1.
 
     target_objval : float
         The objective function value we want to reach, i.e. the value
@@ -318,7 +320,7 @@ class RbfoptSettings:
 
     # Allowed values for multiple choice options
     _allowed_rbf = {'auto', 'cubic', 'thin_plate_spline', 'linear',
-                   'multiquadric'}
+                    'multiquadric', 'gaussian'}
     _allowed_init_strategy = {'all_corners', 'lower_corners', 'rand_corners',
                              'lhd_maximin', 'lhd_corr'}
     _allowed_function_scaling = {'off', 'affine', 'log', 'auto'}
@@ -335,7 +337,7 @@ class RbfoptSettings:
                  num_cpus=1,
                  parallel_wakeup_time=0.1,
                  rbf='auto',
-                 rbf_shape_parameter=1.0,
+                 rbf_shape_parameter=0.1,
                  target_objval=-1.0e10,
                  eps_opt=1.0e-2,
                  eps_zero=1.0e-15,

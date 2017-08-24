@@ -55,6 +55,9 @@ def get_rbf_function(settings):
     elif (settings.rbf == 'multiquadric'):
         mq = _MultiquadricRbf(settings.rbf_shape_parameter)
         return mq._multiquadric
+    elif (settings.rbf == 'gaussian'):
+        gauss = _GaussianRbf(settings.rbf_shape_parameter)
+        return gauss._gaussian
 
 # -- List of radial basis functions
 def _cubic(r):
@@ -71,10 +74,18 @@ def _linear(r):
 
 class _MultiquadricRbf:
     def __init__(self, gamma):
-        self._gamma = gamma
+        self._gamma_sq = gamma*gamma
 
     def _multiquadric(self, r):
-        return (r*r + self._gamma*self._gamma)**0.5
+        return (r*r + self._gamma_sq)**0.5
+# -- end class
+
+class _GaussianRbf:
+    def __init__(self, gamma):
+        self._gamma = gamma
+
+    def _gaussian(self, r):
+        return np.exp(-self._gamma * r * r)
 # -- end class
 
 # -- end list of radial basis functions
@@ -96,14 +107,20 @@ def get_degree_polynomial(settings):
     -------
     int
         Degree of the polynomial
+
+    Raises
+    ------
+    ValueError
+        If the matrix type is not implemented.
     """
     assert(isinstance(settings, RbfoptSettings))
     if (settings.rbf == 'cubic' or settings.rbf == 'thin_plate_spline'):
         return 1
     elif (settings.rbf == 'linear' or settings.rbf == 'multiquadric'):
         return 0
-    else:
+    elif (settings.rbf == 'gaussian'):
         return -1
+    raise ValueError('Rbf "' + settings.rbf + '" not implemented yet')
 
 # -- end function
 
@@ -126,14 +143,20 @@ def get_size_P_matrix(settings, n):
     -------
     int
         Number of columns in the matrix
+
+    Raises
+    ------
+    ValueError
+        If the matrix type is not implemented.
     """
     assert(isinstance(settings, RbfoptSettings))
     if (settings.rbf == 'cubic' or settings.rbf == 'thin_plate_spline'):
         return n+1
     elif (settings.rbf == 'linear' or settings.rbf == 'multiquadric'):
         return 1
-    else:
+    elif (settings.rbf == 'gaussian'):
         return 0
+    raise ValueError('Rbf "' + settings.rbf + '" not implemented yet')
 
 # -- end function
 
@@ -711,6 +734,8 @@ def get_rbf_matrix(settings, n, k, node_pos):
         # P is an all-one vector of size ((k) x (1))
         P = np.ones([k, 1])
         PTr = P.T
+    elif (p == 0):
+        pass
     else:
         raise ValueError('Rbf "' + settings.rbf + '" not implemented yet')
 
@@ -719,7 +744,11 @@ def get_rbf_matrix(settings, n, k, node_pos):
     Phi = rbf(dist)
 
     # Put together to obtain [Phi P; P^T 0].
-    A = np.vstack((np.hstack((Phi, P)), np.hstack((PTr, np.zeros((p, p))))))
+    if (p > 0):
+        A = np.vstack((np.hstack((Phi, P)),
+                       np.hstack((PTr, np.zeros((p, p))))))
+    else:
+        A = Phi
     Amat = np.matrix(A)
 
     # Zero out tiny elements
@@ -1393,6 +1422,8 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
         p = n + 1
     elif (get_degree_polynomial(settings) == 0):
         p = 1
+    elif (get_degree_polynomial(settings) == -1):
+        p = 0
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
@@ -1485,23 +1516,32 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
 
     best_loo_error = float('inf')
     best_model = None
+    best_gamma = 1.0
     original_rbf_type = settings.rbf
-    rbf_list = ['cubic', 'thin_plate_spline', 'multiquadric', 'linear']
+    original_gamma = settings.rbf_shape_parameter
+    rbf_list = ['cubic', 'thin_plate_spline', 'multiquadric', 'linear',
+                'gaussian']
+    gamma_list = [[original_gamma], [original_gamma], [0.1, 1.0],
+                  [original_gamma], [0.001, 0.01, 0.1]]
     with warnings.catch_warnings():
         warnings.filterwarnings('error')
-        for rbf_type in rbf_list:
-            settings.rbf = rbf_type
-            try:
-                loo_error = get_model_quality_estimate(
-                    settings, n, k, node_pos, node_val, num_nodes_to_check)
-            except:
-                return original_rbf_type
-            if (loo_error < best_loo_error):
-                best_loo_error = loo_error
-                best_model = rbf_type
+        for (i, rbf_type) in enumerate(rbf_list):
+            for gamma in gamma_list[i]:
+                settings.rbf = rbf_type
+                settings.rbf_shape_parameter
+                try:
+                    loo_error = get_model_quality_estimate(
+                        settings, n, k, node_pos, node_val, num_nodes_to_check)
+                except:
+                    return original_rbf_type
+                if (loo_error < best_loo_error):
+                    best_loo_error = loo_error
+                    best_model = rbf_type
+                    best_gamma = gamma
 
     settings.rbf = original_rbf_type
-    return best_model
+    settings.rbf_shape_parameter = original_gamma
+    return best_model, best_gamma
 
 # -- end function
 

@@ -1,5 +1,18 @@
+2017-08-24  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 4.0.0 alpha. List of major changes:
+	* Added:
+	Support for Gaussian radial basis function
+	(rbfopt_degreem1_models).
+	Automatic selection of the shape parameter
+	(rbfopt_utils.get_best_rbf_model)
+	* Changed:
+	(RbfoptBlackBox) interface now requires returning var_type instead
+	of a list of integer vars.
+	(RbfoptBlackBox.evaluate_fast) is now called evaluate_noisy, and
+	requires returning an estimate of the error.
+
 2017-08-22  Giacomo Nannicini  <nannicini@us.ibm.com>
-	Version 3.1.0 released. List of major changes:
+	List of major changes:
 	* Added:
 	Installation script setup.py.
 	Class to construct RbfoptBlackBox from user data
