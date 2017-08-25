@@ -3,13 +3,31 @@ from __future__ import absolute_import
 
 from setuptools import setup
 import unittest
+import io
+import os
+import re
 
 def readme():
     with open('README.rst') as f:
         return f.read()
-                
+
+def readpath(*names, **kwargs):
+    with io.open(
+            os.path.join(os.path.dirname(__file__), *names),
+            encoding=kwargs.get("encoding", "utf8")
+    ) as fp:
+        return fp.read()
+
+def find_version(*file_paths):
+    version_file = readpath(*file_paths)
+    version_match = re.search(r"^__version__ = ['\"]([^'\"]*)['\"]",
+                              version_file, re.M)
+    if version_match:
+        return version_match.group(1)
+    raise RuntimeError("Unable to find version string.")
+
 setup(name='rbfopt',
-      version='4.0.0alpha',
+      version=find_version('src/rbfopt', '__init__.py'),
       description='Library for black-box (derivative-free) optimization',
       long_description=readme(),
       classifiers=[
@@ -21,7 +39,7 @@ setup(name='rbfopt',
       ],
       url='https://github.com/coin-or/rbfopt',
       author='Giacomo Nannicini',
-      author_email='giacomo.n@gmail.com',
+      author_email='nannicini@us.ibm.com',
       license='Revised BSD',
       package_dir={'': 'src'},
       packages=['rbfopt'],
