@@ -47,6 +47,12 @@ class RbfoptSettings:
     num_cpus : int
         Number of CPUs used. Default 1.
 
+    num_blas_threads : int
+        Number of threads used by the linear algebra routines. Note
+        that values larger than 1 may not work if the implementation
+        of BLAS on the current system does not support
+        multithreading. Default 1.
+
     parallel_wakeup_time : float
         Time (in seconds) after which the main optimization engine
         checks the arrival of results from workers busy with function
@@ -335,6 +341,7 @@ class RbfoptSettings:
                  max_noisy_evaluations=200,
                  max_clock_time=1.0e30,
                  num_cpus=1,
+                 num_blas_threads=1,
                  parallel_wakeup_time=0.1,
                  rbf='auto',
                  rbf_shape_parameter=0.1,
@@ -390,6 +397,7 @@ class RbfoptSettings:
         self.max_noisy_evaluations = max_noisy_evaluations
         self.max_clock_time = max_clock_time
         self.num_cpus = num_cpus
+        self.num_blas_threads = num_blas_threads
         self.parallel_wakeup_time = parallel_wakeup_time
         self.rbf = rbf
         self.rbf_shape_parameter = rbf_shape_parameter

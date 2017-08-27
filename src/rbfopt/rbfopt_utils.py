@@ -1515,14 +1515,14 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
     assert(k > n + 2)
 
     best_loo_error = float('inf')
-    best_model = None
-    best_gamma = 1.0
+    best_model = settings.rbf
+    best_gamma = settings.rbf_shape_parameter
     original_rbf_type = settings.rbf
     original_gamma = settings.rbf_shape_parameter
     rbf_list = ['cubic', 'thin_plate_spline', 'multiquadric', 'linear',
                 'gaussian']
     gamma_list = [[original_gamma], [original_gamma], [0.1, 1.0],
-                  [original_gamma], [0.001, 0.01, 0.1]]
+                  [original_gamma], [0.001, 0.01]]
     with warnings.catch_warnings():
         warnings.filterwarnings('error')
         for (i, rbf_type) in enumerate(rbf_list):
@@ -1533,7 +1533,13 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
                     loo_error = get_model_quality_estimate(
                         settings, n, k, node_pos, node_val, num_nodes_to_check)
                 except:
-                    return original_rbf_type
+                    if (i >= 2):
+                        # If we tested at least some possibilities,
+                        # return the best one found so far
+                        return best_model, best_gamma
+                    else:
+                        # Else, return the original one
+                        return original_rbf_type, original_gamma
                 if (loo_error < best_loo_error):
                     best_loo_error = loo_error
                     best_model = rbf_type

@@ -298,6 +298,12 @@ class RbfoptAlgorithm:
         # parallelization).
         ru.init_rand_seed(l_settings.rand_seed)
 
+        ## Set number of threads for BLAS, if supported by the BLAS
+        ## implementation.
+        os.environ['OPENBLAS_NUM_THREADS'] = str(l_settings.num_blas_threads)
+        os.environ['GOTO_NUM_THREADS'] = str(l_settings.num_blas_threads)
+        os.environ['OMP_NUM_THREADS'] = str(l_settings.num_blas_threads)
+
         # Initialize counters
         self.itercount = 0
         self.evalcount = 0
