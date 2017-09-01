@@ -35,8 +35,9 @@ class TestUtils(unittest.TestCase):
         # Set up values of the RBF at 0 and at 1
         rbf_values = dict()
         rbf_values['linear'] = (0.0, 1.0)
-        rbf_values['multiquadric'] = (1.0, np.sqrt(
-            1 + settings.rbf_shape_parameter))
+        rbf_values['multiquadric'] = (
+            np.sqrt(settings.rbf_shape_parameter**2),
+            np.sqrt(1+settings.rbf_shape_parameter**2))
         rbf_values['cubic'] = (0.0, 1.0)
         rbf_values['thin_plate_spline'] = (0.0, 0.0)
         rbf_values['gaussian'] = (1.0, np.exp(-settings.rbf_shape_parameter))
@@ -467,8 +468,8 @@ class TestModelSelection(unittest.TestCase):
         """
         settings = RbfoptSettings()
         rbf, gamma = ru.get_best_rbf_model(settings, self.n, self.k, 
-                                    self.node_pos, self.node_val,
-                                    self.k)
+                                           self.node_pos, self.node_val,
+                                           self.k)
         self.assertEqual(rbf, 'linear',
                          msg='Did not obtain expected model')
     # -- end function

@@ -219,7 +219,7 @@ def get_integer_candidate(settings, n, k, h, start_point, tr_radius,
 
     Parameters
     ----------
-    settings : :class:`rbfopt_settings.RbfSettings`.
+    settings : :class:`rbfopt_settings.RbfoptSettings`.
         Global and algorithmic settings.
 
     n : int
@@ -344,6 +344,11 @@ def get_model_improving_point(settings, n, k, var_lower, var_upper,
     Q, R, P = la.qr(A.T, mode='full', pivoting=True)
     rank = min(A.shape) - np.abs(np.diag(R))[::-1].searchsorted(
         settings.eps_linear_dependence)
+    if (rank >= model_size):
+        # Numerically, the rank is ok according to our tolerance.
+        # Return indicating that we do not have to perform model
+        # improvement.
+        return (node_pos[start_point_index], False, start_point_index)
     success = False
     d = np.zeros(n)
     i = rank

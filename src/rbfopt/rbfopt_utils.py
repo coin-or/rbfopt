@@ -8,7 +8,6 @@ various modules.
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
 (C) Copyright International Business Machines Corporation 2017.
-Research partially supported by SUTD-MIT International Design Center.
 
 """
 
@@ -18,9 +17,12 @@ from __future__ import division
 from __future__ import absolute_import
 
 import sys
+import os
 import math
 import itertools
 import warnings
+import ctypes
+import ctypes.util
 import numpy as np
 import scipy.spatial as ss
 import scipy.linalg as la
@@ -1441,7 +1443,7 @@ def get_model_quality_estimate(settings, n, k, node_pos, node_val,
     base_sol = la.lu_solve((lu, piv), rhs)
     # Estimate of the model error
     loo_error = 0.0
-    
+
     for i in range(num_nodes_to_check):
         # Compute the RBF interpolant with one node left out
         if (abs(base_sol[i]) <= settings.eps_zero):
@@ -1521,14 +1523,14 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
     original_gamma = settings.rbf_shape_parameter
     rbf_list = ['cubic', 'thin_plate_spline', 'multiquadric', 'linear',
                 'gaussian']
-    gamma_list = [[original_gamma], [original_gamma], [0.1, 1.0],
-                  [original_gamma], [0.001, 0.01]]
+    gamma_list = [[original_gamma], [original_gamma], [0.1],
+                  [original_gamma], [0.001]]
     with warnings.catch_warnings():
         warnings.filterwarnings('error')
         for (i, rbf_type) in enumerate(rbf_list):
             for gamma in gamma_list[i]:
                 settings.rbf = rbf_type
-                settings.rbf_shape_parameter
+                settings.rbf_shape_parameter = gamma
                 try:
                     loo_error = get_model_quality_estimate(
                         settings, n, k, node_pos, node_val, num_nodes_to_check)
@@ -1606,15 +1608,18 @@ def get_one_ready_index(results):
     return len(results)
 # -- end if
 
-def init_rand_seed(seed):
-    """Initialize the random seed.
+def init_environment(settings):
+    """Initialize the environment: random seed.
 
     Parameters
     ----------
-    seed : any
-        A hashable object that can be used to initialize numpy's
-        internal random number generator.
+    settings : :class:`rbfopt_settings.RbfoptSettings`
+        Global and algorithmic settings.
     """
-    np.random.seed(seed)
+    assert(isinstance(settings, RbfoptSettings))
+    # Numpy's random seed
+    np.random.seed(settings.rand_seed)
+    
+
 # -- end if
 

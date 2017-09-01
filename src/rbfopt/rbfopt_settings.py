@@ -5,7 +5,7 @@ This module contains the settings of the main optimization algorithm.
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2015.
 (C) Copyright International Business Machines Corporation 2016.
-Research partially supported by SUTD-MIT International Design Center.
+
 """
 
 from __future__ import print_function
@@ -46,12 +46,6 @@ class RbfoptSettings:
 
     num_cpus : int
         Number of CPUs used. Default 1.
-
-    num_blas_threads : int
-        Number of threads used by the linear algebra routines. Note
-        that values larger than 1 may not work if the implementation
-        of BLAS on the current system does not support
-        multithreading. Default 1.
 
     parallel_wakeup_time : float
         Time (in seconds) after which the main optimization engine
@@ -220,7 +214,7 @@ class RbfoptSettings:
         original MSRSM score function. Default True.
 
     max_consecutive_refinement : int
-        Maximum number of consecutive refinement steps. Default 10.
+        Maximum number of consecutive refinement steps. Default 5.
 
     thresh_unlimited_refinement : float
         Lower threshold for the amounf of search budget depleted,
@@ -341,7 +335,6 @@ class RbfoptSettings:
                  max_noisy_evaluations=200,
                  max_clock_time=1.0e30,
                  num_cpus=1,
-                 num_blas_threads=1,
                  parallel_wakeup_time=0.1,
                  rbf='auto',
                  rbf_shape_parameter=0.1,
@@ -374,7 +367,7 @@ class RbfoptSettings:
                  ga_num_generations=20,
                  num_samples_aux_problems=1000,
                  modified_msrsm_score=True,
-                 max_consecutive_refinement=10,
+                 max_consecutive_refinement=5,
                  thresh_unlimited_refinement=0.9,
                  refinement_frequency=3,
                  tr_num_integer_candidates=10,
@@ -397,7 +390,6 @@ class RbfoptSettings:
         self.max_noisy_evaluations = max_noisy_evaluations
         self.max_clock_time = max_clock_time
         self.num_cpus = num_cpus
-        self.num_blas_threads = num_blas_threads
         self.parallel_wakeup_time = parallel_wakeup_time
         self.rbf = rbf
         self.rbf_shape_parameter = rbf_shape_parameter

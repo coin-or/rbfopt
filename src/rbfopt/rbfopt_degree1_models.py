@@ -6,7 +6,8 @@ module does not solve the problems.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
-Research partially supported by SUTD-MIT International Design Center.
+(C) Copyright International Business Machines Corporation 2017.
+
 """
 
 from __future__ import print_function
@@ -19,7 +20,7 @@ import numpy as np
 import rbfopt.rbfopt_utils as ru
 from rbfopt.rbfopt_settings import RbfoptSettings
 
-_DISTANCE_SHIFT = 1.0e-40
+_DISTANCE_SHIFT = 1.0e-15
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
                          integer_vars, node_pos, rbf_lambda, rbf_h):
@@ -902,8 +903,8 @@ def _udef_cubic_constraint_rule(model, i):
 def _udef_thinplate_constraint_rule(model, i):
     return (model.u_pi[i] == 
             (sum((model.x[j] - model.node[i, j])**2 for j in model.N)) *
-            log(sqrt(sum((model.x[j] - model.node[i, j])**2
-                         for j in model.N) + _DISTANCE_SHIFT)))
+            0.5 * log(sum((model.x[j] - model.node[i, j])**2
+                          for j in model.N) + _DISTANCE_SHIFT))
 
 
 # Constraints: definition of the pi component of u_pi. The expression is:

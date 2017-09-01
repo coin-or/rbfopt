@@ -92,7 +92,7 @@ class TestGutmann(unittest.TestCase):
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving branin with random seed ' +
+            print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
                                       rbf='multiquadric',
@@ -127,8 +127,6 @@ class TestGutmann(unittest.TestCase):
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
                                       max_evaluations=300,
-                                      fast_objfun_rel_error=0.1,
-                                      fast_objfun_abs_error=0.01,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
@@ -155,8 +153,6 @@ class TestGutmann(unittest.TestCase):
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
                                       max_evaluations=300,
-                                      fast_objfun_rel_error=0.1,
-                                      fast_objfun_abs_error=0.01,
                                       rand_seed=seed)
             init_node_pos = [[0, 0], [-2, 2], [5, 10]]
             init_node_val = [bb._function.evaluate(x) for x in init_node_pos]
@@ -274,10 +270,11 @@ class TestGutmannParallel(unittest.TestCase):
                                       num_cpus=2,
                                       function_scaling='log',
                                       do_infstep=True,
+                                      refinement_frequency=5,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve branin with Gutmann\'s algorithm'
+            msg = 'Could not solve ex8_1_4 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero
                                 else self.eps_opt)
@@ -299,8 +296,6 @@ class TestGutmannParallel(unittest.TestCase):
                                       max_iterations=200,
                                       max_evaluations=300,
                                       num_cpus=2,
-                                      fast_objfun_rel_error=0.1,
-                                      fast_objfun_abs_error=0.01,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
@@ -434,8 +429,6 @@ class TestMSRSM(unittest.TestCase):
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
                                       max_evaluations=300,
-                                      fast_objfun_rel_error=0.1,
-                                      fast_objfun_abs_error=0.01,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
@@ -460,8 +453,6 @@ class TestMSRSM(unittest.TestCase):
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
                                       max_evaluations=300,
-                                      fast_objfun_rel_error=0.1,
-                                      fast_objfun_abs_error=0.01,
                                       rand_seed=seed)
             init_node_pos = [[0, 0], [-2, 2], [5, 10], [-2.5, 1]]
             alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos)
@@ -513,7 +504,7 @@ class TestMSRSMParallel(unittest.TestCase):
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='MSRSM',
                                       global_search_method='sampling',
-                                      rbf='linear',
+                                      rbf='gaussian',
                                       target_objval=optimum,
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
@@ -598,8 +589,6 @@ class TestMSRSMParallel(unittest.TestCase):
                                       max_iterations=200,
                                       max_evaluations=300,
                                       num_cpus=4,
-                                      fast_objfun_rel_error=0.1,
-                                      fast_objfun_abs_error=0.01,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
@@ -709,13 +698,10 @@ class TestBlackBoxFixed(RbfoptBlackBox):
                          self.fixed_var_upper[i - self._function.dimension]
                          for i in self.var_pos])
 
-    def get_integer_vars(self):
-        if (len(self._function.integer_vars)):
-            orig_int_vars = [np.where(self.var_pos == i)[0][0]
-                             for i in self._function.integer_vars]
-            return np.array(sorted(orig_int_vars))
-        else:
-            return self._function.integer_vars
+    def get_var_type(self):
+        return np.array([self._function.var_type[i]
+                         if i < self._function.dimension else 'R'
+                         for i in self.var_pos])
 
     def evaluate(self, point):
         # Objective is shifted by the sum of all fixed variables

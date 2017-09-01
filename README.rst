@@ -248,6 +248,43 @@ The default parameters of the algorithm are optimized for the serial
 optimization mode. For recommendations on what parameters to use with
 the parallel optimizer, feel free to ask on the mailing list.
 
+Note that the parallel optimizer is oblivious of the system-wide
+settings for executing linear algebra routines (BLAS) in parallel. We
+recommend setting the number of threads for BLAS to 1 when using the
+parallel optimizer, see the next section.
+
+==========================
+Known issues with OpenBLAS
+==========================
+
+We are aware of an issue when launching multiple distinct processes
+that use RBFOpt and the NumPy implementation is configured to use
+OpenBLAS in parallel: in this case, on rare occasions we have observed
+that some processes may get stuck forever when computing matrix-vector
+multiplications. The problem can be fixed by setting the number of
+threads for OpenBLAS to 1. We do not know if the same issue occurs
+with other parallel implementations of BLAS.
+
+For this reason, and because parallel BLAS uses resources suboptimally
+when used in conjunction with the parallel optimizer of RBFOpt (if
+BLAS runs in parallel, each thread of the parallel optimizer would
+spawn multiple threads to run BLAS, therefore disregarding the option
+num_cpus), RBFOpt attempts to set the number of BLAS threads to 1 at
+run time.
+
+All scripts (rbfopt_cl_interface.py and rbfopt_test_interface.py) set
+the environment variables OMP_NUM_THREADS to 1. Furthermore, the
+rbfopt module does the same when imported for the first time.
+
+Note that these settings are only effective if the environment
+variable is set *before* NumPy is imported; otherwise, they are
+ignored. If you are facing the same issue, we recommend setting
+environment variable OMP_NUM_THREADS to 1. In Python, this can be done
+with::
+
+  import os
+  os.environ['OMP_NUM_THREADS'] = '1'
+
 =============
 Documentation
 =============

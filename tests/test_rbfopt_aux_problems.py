@@ -138,13 +138,12 @@ class TestAuxProblems(unittest.TestCase):
         for algorithm in RbfoptSettings._allowed_algorithm:
             self.settings.algorithm = algorithm
             references = solutions[algorithm]
-            sol = aux.minimize_rbf(self.settings, self.n, self.k,
-                                   self.var_lower, self.var_upper,
-                                   self.integer_vars, self.node_pos,
-                                   self.rbf_lambda, self.rbf_h,)
+            sol = aux.minimize_rbf(
+                self.settings, self.n, self.k, self.var_lower,
+                self.var_upper, self.integer_vars, self.node_pos,
+                self.rbf_lambda, self.rbf_h, self.node_pos[0])
             val = ru.evaluate_rbf(self.settings, sol, self.n, self.k, 
-                                  self.node_pos, self.rbf_lambda,
-                                  self.rbf_h)
+                                  self.node_pos, self.rbf_lambda, self.rbf_h)
             found_solution = False
             for ref in references:
                 satisfied = True

@@ -5,8 +5,7 @@ polynomials. The models are created and instantiated using Pyomo. This
 module does not solve the problems.
 
 Licensed under Revised BSD license, see LICENSE.
-(C) Copyright Singapore University of Technology and Design 2014.
-Research partially supported by SUTD-MIT International Design Center.
+(C) Copyright International Business Machines Corporation 2017.
 
 """
 
@@ -20,7 +19,7 @@ import numpy as np
 import rbfopt.rbfopt_utils as ru
 from rbfopt.rbfopt_settings import RbfoptSettings
 
-_DISTANCE_SHIFT = 1.0e-40
+_DISTANCE_SHIFT = 1.0e-15
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
                          integer_vars, node_pos, rbf_lambda, rbf_h):

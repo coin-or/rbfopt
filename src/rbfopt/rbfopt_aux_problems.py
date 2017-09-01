@@ -9,7 +9,7 @@ modules, and the search algorithms.
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
 (C) Copyright International Business Machines Corporation 2017.
-Research partially supported by SUTD-MIT International Design Center.
+
 """
 
 from __future__ import print_function
@@ -138,26 +138,23 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
     elif (settings.global_search_method == 'solver'):
         # Optimize using Pyomo
         if (settings.algorithm == 'Gutmann'):
-            instance = model.create_max_one_over_mu_model(settings, n, k,
-                                                          var_lower,
-                                                          var_upper,
-                                                          integer_vars,
-                                                          node_pos, mat)
+            instance = model.create_max_one_over_mu_model(
+                settings, n, k, var_lower, var_upper,
+                integer_vars, node_pos, mat)
             # Initialize variables for local search
             initialize_instance_variables(settings, instance)
         elif (settings.algorithm == 'MSRSM'):
-            instance = model.create_maximin_dist_model(settings, n, k,
-                                                       var_lower, var_upper,
-                                                       integer_vars, node_pos)
+            instance = model.create_maximin_dist_model(
+                settings, n, k, var_lower, var_upper, integer_vars, node_pos)
             # Initialize variables for local search
-            initialize_instance_variables(settings, instance, False)
+            initialize_instance_variables(settings, instance,
+                                          init_u_pi=False)
         else:
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
         # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory('bonmin',
-                                      executable=settings.minlp_solver_path,
-                                      solver_io='nl')
+        opt = pyomo.opt.SolverFactory(
+            'bonmin', executable=settings.minlp_solver_path, solver_io='nl')
         if opt is None:
             raise RuntimeError('Solver ' + 'bonmin' + ' not found')
         set_minlp_solver_options(opt)
@@ -187,7 +184,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
 
 
 def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
-                 node_pos, rbf_lambda, rbf_h):
+                 node_pos, rbf_lambda, rbf_h, best_node_pos):
     """Compute the minimum of the RBF interpolant.
 
     Compute the minimum of the RBF interpolant with a PyOmo model.
@@ -225,6 +222,9 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     rbf_h : 1D numpy.ndarray[float]
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
+
+    best_node_pos : 1D numpy.ndarray[float]
+        Coordinates of the best interpolation point.
 
     Returns
     -------
@@ -269,14 +269,13 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     instance = model.create_min_rbf_model(settings, n, k, var_lower,
                                           var_upper, integer_vars,
                                           node_pos, rbf_lambda, rbf_h)
-
     # Initialize variables for local search
-    initialize_instance_variables(settings, instance)
+    initialize_instance_variables(settings, instance,
+                                  start_point=best_node_pos)
 
     # Instantiate optimizer
-    opt = pyomo.opt.SolverFactory('bonmin',
-                                  executable=settings.minlp_solver_path,
-                                  solver_io='nl')
+    opt = pyomo.opt.SolverFactory(
+        'bonmin', executable=settings.minlp_solver_path, solver_io='nl')
     if opt is None:
         raise RuntimeError('Solver ' + 'bonmin' + 'not found')
     set_minlp_solver_options(opt)
@@ -472,9 +471,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
         # Instantiate optimizer
-        opt = pyomo.opt.SolverFactory('bonmin',
-                                      executable=settings.minlp_solver_path,
-                                      solver_io='nl')
+        opt = pyomo.opt.SolverFactory(
+            'bonmin', executable=settings.minlp_solver_path, solver_io='nl')
         if opt is None:
             raise RuntimeError('Solver ' + 'bonmin' + ' not found')
         set_minlp_solver_options(opt)
@@ -505,7 +503,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
 # -- end function
 
 
-def initialize_instance_variables(settings, instance, init_u_pi=True):
+def initialize_instance_variables(settings, instance, start_point=None,
+                                  init_u_pi=True):
     """Initialize the variables of a problem instance.
 
     Initialize the x variables of a problem instance, and set the
@@ -520,8 +519,13 @@ def initialize_instance_variables(settings, instance, init_u_pi=True):
     instance : pyomo.ConcreteModel
         A concrete instance of mathematical optimization model.
 
+    start_point : 1D numpy.ndarray[float] or None
+        The starting point for the local search, or None if it should
+        be randomly generated.
+
     init_u_pi : bool
         Whether or not the u_pi variables should be initialized.
+
     """
     assert(isinstance(settings, RbfoptSettings))
 
@@ -529,14 +533,19 @@ def initialize_instance_variables(settings, instance, init_u_pi=True):
     rbf = ru.get_rbf_function(settings)
 
     # Initialize variables for local search
-    for i in instance.N:
-        instance.x[i] = np.random.uniform(instance.var_lower[i],
-                                          instance.var_upper[i])
+    if (start_point is not None):
+        assert(len(instance.N) == len(start_point))
+        for i in instance.N:
+            instance.x[i] = start_point[i]
+    else:
+        for i in instance.N:
+            instance.x[i] = np.random.uniform(instance.var_lower[i],
+                                              instance.var_upper[i])
     if (init_u_pi):
         for j in instance.K:
-            instance.u_pi[j] = rbf(math.sqrt(math.fsum((instance.x[i].value -
-                                                        instance.node[j, i])**2
-                                                       for i in instance.N)))
+            instance.u_pi[j] = rbf(np.sqrt(sum((instance.x[i].value -
+                                                instance.node[j, i])**2
+                                               for i in instance.N)))
         if (ru.get_degree_polynomial(settings) == 1):
             for j in instance.N:
                 instance.u_pi[instance.k + j] = instance.x[j].value
@@ -689,9 +698,8 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
                                            node_val, node_err_bounds)
 
     # Instantiate optimizer
-    opt = pyomo.opt.SolverFactory('ipopt',
-                                  executable=settings.nlp_solver_path,
-                                  solver_io='nl')
+    opt = pyomo.opt.SolverFactory(
+        'ipopt', executable=settings.nlp_solver_path, solver_io='nl')
     if opt is None:
         raise RuntimeError('Solver ' + 'ipopt' + ' not found')
     set_nlp_solver_options(opt)

@@ -8,7 +8,6 @@ reimplemented by the user.
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
 (C) Copyright International Business Machines Corporation 2016.
-Research partially supported by SUTD-MIT International Design Center.
 
 """
 

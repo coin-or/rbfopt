@@ -7,7 +7,6 @@ and resumed at any time.
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2016.
 (C) Copyright International Business Machines Corporation 2016.
-Research partially supported by SUTD-MIT International Design Center.
 
 """
 
@@ -293,16 +292,10 @@ class RbfoptAlgorithm:
         # of the paper. This is redundant but it simplifies our life.
         self.n = dimension
 
-        # Set random seed. We use numpy's random generator. This is
-        # taken care of by an appropriate function (useful for
-        # parallelization).
-        ru.init_rand_seed(l_settings.rand_seed)
-
-        ## Set number of threads for BLAS, if supported by the BLAS
-        ## implementation.
-        os.environ['OPENBLAS_NUM_THREADS'] = str(l_settings.num_blas_threads)
-        os.environ['GOTO_NUM_THREADS'] = str(l_settings.num_blas_threads)
-        os.environ['OMP_NUM_THREADS'] = str(l_settings.num_blas_threads)
+        # Set random seed. We always use numpy's random
+        # generator. This is taken care of by an appropriate function
+        # (useful for parallelization).
+        ru.init_environment(l_settings)
 
         # Initialize counters
         self.itercount = 0
@@ -1063,8 +1056,8 @@ class RbfoptAlgorithm:
         n = self.n
 
         # Create pool of workers
-        pool = Pool(l_settings.num_cpus, ru.init_rand_seed,
-                    (l_settings.rand_seed, ))
+        pool = Pool(l_settings.num_cpus, ru.init_environment,
+                    (l_settings, ))
         # List of new point evaluations. A new point evaluation has
         # the format: [result, point, is_node_noisy, iteration_id],
         # where result is an object of class AsyncResult, and point is
@@ -2047,9 +2040,9 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
 # -- end function
 
 def local_step(settings, n, k, var_lower, var_upper, integer_vars, 
-               node_pos, rbf_lambda, rbf_h, tfv,
-               Amat, Amatinv, fmin_index, two_phase_optimization, 
-               eval_mode, node_is_noisy):
+               node_pos, rbf_lambda, rbf_h, tfv, Amat, Amatinv,
+               fmin_index, two_phase_optimization, eval_mode,
+               node_is_noisy):
     """Perform local search step, possibly adjusted.
     
     Perform a local search step. This typically accepts the
@@ -2152,7 +2145,8 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     scaled_node_val, scaled_fmin, scaled_fmax, scaled_err_bounds = tfv
     # Local search: compute the minimum of the RBF.
     min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper,
-                               integer_vars, node_pos, rbf_lambda, rbf_h)
+                               integer_vars, node_pos, rbf_lambda, rbf_h,
+                               node_pos[fmin_index])
     if (min_rbf is not None):
         min_rbf_val = ru.evaluate_rbf(settings, min_rbf, n, k, 
                                       node_pos, rbf_lambda, rbf_h)
@@ -2160,7 +2154,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     # larger than the node with smallest value, just take the
     # node with the smallest value.
     if (min_rbf is None or
-            (min_rbf_val >= scaled_fmin + settings.eps_zero)):
+        (min_rbf_val >= scaled_fmin + settings.eps_zero)):
         min_rbf = node_pos[fmin_index]
         min_rbf_val = scaled_fmin
     # Check if point can be accepted: is there an improvement?
@@ -2402,7 +2396,8 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         # If we use Gutmann's algorithm, we need the minimum of the
         # RBF interpolant to choose the target value.
         min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper, 
-                                   integer_vars, node_pos, rbf_lambda, rbf_h)
+                                   integer_vars, node_pos, rbf_lambda,
+                                   rbf_h, node_pos[fmin_index])
         if (min_rbf is not None):
             min_rbf_val = ru.evaluate_rbf(settings, min_rbf, n, k,
                                           node_pos, rbf_lambda, rbf_h)
