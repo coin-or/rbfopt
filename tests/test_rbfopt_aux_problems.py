@@ -45,8 +45,8 @@ class TestAuxProblems(unittest.TestCase):
         """Generate data to simulate an optimization problem."""
         np.random.seed(71294123)
         self.settings = RbfoptSettings(rbf = 'cubic',
-                                    num_samples_aux_problems = 10000,
-                                    ga_base_population_size = 1000)
+                                       num_samples_aux_problems = 10000,
+                                       ga_base_population_size = 1000)
         self.n = 3
         self.k = 5
         self.var_lower = np.array([i for i in range(self.n)])
@@ -70,11 +70,13 @@ class TestAuxProblems(unittest.TestCase):
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
         self.Amat = np.matrix(Amat)
         self.Amatinv = self.Amat.getI()
-        self.rbf_lambda = np.array([-0.02031417613815348, -0.0022571306820170587,
-                           0.02257130682017054, 6.74116235140294e-18,
-                           -1.0962407017011667e-18])
+        self.rbf_lambda = np.array([-0.02031417613815348,
+                                    -0.0022571306820170587,
+                                    0.02257130682017054,
+                                    6.74116235140294e-18,
+                                    -1.0962407017011667e-18])
         self.rbf_h = np.array([-0.10953754862932995, 0.6323031632900591,
-                      0.5216788297837124, 9.935450288253636])
+                               0.5216788297837124, 9.935450288253636])
         self.integer_vars = np.array([1])
         self.rbf_types = [rbf_type for rbf_type in RbfoptSettings._allowed_rbf
                           if rbf_type != 'auto']
@@ -164,6 +166,41 @@ class TestAuxProblems(unittest.TestCase):
                        + ' alg {:s} '.format(algorithm))
                 self.assertAlmostEqual(abs(sol[i] - round(sol[i])), 0.0,
                                        msg=msg)
+    # -- end function
+
+    def test_minimize_rbf_random(self):
+        """Check solution of RBF minimization problem on random instances.
+
+        This function verifies that the solution of the RBF
+        minimization problem on small random problems is always no
+        worse than he best interpolation node.
+
+        """
+        for i in range(10):
+            n = np.random.randint(4, 10)
+            k = np.random.randint(n+1, n+10)
+            var_lower = np.array([-5] * n)
+            var_upper = np.array([5] * n)
+            integer_vars = np.sort(np.random.choice(n, np.random.randint(n)))
+            node_pos = np.random.uniform(-5, 5, size=(k, n))
+            node_pos[:, integer_vars] = np.around(node_pos[:, integer_vars])
+            node_val = np.random.uniform(-10, 10, size=k)
+            best_node_pos = np.argmin(node_val)
+            for rbf_type in self.rbf_types:
+                settings = RbfoptSettings(rbf=rbf_type)
+                A = ru.get_rbf_matrix(settings, n, k, node_pos)
+                rbf_l, rbf_h = ru.get_rbf_coefficients(settings, n, k, A,
+                                                       node_val)
+                sol = aux.minimize_rbf(settings, n, k, var_lower, var_upper,
+                                       integer_vars, node_pos, rbf_l, rbf_h,
+                                       node_pos[best_node_pos])
+                val = ru.evaluate_rbf(settings, sol, n, k, node_pos,
+                                      rbf_l, rbf_h)
+                print(val, node_val[best_node_pos])
+                self.assertLessEqual(val, node_val[best_node_pos] + 1.0e-3,
+                                     msg='The minimize_rbf solution' +
+                                     ' is worse than starting point' +
+                                     ' with rbf ' + rbf_type)
     # -- end function
 
     def test_global_search(self):
@@ -270,7 +307,7 @@ class TestAuxProblems(unittest.TestCase):
         var_lower = np.array([i for i in range(n)])
         var_upper = np.array([i + 10 for i in range(n)])
         node_pos = np.array([var_lower, var_upper,
-                    [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
+                             [1, 2, 3], [9, 5, 8.8], [5.5, 7, 12]])
         node_val = np.array([2*i for i in range(k)])
         node_err_bounds = np.array([(-1, +1) for i in range(k)])
         Amat = [[0.0, 5196.152422706633, 5.196152422706631,

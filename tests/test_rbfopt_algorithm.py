@@ -106,7 +106,7 @@ class TestGutmann(unittest.TestCase):
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve branin with Gutmann\'s algorithm'
+            msg = 'Could not solve ex8_1_4 with Gutmann\'s algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero
                                 else self.eps_opt)
@@ -146,7 +146,6 @@ class TestGutmann(unittest.TestCase):
             print('Solving branin with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
-                                      rbf='gaussian',
                                       rbf_shape_parameter=0.1,
                                       global_search_method='solver',
                                       target_objval=optimum,
@@ -207,7 +206,7 @@ class TestGutmannParallel(unittest.TestCase):
             settings = RbfoptSettings(algorithm='Gutmann',
                                       global_search_method='solver',
                                       target_objval=optimum,
-                                      max_stalled_cycles=10,
+                                      max_stalled_iterations=70,
                                       eps_impr=0.01,
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
@@ -281,16 +280,18 @@ class TestGutmannParallel(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg=msg)
     # -- end function
 
-    def test_gutmann_parallel_st_miqp3_noisy(self):
-        """Check solution of noisy st_miqp3 with Gutmann, solver."""
-        bb = tf.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
+    def test_gutmann_parallel_st_test1_noisy(self):
+        """Check solution of noisy st_test1 with Gutmann, solver."""
+        bb = tf.TestNoisyBlackBox('st_test1', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving st_miqp3 with random seed ' +
+            print('Solving st_test1 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
                                       global_search_method='solver',
+                                      rbf_shape_parameter=0.01,
+                                      rbf='gaussian',
                                       target_objval=optimum,
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
@@ -421,7 +422,7 @@ class TestMSRSM(unittest.TestCase):
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving goldsteinprice with random seed ' +
+            print('Solving st_miqp3 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='MSRSM',
                                       global_search_method='genetic',
@@ -432,7 +433,7 @@ class TestMSRSM(unittest.TestCase):
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
-            msg = 'Could not solve goldsteinprice with MSRSM algorithm'
+            msg = 'Could not solve st_miqp3 with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero
                                 else self.eps_opt)
@@ -504,7 +505,8 @@ class TestMSRSMParallel(unittest.TestCase):
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='MSRSM',
                                       global_search_method='sampling',
-                                      rbf='gaussian',
+                                      rbf='linear',
+                                      rbf_shape_parameter=0.01,
                                       target_objval=optimum,
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
