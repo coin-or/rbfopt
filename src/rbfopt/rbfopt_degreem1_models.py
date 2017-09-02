@@ -19,8 +19,6 @@ import numpy as np
 import rbfopt.rbfopt_utils as ru
 from rbfopt.rbfopt_settings import RbfoptSettings
 
-_DISTANCE_SHIFT = 1.0e-15
-
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
                          integer_vars, node_pos, rbf_lambda, rbf_h):
     """Create the concrete model to minimize the RBF.
@@ -117,17 +115,11 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variables: the vectors (u, \pi),
-    # see equations (6) and (7) in the paper by Costa and Nannicini
-    model.u_pi = Var(model.Q, domain=Reals)
-
-    model.OBJ = Objective(rule=_min_rbf_obj_expression, sense=minimize)
-
     # Constraints. See definitions below.
     if (settings.rbf == 'gaussian'):
         model.gamma = Param(initialize=settings.rbf_shape_parameter)
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_gaussian_constraint_rule)
+        model.OBJ = Objective(rule=_min_rbf_obj_expression_gaussian,
+                              sense=minimize)
 
     # Add integer variables if necessary
     if (len(integer_vars)):
@@ -245,20 +237,10 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variables: the vectors (u, \pi),
-    # see equations (6) and (7) in the paper by Costa and Nannicini
-    model.u_pi = Var(model.Q, domain=Reals)
-
-    # Objective function. Remember that there should be a constant
-    # term \phi(0) at the beginning, but because this is zero in this
-    # case we take it out.
-    model.OBJ = Objective(rule=_max_one_over_mu_obj_expression,
-                          sense=maximize)
-
-    # Constraints. See definitions below.
+    # Objective function. 
     if (settings.rbf == 'gaussian'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_gaussian_constraint_rule)
+        model.OBJ = Objective(rule=_max_one_over_mu_obj_expression_gaussian,
+                              sense=maximize)
 
     # Add integer variables if necessary
     if (len(integer_vars)):
@@ -398,25 +380,10 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variables: the vectors (u, \pi),
-    # see equations (6) and (7) in the paper by Costa and Nannicini
-    model.u_pi = Var(model.Q, domain=Reals)
-
-    # Auxiliary variable: value of the rbf at a given point
-    model.rbfval = Var(domain=Reals)
-
-    # Auxiliary variable: value of the inverse of \mu_k at a given point
-    model.mu_k_inv = Var(domain=Reals)
-
     # Objective function.
-    model.OBJ = Objective(rule=_max_h_k_obj_expression, sense=maximize)
-
-    # Constraints. See definitions below.
     if (settings.rbf == 'gaussian'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_gaussian_constraint_rule)
-    model.RbfdefConstraint = Constraint(rule=_rbfdef_constraint_rule)
-    model.MukdefConstraint = Constraint(rule=_mukdef_constraint_rule)
+        model.OBJ = Objective(rule=_max_h_k_obj_expression_gaussian,
+                              sense=maximize)
 
     # Add integer variables if necessary
     if (len(integer_vars)):
@@ -607,7 +574,7 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variable: value of the inverse of \mu_k at a given point
+    # Auxiliary variable: value of the minimum distance to the nodes
     model.mindistsq = Var(domain=NonNegativeReals)
 
     # Objective function.
@@ -765,24 +732,14 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variables: the vectors (u, \pi),
-    # see equations (6) and (7) in the paper by Costa and Nannicini
-    model.u_pi = Var(model.Q, domain=Reals)
-
-    # Auxiliary variable: value of the rbf at a given point
-    model.rbfval = Var(domain=Reals)
-
-    # Auxiliary variable: value of the inverse of \mu_k at a given point
+    # Auxiliary variable: value of the min distance to the nodes
     model.mindistsq = Var(domain=NonNegativeReals)
 
     # Objective function.
-    model.OBJ = Objective(rule=_min_msrsm_obj_expression, sense=minimize)
-
-    # Constraints. See definitions below.
     if (settings.rbf == 'gaussian'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_gaussian_constraint_rule)
-    model.RbfdefConstraint = Constraint(rule=_rbfdef_constraint_rule)
+        model.OBJ = Objective(rule=_min_msrsm_obj_expression_gaussian,
+                              sense=minimize)
+    # Constraints. See definitions below.
     model.MdistdefConstraint = Constraint(model.K,
                                           rule=_mdistdef_constraint_rule)
 
@@ -839,65 +796,50 @@ def add_integrality_constraints(model, integer_vars):
 def _x_bounds(model, i):
     return (model.var_lower[i], model.var_upper[i])
 
-
-# Constraints: definition of the u components of u_pi for cubic RBF. 
-# The expression is:
-# for i in K: upi_i = e^{-\gamma * sum_{j in N} (x_j - node_{i, j})^2}
-def _udef_gaussian_constraint_rule(model, i):
-    return (model.u_pi[i] ==
-            exp(-model.gamma *
-                sum((model.x[j] - model.node[i, j])**2 for j in model.N)))
-
-
-# Constraints: definition of the value of the RBF. Expression:
-# sum_{j in K} lambda_j u_j + sum_{j in N} h_j \pi_j + h_{n+1} \pi_{n+1}
-# Because of the definition of u_pi, we can just write:
-# min sum_{j in Q} lambda_h_j u_pi_j
-def _rbfdef_constraint_rule(model):
-    return (model.rbfval == summation(model.lambda_h, model.u_pi))
-
-
-# Constraints: Definition of \mu_k. Expression:
-# -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j
-def _mukdef_constraint_rule(model):
-    return (-1.0*sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
-                     for i in model.Q for j in model.Q) + 
-            model.phi_0 == model.mu_k_inv)
-
-
 # Constraints: definition of the interpolation conditions. Expression:
 # Phi lambda + P h + slack = F
 def _intr_constraint_rule(model, i):
     return (sum(model.Phi[i, j]*model.rbf_lambda[j] for j in model.K) +
             model.slack[i] == model.node_val[i])
 
-
 # Constraints: definition of the minimum distance constraint.
 # for i in K: mindistsq <= dist(x, x^i)^2
 def _mdistdef_constraint_rule(model, i):
-    return (model.mindistsq <= _DISTANCE_SHIFT + 
+    return (model.mindistsq <= 
             sum((model.x[j] - model.node[i, j])**2 for j in model.N))
 
-
 # Objective function for the "minimize rbf" problem. 
-# Because of the definition of u_pi, we can just write:
-# min sum_{j in Q} lambda_h_j u_pi_j
-def _min_rbf_obj_expression(model):
-    return (summation(model.lambda_h, model.u_pi))
-
+# min sum_{j in K} lambda_h_j e^{-\gamma d_j}
+def _min_rbf_obj_expression_gaussian(model):
+    return (sum(model.lambda_h[i] *
+                exp(-model.gamma *
+                    sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+                for i in model.K))
 
 # Objective function for the "maximize 1/\mu" problem. The expression is:
-# max -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j;
-def _max_one_over_mu_obj_expression(model):
-    return (-sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
-                 for i in model.Q for j in model.Q) + model.phi_0)
+# max -\sum_{i in K, j in K} A^{-1}_{ij} e^{-\gamma d_i} e^{-\gamma d_j};
+def _max_one_over_mu_obj_expression_gaussian(model):
+    return (-sum(model.Ainv[i,j] *
+                 exp(-model.gamma *
+                     sum((model.x[h] - model.node[i, h])**2 for h in model.N)
+                     -model.gamma *
+                     sum((model.x[h] - model.node[j, h])**2 for h in model.N))
+                 for i in model.N for j in model.N) + model.phi_0)
 
 
 # Objective function for the "maximize h_k" problem. The expression is:
 # 1/(\mu_k(x) [s_k(x) - f^\ast]^2)
-def _max_h_k_obj_expression(model):
-    return (model.mu_k_inv/((model.rbfval - model.fstar)**2))
-
+def _max_h_k_obj_expression_gaussian(model):
+    return ((-sum(model.Ainv[i,j] *
+                 exp(-model.gamma *
+                     sum((model.x[h] - model.node[i, h])**2 for h in model.N)
+                     -model.gamma *
+                     sum((model.x[h] - model.node[j, h])**2 for h in model.N))
+                 for i in model.N for j in model.N) + model.phi_0) /
+            ((sum(model.lambda_h[i] *
+                  exp(-model.gamma *
+                      sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+                  for i in model.K) - model.fstar)**2))
 
 # Objective function for the "minimize bumpiness with variable nodes"
 # problem. The expression is:
@@ -910,12 +852,14 @@ def _min_bump_obj_expression(model):
 # Objective function for the "minimize MSRSM obj" problem. The expression is:
 # dist_weight * (dist_max - \min_k distance(x, x^k)) / (dist_max - dist_min)
 # + (obj_weight) * (s_k(x) - fmin) / (fmax - fmin)
-def _min_msrsm_obj_expression(model):
+def _min_msrsm_obj_expression_gaussian(model):
     return (model.dist_weight * (model.dist_max - sqrt(model.mindistsq)) /
-            (model.dist_max - model.dist_min) +
-            model.obj_weight * (model.rbfval - model.fmin) / 
+            (model.dist_max - model.dist_min) + model.obj_weight *
+            (sum(model.lambda_h[i] *
+                 exp(-model.gamma *
+                     sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+                 for i in model.K) - model.fmin) / 
             (model.fmax - model.fmin))
-
 
 # Function to return bounds on the slack variables
 def _slack_bounds(model, i):

@@ -20,7 +20,7 @@ import numpy as np
 import rbfopt.rbfopt_utils as ru
 from rbfopt.rbfopt_settings import RbfoptSettings
 
-_DISTANCE_SHIFT = 1.0e-15
+_DISTANCE_SHIFT = 1.0e-12
 
 def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
                          integer_vars, node_pos, rbf_lambda, rbf_h):
@@ -92,7 +92,6 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     # Dimension of u_pi
     model.q = Param(initialize=(k+1))
     model.Q = RangeSet(0, model.q - 1)
-    model.Qlast = RangeSet(model.q - 1, model.q - 1)
 
     # Coefficients of the RBF
     lambda_h_param = {}
@@ -121,22 +120,13 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variables: the vectors (u, \pi),
-    # see equations (6) and (7) in the paper by Costa and Nannicini
-    model.u_pi = Var(model.Q, domain=Reals)
-
-    model.OBJ = Objective(rule=_min_rbf_obj_expression, sense=minimize)
-
-    # Constraints. See definitions below.
     if (settings.rbf == 'linear'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_linear_constraint_rule)
+        model.OBJ = Objective(rule=_min_rbf_obj_expression_linear,
+                              sense=minimize)
     elif (settings.rbf == 'multiquadric'):
         model.gamma = Param(initialize=settings.rbf_shape_parameter)
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_multiquad_constraint_rule)
-    model.NonhomoConstraint = Constraint(model.Qlast, 
-                                         rule=_nonhomo_constraint_rule)
+        model.OBJ = Objective(rule=_min_rbf_obj_expression_mq,
+                              sense=minimize)
 
     # Add integer variables if necessary
     if (len(integer_vars)):
@@ -215,7 +205,6 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     # Dimension of the matrix
     model.q = Param(initialize=(k+1))
     model.Q = RangeSet(0, model.q - 1)
-    model.Qlast = RangeSet(model.q - 1, model.q - 1)
 
     # Coordinates of the nodes
     node_param = {}
@@ -257,23 +246,13 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variables: the vectors (u, \pi),
-    # see equations (6) and (7) in the paper by Costa and Nannicini
-    model.u_pi = Var(model.Q, domain=Reals)
-
     # Objective function. 
-    model.OBJ = Objective(rule=_max_one_over_mu_obj_expression,
-                          sense=maximize)
-
-    # Constraints. See definitions below.
     if (settings.rbf == 'linear'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_linear_constraint_rule)
+        model.OBJ = Objective(rule=_max_one_over_mu_obj_expression_linear,
+                              sense=maximize)
     elif (settings.rbf == 'multiquadric'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_multiquad_constraint_rule)
-    model.NonhomoConstraint = Constraint(model.Qlast, 
-                                         rule=_nonhomo_constraint_rule)
+        model.OBJ = Objective(rule=_max_one_over_mu_obj_expression_mq,
+                              sense=maximize)
 
     # Add integer variables if necessary
     if (len(integer_vars)):
@@ -365,7 +344,6 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     # Dimension of the matrix
     model.q = Param(initialize=(k+1))
     model.Q = RangeSet(0, model.q - 1)
-    model.Qlast = RangeSet(model.q - 1, model.q - 1)
 
     # Coefficients of the RBF
     lambda_h_param = {}
@@ -418,30 +396,13 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variables: the vectors (u, \pi),
-    # see equations (6) and (7) in the paper by Costa and Nannicini
-    model.u_pi = Var(model.Q, domain=Reals)
-
-    # Auxiliary variable: value of the rbf at a given point
-    model.rbfval = Var(domain=Reals)
-
-    # Auxiliary variable: value of the inverse of \mu_k at a given point
-    model.mu_k_inv = Var(domain=Reals)
-
-    # Objective function.
-    model.OBJ = Objective(rule=_max_h_k_obj_expression, sense=maximize)
-
-    # Constraints. See definitions below.
+    # Objective function. 
     if (settings.rbf == 'linear'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_linear_constraint_rule)
+        model.OBJ = Objective(rule=_max_h_k_obj_expression_linear,
+                              sense=maximize)
     elif (settings.rbf == 'multiquadric'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_multiquad_constraint_rule)
-    model.NonhomoConstraint = Constraint(model.Qlast, 
-                                         rule=_nonhomo_constraint_rule)
-    model.RbfdefConstraint = Constraint(rule=_rbfdef_constraint_rule)
-    model.MukdefConstraint = Constraint(rule=_mukdef_constraint_rule)
+        model.OBJ = Objective(rule=_max_h_k_obj_expression_mq,
+                              sense=maximize)
 
     # Add integer variables if necessary
     if (len(integer_vars)):
@@ -648,7 +609,7 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variable: value of the inverse of \mu_k at a given point
+    # Auxiliary variable: value of the minimum distance to the nodes
     model.mindistsq = Var(domain=NonNegativeReals)
 
     # Objective function.
@@ -759,7 +720,6 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     # Dimension of u_pi
     model.q = Param(initialize=(k+1))
     model.Q = RangeSet(0, model.q - 1)
-    model.Qlast = RangeSet(model.q - 1, model.q - 1)
 
     # Coefficients of the RBF
     lambda_h_param = {}
@@ -811,30 +771,16 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     # Variable: the point in the space
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
-    # Auxiliary variables: the vectors (u, \pi),
-    # see equations (6) and (7) in the paper by Costa and Nannicini
-    model.u_pi = Var(model.Q, domain=Reals)
-
-    # Auxiliary variable: value of the rbf at a given point
-    model.rbfval = Var(domain=Reals)
-
-    # Auxiliary variable: value of the inverse of \mu_k at a given point
+    # Auxiliary variable: value of the minimum distance to the nodes
     model.mindistsq = Var(domain=NonNegativeReals)
 
     # Objective function.
-    model.OBJ = Objective(rule=_min_msrsm_obj_expression, sense=minimize)
-
-    # Constraints. See definitions below.
-    # Constraints. See definitions below.
     if (settings.rbf == 'linear'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_linear_constraint_rule)
+        model.OBJ = Objective(rule=_min_msrsm_obj_expression_linear,
+                              sense=minimize)
     elif (settings.rbf == 'multiquadric'):
-        model.UdefConstraint = Constraint(model.K, 
-                                          rule=_udef_multiquad_constraint_rule)
-    model.NonhomoConstraint = Constraint(model.Qlast, 
-                                         rule=_nonhomo_constraint_rule)
-    model.RbfdefConstraint = Constraint(rule=_rbfdef_constraint_rule)
+        model.OBJ = Objective(rule=_min_msrsm_obj_expression_mq,
+                              sense=minimize)
     model.MdistdefConstraint = Constraint(model.K,
                                           rule=_mdistdef_constraint_rule)
 
@@ -892,46 +838,6 @@ def _x_bounds(model, i):
     return (model.var_lower[i], model.var_upper[i])
 
 
-# Constraints: definition of the u components of u_pi for a multiquadric RBF. 
-# The expression is:
-# for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)
-def _udef_multiquad_constraint_rule(model, i):
-    return (model.u_pi[i] ==
-            sqrt(_DISTANCE_SHIFT + model.gamma*model.gamma +
-                 sum((model.x[j] - model.node[i, j])**2 for j in model.N)))
-
-
-# Constraints: definition of the u components of u_pi for a linear RBF.
-# The expression is:
-# for i in K: upi_i = \sqrt(sum_{j in N} (x_j - node_{i, j})^2)
-def _udef_linear_constraint_rule(model, i):
-    return (model.u_pi[i] == 
-            sqrt(_DISTANCE_SHIFT +
-                 sum((model.x[j] - model.node[i, j])**2 for j in model.N)))
-
-
-# Constraint: definition of the nonhomogeneous term of the polynomial. 
-# The expression is: upi_q = 1.0
-def _nonhomo_constraint_rule(model, i):
-    return (model.u_pi[i] == 1.0)
-
-
-# Constraints: definition of the value of the RBF. Expression:
-# sum_{j in K} lambda_j u_j + sum_{j in N} h_j \pi_j + h_{n+1} \pi_{n+1}
-# Because of the definition of u_pi, we can just write:
-# min sum_{j in Q} lambda_h_j u_pi_j
-def _rbfdef_constraint_rule(model):
-    return (model.rbfval == summation(model.lambda_h, model.u_pi))
-
-
-# Constraints: Definition of \mu_k. Expression:
-# -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j
-def _mukdef_constraint_rule(model):
-    return (sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
-                for i in model.Q for j in model.Q) - model.phi_0 == 
-            model.mu_k_inv)
-
-
 # Constraints: definition of the interpolation conditions. Expression:
 # Phi lambda + P h + slack = F
 def _intr_constraint_rule(model, i):
@@ -949,29 +855,74 @@ def _unis_constraint_rule(model, i):
 # Constraints: definition of the minimum distance constraint.
 # for i in K: mindistsq <= dist(x, x^i)^2
 def _mdistdef_constraint_rule(model, i):
-    return (model.mindistsq <= _DISTANCE_SHIFT + 
+    return (model.mindistsq <= 
             sum((model.x[j] - model.node[i, j])**2 for j in model.N))
 
+# Objective function for the "minimize rbf" problem. The expression is:
+# min sum_{j in K} lambda_j d_j + h_{0}
+def _min_rbf_obj_expression_linear(model):
+    return (sum(model.lambda_h[i] *
+                sqrt(_DISTANCE_SHIFT +
+                     sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+                for i in model.K) + model.lambda_h[model.k])
 
 # Objective function for the "minimize rbf" problem. The expression is:
-# min sum_{j in K} lambda_j d_j^3 + sum_{j in N} h_j x_j + h_{n+1}
-# Because of the definition of u_pi, we can just write:
-# min sum_{j in Q} lambda_h_j u_pi_j
-def _min_rbf_obj_expression(model):
-    return (summation(model.lambda_h, model.u_pi))
-
+# min sum_{j in K} lambda_j \sqrt{d_j + gamma^2} + h_{0}
+def _min_rbf_obj_expression_mq(model):
+    return (sum(model.lambda_h[i] *
+                sqrt(model.gamma*model.gamma +
+                     sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+                for i in model.K) + model.lambda_h[model.k])
 
 # Objective function for the "maximize 1/\mu" problem. The expression is:
 # max -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j;
-def _max_one_over_mu_obj_expression(model):
-    return (sum(model.Ainv[i,j] * model.u_pi[i] * model.u_pi[j] 
-                for i in model.Q for j in model.Q) - model.phi_0)
+def _max_one_over_mu_obj_expression_linear(model):
+    return (sum(model.Ainv[i,j] *
+                sqrt(_DISTANCE_SHIFT +
+                     sum((model.x[h] - model.node[i, h])**2 for h in model.N)*
+                     sum((model.x[h] - model.node[j, h])**2 for h in model.N))
+                for i in model.K for j in model.K) +
+            sum(model.Ainv[j,model.k] for j in model.Q) - model.phi_0)
 
+def _max_one_over_mu_obj_expression_mq(model):
+    return (sum(model.Ainv[i,j] *
+                sqrt(model.gamma*model.gamma +
+                     sum((model.x[h] - model.node[i, h])**2 for h in model.N))
+                *sqrt(model.gamma*model.gamma +
+                     sum((model.x[h] - model.node[j, h])**2 for h in model.N))
+                for i in model.K for j in model.K) +
+            sum(model.Ainv[j,model.k] for j in model.Q) - model.phi_0)
 
 # Objective function for the "maximize h_k" problem. The expression is:
 # 1/(\mu_k(x) [s_k(x) - f^\ast]^2)
-def _max_h_k_obj_expression(model):
-    return (model.mu_k_inv/((model.rbfval - model.fstar)**2))
+def _max_h_k_obj_expression_linear(model):
+    return ((sum(model.Ainv[i,j] *
+                 sqrt(_DISTANCE_SHIFT +
+                      sum((model.x[h] - model.node[i, h])**2 for h in model.N)*
+                      sum((model.x[h] - model.node[j, h])**2 for h in model.N))
+                 for i in model.K for j in model.K) +
+             sum(model.Ainv[j,model.k] for j in model.Q) - model.phi_0)/
+            ((sum(model.lambda_h[i] *
+                  sqrt(_DISTANCE_SHIFT +
+                       sum((model.x[j] - model.node[i, j])**2
+                           for j in model.N))
+                  for i in model.K) +
+              model.lambda_h[model.k] - model.fstar)**2))
+
+def _max_h_k_obj_expression_mq(model):
+    return ((sum(model.Ainv[i,j] *
+                sqrt(model.gamma*model.gamma +
+                     sum((model.x[h] - model.node[i, h])**2 for h in model.N))
+                *sqrt(model.gamma*model.gamma +
+                     sum((model.x[h] - model.node[j, h])**2 for h in model.N))
+                for i in model.K for j in model.K) +
+             sum(model.Ainv[j,model.k] for j in model.Q) - model.phi_0)/
+            ((sum(model.lambda_h[i] *
+                  sqrt(model.gamma*model.gamma +
+                       sum((model.x[j] - model.node[i, j])**2
+                           for j in model.N))
+                  for i in model.K) +
+              model.lambda_h[model.k] - model.fstar)**2))
 
 
 # Objective function for the "minimize bumpiness with variable nodes"
@@ -985,23 +936,34 @@ def _min_bump_obj_expression(model):
 # Objective function for the "minimize MSRSM obj" problem. The expression is:
 # dist_weight * (dist_max - \min_k distance(x, x^k)) / (dist_max - dist_min)
 # + (obj_weight) * (s_k(x) - fmin) / (fmax - fmin)
-def _min_msrsm_obj_expression(model):
+def _min_msrsm_obj_expression_linear(model):
     return (model.dist_weight * (model.dist_max - sqrt(model.mindistsq)) /
             (model.dist_max - model.dist_min) +
-            model.obj_weight * (model.rbfval - model.fmin) / 
+            model.obj_weight *
+            (sum(model.lambda_h[i] *
+                 sqrt(_DISTANCE_SHIFT +
+                      sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+                 for i in model.K) + model.lambda_h[model.k] - model.fmin) / 
             (model.fmax - model.fmin))
 
+def _min_msrsm_obj_expression_mq(model):
+    return (model.dist_weight * (model.dist_max - sqrt(model.mindistsq)) /
+            (model.dist_max - model.dist_min) +
+            model.obj_weight *
+            (sum(model.lambda_h[i] *
+                 sqrt(model.gamma*model.gamma +
+                      sum((model.x[j] - model.node[i, j])**2 for j in model.N))
+                 for i in model.K) + model.lambda_h[model.k] - model.fmin) / 
+            (model.fmax - model.fmin))
 
 # Function to return bounds on the slack variables
 def _slack_bounds(model, i):
     return (model.slack_lower[i], model.slack_upper[i])
 
-
 # Function to return bounds of the y variables
 def _y_bounds(model, i):
     return (model.var_lower[model.integer_vars[i]], 
             model.var_upper[model.integer_vars[i]])
-
 
 # Constraints: definition of the integrality constraints for the
 # variables.

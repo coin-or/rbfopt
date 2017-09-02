@@ -147,9 +147,9 @@ class RbfoptSettings:
         Rescaling factor for the hyperbox used for local search. See
         parameter nu of Regis and Shoemaker (2007). Default 0.5.
 
-    max_stalled_cycles : int
-        Maximum number of consecutive optimization cycles without
-        improvement before we perform a full restart. Default 30.
+    max_stalled_iterations : int
+        Maximum number of iterations without improvement before we
+        perform a full restart. Default 150.
 
     max_consecutive_discarded : int
         Maximum number of discarded points before a restart is
@@ -228,8 +228,8 @@ class RbfoptSettings:
         global search cycles after which the refinement step can be
         performed (in case a better solution has been found in the
         meantime). In parallel mode, this determines the maximum
-        acceptable ration between other search steps and refinement
-        steps. Default 3.
+        acceptable ratio between other search steps per CPU and 
+        refinement steps. Default 3.
 
     tr_num_integer_candidates : int
         Number of integer candidates per dimension of the problem that
@@ -355,7 +355,7 @@ class RbfoptSettings:
                  dynamism_threshold=1.0e3,
                  local_search_threshold=0.25,
                  local_search_box_scaling=0.5,
-                 max_stalled_cycles=30,
+                 max_stalled_iterations=150,
                  max_consecutive_discarded=10,
                  max_consecutive_restoration=15,
                  max_noisy_restarts=2,
@@ -410,7 +410,7 @@ class RbfoptSettings:
         self.dynamism_threshold = dynamism_threshold
         self.local_search_threshold = local_search_threshold
         self.local_search_box_scaling = local_search_box_scaling
-        self.max_stalled_cycles = max_stalled_cycles
+        self.max_stalled_iterations = max_stalled_iterations
         self.max_consecutive_discarded = max_consecutive_discarded
         self.max_consecutive_restoration = max_consecutive_restoration
         self.max_noisy_restarts = max_noisy_restarts

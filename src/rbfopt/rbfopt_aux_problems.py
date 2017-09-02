@@ -147,8 +147,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
             instance = model.create_maximin_dist_model(
                 settings, n, k, var_lower, var_upper, integer_vars, node_pos)
             # Initialize variables for local search
-            initialize_instance_variables(settings, instance,
-                                          init_u_pi=False)
+            initialize_instance_variables(settings, instance)
         else:
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
@@ -449,7 +448,6 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
                                                   rbf_lambda, rbf_h, mat,
                                                   target_val)
             initialize_instance_variables(settings, instance)
-            initialize_h_k_aux_variables(settings, instance)
         elif (settings.algorithm == 'MSRSM'):
             # Compute minimum and maximum distances between
             # points. This computation could be avoided if
@@ -503,8 +501,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
 # -- end function
 
 
-def initialize_instance_variables(settings, instance, start_point=None,
-                                  init_u_pi=True):
+def initialize_instance_variables(settings, instance, start_point=None):
     """Initialize the variables of a problem instance.
 
     Initialize the x variables of a problem instance, and set the
@@ -523,9 +520,6 @@ def initialize_instance_variables(settings, instance, start_point=None,
         The starting point for the local search, or None if it should
         be randomly generated.
 
-    init_u_pi : bool
-        Whether or not the u_pi variables should be initialized.
-
     """
     assert(isinstance(settings, RbfoptSettings))
 
@@ -541,48 +535,6 @@ def initialize_instance_variables(settings, instance, start_point=None,
         for i in instance.N:
             instance.x[i] = np.random.uniform(instance.var_lower[i],
                                               instance.var_upper[i])
-    if (init_u_pi):
-        for j in instance.K:
-            instance.u_pi[j] = rbf(np.sqrt(sum((instance.x[i].value -
-                                                instance.node[j, i])**2
-                                               for i in instance.N)))
-        if (ru.get_degree_polynomial(settings) == 1):
-            for j in instance.N:
-                instance.u_pi[instance.k + j] = instance.x[j].value
-                instance.u_pi[instance.k + instance.n] = 1.0
-        elif (ru.get_degree_polynomial(settings) == 0):
-            # We use "+ 0" here to convert the symbolic parameter
-            # instance.k into a number that can be used for indexing.
-            instance.u_pi[instance.k + 0] = 1.0
-
-# -- end function
-
-
-def initialize_h_k_aux_variables(settings, instance):
-    """Initialize auxiliary variables for the h_k model.
-
-    Initialize the rbfval and mu_k_inv variables of a problem
-    instance, using the values for for x and u_pi already given. This
-    helps the local search by starting at a feasible point.
-
-    Parameters
-    ----------
-    settings : :class:`rbfopt_settings.RbfoptSettings`
-        Global and algorithmic settings.
-
-    instance : pyomo.ConcreteModel
-        A concrete instance of mathematical optimization model.
-    """
-    assert(isinstance(settings, RbfoptSettings))
-
-    instance.rbfval = math.fsum(instance.lambda_h[i] * instance.u_pi[i].value
-                                for i in instance.Q)
-    instance.mu_k_inv = ((-1)**ru.get_degree_polynomial(settings) *
-                         math.fsum(instance.Ainv[i,j] * instance.u_pi[i].value
-                                   * instance.u_pi[j].value
-                                   for i in instance.Q for j in instance.Q) +
-                         instance.phi_0)
-
 # -- end function
 
 
@@ -603,8 +555,6 @@ def initialize_msrsm_aux_variables(settings, instance):
     """
     assert(isinstance(settings, RbfoptSettings))
 
-    instance.rbfval = math.fsum(instance.lambda_h[i] * instance.u_pi[i].value
-                                for i in instance.Q)
     dist = min(sum((instance.x[j].value - instance.node[i, j])**2
                    for j in instance.N) for i in instance.K)
     instance.mindistsq = dist
@@ -947,9 +897,10 @@ def set_nlp_solver_options(solver):
     """
 
     nlp_solver_options = [('acceptable_tol', 1.0e-3),
-                          ('honor_original_bounds', 'no'),
+                          ('honor_original_bounds', 'yes'),
+                          ('bound_relax_factor', 0.0),
                           ('max_cpu_time', 20),
-                          ('max_iter', 1000)]
+                          ('max_iter', 2000)]
     nlp_solver_rand_seed_option = None
     nlp_solver_max_seed = 2**31 - 2
 
@@ -1573,6 +1524,8 @@ class GutmannMukObj:
         elif (ru.get_degree_polynomial(self.settings) == 0):
             u_pi_mat = np.concatenate((u_mat, np.ones((len(points), 1))),
                                       axis=1)
+        elif (ru.get_degree_polynomial(self.settings) == -1):
+            u_pi_mat = u_mat
         # This is the shift in the computation of \mu_k
         shift = rbf_function(0.0)
         sign = (-1)**ru.get_degree_polynomial(self.settings)

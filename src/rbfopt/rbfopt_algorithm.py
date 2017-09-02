@@ -93,8 +93,8 @@ class RbfoptAlgorithm:
     num_cons_refinement : int
         Current number of consecutive refinement steps.
 
-    num_stalled_cycles : int
-        Number of consecutive cycles without improvement.
+    num_stalled_iter : int
+        Number of consecutive iterations without improvement.
 
     num_cons_discarded : int
         Number of consecutive discarded points.
@@ -182,7 +182,7 @@ class RbfoptAlgorithm:
     fmax : float
         Maximum value among the nodes since last restart.
 
-    fmin_cycle_start : float
+    fmin_stall_check : float
         Best function value at the beginning of the most recent
         optimization cycle.
 
@@ -303,7 +303,7 @@ class RbfoptAlgorithm:
         self.noisy_evalcount = 0
         self.current_step = 0
         self.num_cons_refinement = 0
-        self.num_stalled_cycles = 0
+        self.num_stalled_iter = 0
         self.num_cons_discarded = 0
         self.num_noisy_restarts = 0
     
@@ -371,7 +371,7 @@ class RbfoptAlgorithm:
         self.best_gap_shown = float('+inf')
 
         # Best function value at the beginning of an optimization cycle
-        self.fmin_cycle_start = self.fmin
+        self.fmin_stall_check = self.fmin
         # Best function value and itercount at the most recent refinement
         self.fmin_last_refine = self.fmin
         self.iter_last_refine = 0
@@ -770,8 +770,8 @@ class RbfoptAlgorithm:
             if (self.current_step <= self.first_step and
                 (self.num_cons_discarded >= 
                  l_settings.max_consecutive_discarded) or 
-                (self.num_stalled_cycles >= l_settings.max_stalled_cycles and
-                 self.evalcount + 2*(n + 1 + self.cycle_length) < 
+                (self.num_stalled_iter >= l_settings.max_stalled_iterations
+                 and self.evalcount + 3*(n + 1 + self.cycle_length) < 
                  l_settings.max_evaluations)):
                 self.update_log('Restart')
                 self.restart()
@@ -1297,8 +1297,8 @@ class RbfoptAlgorithm:
             if (self.current_step <= self.first_step and 
                 (self.num_cons_discarded >= 
                  l_settings.max_consecutive_discarded*l_settings.num_cpus) or 
-                (self.num_stalled_cycles >= l_settings.max_stalled_cycles and
-                 self.evalcount + 2*(n + 1 + self.cycle_length) < 
+                (self.num_stalled_iter >= l_settings.max_stalled_iterations
+                 and self.evalcount + 3*(n + 1 + self.cycle_length) < 
                  l_settings.max_evaluations)):
                 # If there are still results in the pipeline, wait for
                 # them, then try again.
@@ -1421,7 +1421,7 @@ class RbfoptAlgorithm:
             # not excessive, start it or keep it going
             elif (not refinement_in_progress and 
                   (refinement_itercount <= self.itercount / 
-                   l_settings.refinement_frequency)):
+                   (l_settings.refinement_frequency * l_settings.num_cpus))):
                 if (self.num_cons_refinement == 0 or
                     (self.fmin <= node_val[self.tr_iterate_index] -
                      l_settings.eps_impr * 
@@ -1592,8 +1592,8 @@ class RbfoptAlgorithm:
         if (self.num_nodes_at_restart and prev_node_pos):
             node_pos = np.vstack((node_pos, np.array(prev_node_pos)))
             node_val = np.append(node_val, np.array(prev_node_val))
-            node_is_noisy = np.append(node_is_noisy,
-                                     np.array(prev_node_is_noisy, dtype = bool))
+            node_is_noisy = np.append(
+                node_is_noisy, np.array(prev_node_is_noisy, dtype = bool))
             node_err_bounds = np.vstack((node_err_bounds,
                                          np.array(prev_node_err_bounds)))
         # Add user-provided points if this is the first iteration
@@ -1649,10 +1649,10 @@ class RbfoptAlgorithm:
         self.fmin_index = np.argmin(node_val)
         self.fmin = node_val[self.fmin_index]
         self.fmax = np.max(node_val)
-        self.fmin_cycle_start = self.fmin
+        self.fmin_stall_check = self.fmin
         self.fmin_last_refine = self.fmin
         self.iter_last_refine = self.itercount
-        self.num_stalled_cycles = 0
+        self.num_stalled_iter = 0
         self.num_cons_discarded = 0
         self.num_cons_refinement = 0
         self.is_fmin_noisy = self.node_is_noisy[self.fmin_index]
@@ -1938,14 +1938,13 @@ class RbfoptAlgorithm:
         Check if the algorithm is stalling, and perform the
         corresponding updates.
         """
-        if (self.itercount % (self.cycle_length - self.first_step) == 0):
-            if (self.fmin <= (self.fmin_cycle_start - 
-                              self.l_settings.eps_impr *
-                              max(1.0, abs(self.fmin_cycle_start)))):
-                self.num_stalled_cycles = 0
-                self.fmin_cycle_start = self.fmin
-            else:
-                self.num_stalled_cycles += 1
+        if (self.fmin <= (self.fmin_stall_check - 
+                          self.l_settings.eps_impr *
+                          max(1.0, abs(self.fmin_stall_check)))):
+            self.num_stalled_iter = 0
+            self.fmin_stall_check = self.fmin
+        else:
+            self.num_stalled_iter += 1
     # -- end function
 
     def require_accurate_evaluation(self, noisy_val):
