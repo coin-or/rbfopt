@@ -196,7 +196,6 @@ class TestAuxProblems(unittest.TestCase):
                                        node_pos[best_node_pos])
                 val = ru.evaluate_rbf(settings, sol, n, k, node_pos,
                                       rbf_l, rbf_h)
-                print(val, node_val[best_node_pos])
                 self.assertLessEqual(val, node_val[best_node_pos] + 1.0e-3,
                                      msg='The minimize_rbf solution' +
                                      ' is worse than starting point' +

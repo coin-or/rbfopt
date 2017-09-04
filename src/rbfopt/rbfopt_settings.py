@@ -44,6 +44,11 @@ class RbfoptSettings:
     max_clock_time : float
         Maximum wall clock time in seconds. Default 1.0e30.
 
+    algorithm : string
+        Optimization algorithm used. Choice of 'Gutmann' and 'MSRSM',
+        see References Gutmann (2001) and Regis and Shoemaker
+        (2007). Default 'MSRSM'.
+
     num_cpus : int
         Number of CPUs used. Default 1.
 
@@ -149,7 +154,7 @@ class RbfoptSettings:
 
     max_stalled_iterations : int
         Maximum number of iterations without improvement before we
-        perform a full restart. Default 150.
+        perform a full restart. Default 100.
 
     max_consecutive_discarded : int
         Maximum number of discarded points before a restart is
@@ -160,6 +165,10 @@ class RbfoptSettings:
     max_consecutive_restoration : int
         Maximum number of consecutive nonsingularity restoration
         phases before the algorithm fails. Default 15.
+
+    max_cross_validations : int
+        Maximum number of cross validations before we trust our
+        previous results. Default 50.
         
     max_noisy_restarts : int
         Maximum number of restarts in noisy mode before we switch
@@ -169,11 +178,6 @@ class RbfoptSettings:
         Maximum number of iterations in noisy mode before switching
         to accurate mode. Default 200.
     
-    algorithm : string
-        Optimization algorithm used. Choice of 'Gutmann' and 'MSRSM',
-        see References Gutmann (2001) and Regis and Shoemaker
-        (2007). Default 'MSRSM'.
-
     targetval_clipping : bool
         Clip target value selection based on periodically eliminating
         some of the largest function values, as proposed by Gutmann
@@ -228,8 +232,8 @@ class RbfoptSettings:
         global search cycles after which the refinement step can be
         performed (in case a better solution has been found in the
         meantime). In parallel mode, this determines the maximum
-        acceptable ratio between other search steps per CPU and 
-        refinement steps. Default 3.
+        acceptable ratio between other search steps and refinement 
+        steps. Default 3.
 
     tr_num_integer_candidates : int
         Number of integer candidates per dimension of the problem that
@@ -336,6 +340,7 @@ class RbfoptSettings:
                  max_clock_time=1.0e30,
                  num_cpus=1,
                  parallel_wakeup_time=0.1,
+                 algorithm='MSRSM',
                  rbf='auto',
                  rbf_shape_parameter=0.1,
                  target_objval=-1.0e10,
@@ -355,12 +360,12 @@ class RbfoptSettings:
                  dynamism_threshold=1.0e3,
                  local_search_threshold=0.25,
                  local_search_box_scaling=0.5,
-                 max_stalled_iterations=150,
+                 max_stalled_iterations=100,
                  max_consecutive_discarded=10,
                  max_consecutive_restoration=15,
+                 max_cross_validations=50,
                  max_noisy_restarts=2,
                  max_noisy_iterations=200,
-                 algorithm='MSRSM',
                  targetval_clipping=True,
                  global_search_method='genetic',
                  ga_base_population_size=400,
@@ -413,6 +418,7 @@ class RbfoptSettings:
         self.max_stalled_iterations = max_stalled_iterations
         self.max_consecutive_discarded = max_consecutive_discarded
         self.max_consecutive_restoration = max_consecutive_restoration
+        self.max_cross_validations = max_cross_validations
         self.max_noisy_restarts = max_noisy_restarts
         self.max_noisy_iterations = max_noisy_iterations
         self.algorithm = algorithm

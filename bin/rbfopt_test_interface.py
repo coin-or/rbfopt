@@ -8,8 +8,6 @@ can be used as an interface to test RBFOpt.
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright Singapore University of Technology and Design 2014.
 (C) Copyright International Business Machines Corporation 2017.
-Research partially supported by SUTD-MIT International Design Center.
-
 """
 
 from __future__ import print_function
@@ -18,6 +16,9 @@ from __future__ import absolute_import
 
 import sys
 import os
+# We must set the threading options before numpy is loaded, otherwise
+# there might be issues when running several processes in parallel.
+os.environ['OMP_NUM_THREADS'] = '1'
 import argparse
 import ast
 import numpy as np

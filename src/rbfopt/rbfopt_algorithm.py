@@ -20,6 +20,7 @@ import time
 import os
 import pickle
 import copy
+import collections
 import numpy as np
 from multiprocessing import Pool
 import rbfopt.rbfopt_utils as ru
@@ -284,9 +285,11 @@ class RbfoptAlgorithm:
         # Save references
         self.l_settings = l_settings
 
-        # Local and global RBF models are usually the same
+        # Local and global RBF models are initially the same
         self.best_local_rbf = (l_settings.rbf, l_settings.rbf_shape_parameter)
         self.best_global_rbf = (l_settings.rbf, l_settings.rbf_shape_parameter)
+        self.best_local_rbf_list = list()
+        self.best_global_rbf_list = list()
     
         # We use n to denote the dimension of the problem, same notation
         # of the paper. This is redundant but it simplifies our life.
@@ -799,17 +802,30 @@ class RbfoptAlgorithm:
             # If RBF selection is automatic, at the beginning of each
             # cycle check if a different RBF yields a better model
             if (settings.rbf == 'auto' and k > n+2 and 
-                self.current_step <= self.first_step):
+                self.current_step <= self.first_step and
+                len(self.best_local_rbf_list) <
+                l_settings.max_cross_validations):
                 loc_iter = int(math.ceil(k*0.1))
                 glob_iter = int(math.ceil(k*0.7))
-                self.best_local_rbf = ru.get_best_rbf_model(l_settings, n, k, 
-                                                            self.node_pos,
-                                                            scaled_node_val,
-                                                            loc_iter)
-                self.best_global_rbf = ru.get_best_rbf_model(l_settings, n, k,
-                                                             self.node_pos,
-                                                             scaled_node_val,
-                                                             glob_iter)
+                best_local_rbf = ru.get_best_rbf_model(
+                    l_settings, n, k, self.node_pos,
+                    scaled_node_val, loc_iter)
+                best_global_rbf = ru.get_best_rbf_model(
+                    l_settings, n, k, self.node_pos,
+                    scaled_node_val, glob_iter)
+                self.best_local_rbf = best_local_rbf
+                self.best_global_rbf = best_global_rbf
+                self.best_local_rbf_list.append(best_local_rbf)
+                self.best_global_rbf_list.append(best_global_rbf)
+                # If we reached the maximum number of cross
+                # validations, find the best model by looking at
+                # frequency
+                if (len(self.best_local_rbf_list) ==
+                    l_settings.max_cross_validations):
+                    counter = collections.Counter(self.best_local_rbf_list)
+                    self.best_local_rbf = counter.most_common(1)[0][0]
+                    counter = collections.Counter(self.best_global_rbf_list)
+                    self.best_global_rbf = counter.most_common(1)[0][0]
             # If we are in local search or just before local search, use a
             # local model.
             if (self.current_step >= (self.local_search_step - 1)):
@@ -1345,17 +1361,29 @@ class RbfoptAlgorithm:
             # If RBF selection is automatic, at the beginning of each
             # cycle check if a different RBF yields a better model
             if (settings.rbf == 'auto' and k > n+2 and 
-                self.current_step <= self.first_step):
+                self.current_step <= self.first_step and
+                len(self.best_local_rbf_list) <
+                l_settings.max_cross_validations):
                 loc_iter = int(math.ceil(k*0.1))
                 glob_iter = int(math.ceil(k*0.7))
-                self.best_local_rbf = ru.get_best_rbf_model(l_settings, n, 
-                                                            k, node_pos,
-                                                            scaled_node_val,
-                                                            loc_iter)
-                self.best_global_rbf = ru.get_best_rbf_model(l_settings, n, 
-                                                             k, node_pos,
-                                                             scaled_node_val,
-                                                             glob_iter)
+                best_local_rbf = ru.get_best_rbf_model(
+                    l_settings, n, k, node_pos, scaled_node_val, loc_iter)
+                best_global_rbf = ru.get_best_rbf_model(
+                    l_settings, n, k, node_pos, scaled_node_val, glob_iter)
+                self.best_local_rbf = best_local_rbf
+                self.best_global_rbf = best_global_rbf
+                self.best_local_rbf_list.append(best_local_rbf)
+                self.best_global_rbf_list.append(best_global_rbf)
+                # If we reached the maximum number of cross
+                # validations, find the best model by looking at
+                # frequency
+                if (len(self.best_local_rbf_list) ==
+                    l_settings.max_cross_validations):
+                    counter = collections.Counter(self.best_local_rbf_list)
+                    self.best_local_rbf = counter.most_common(1)[0][0]
+                    counter = collections.Counter(self.best_global_rbf_list)
+                    self.best_global_rbf = counter.most_common(1)[0][0]
+            
             # If we are in local search or just before local search, use a
             # local model.
             if (self.current_step >= (self.local_search_step - 1)):
@@ -1420,8 +1448,8 @@ class RbfoptAlgorithm:
             # If no refinement is in progress, and the frequency is
             # not excessive, start it or keep it going
             elif (not refinement_in_progress and 
-                  (refinement_itercount <= self.itercount / 
-                   (l_settings.refinement_frequency * l_settings.num_cpus))):
+                  refinement_itercount <= self.itercount / 
+                  l_settings.refinement_frequency):
                 if (self.num_cons_refinement == 0 or
                     (self.fmin <= node_val[self.tr_iterate_index] -
                      l_settings.eps_impr * 

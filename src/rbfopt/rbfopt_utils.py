@@ -1523,8 +1523,8 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
     original_gamma = settings.rbf_shape_parameter
     rbf_list = ['cubic', 'thin_plate_spline', 'multiquadric', 'linear',
                 'gaussian']
-    gamma_list = [[original_gamma], [original_gamma], [0.1],
-                  [original_gamma], [0.001]]
+    gamma_list = [[original_gamma], [original_gamma], [0.1, 1.0],
+                  [original_gamma], [0.001, 0.01]]
     with warnings.catch_warnings():
         warnings.filterwarnings('error')
         for (i, rbf_type) in enumerate(rbf_list):

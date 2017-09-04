@@ -477,8 +477,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
 
         # Solve and load results
         try:
-            results = opt.solve(instance, keepfiles = False,
-                                tee = settings.print_solver_output)
+            results = opt.solve(instance, keepfiles=False,
+                                tee=settings.print_solver_output)
             if ((results.solver.status == pyomo.opt.SolverStatus.ok) and
                 (results.solver.termination_condition ==
                  pyomo.opt.TerminationCondition.optimal)):
@@ -872,8 +872,10 @@ def set_minlp_solver_options(solver):
                             ('bonmin.num_resolve_at_infeasibles', 5),
                             ('bonmin.algorithm', 'B-BB'),
                             ('bonmin.time_limit', 45),
+                            ('acceptable_tol', 1.0e-3),
                             ('max_cpu_time', 20),
-                            ('max_iter', 1000)]
+                            ('max_iter', 1000),
+                            ('bound_relax_factor', 0.0)]
     minlp_solver_rand_seed_option = 'bonmin.random_generator_seed'
     minlp_solver_max_seed = 2**31 - 2
 
@@ -898,9 +900,9 @@ def set_nlp_solver_options(solver):
 
     nlp_solver_options = [('acceptable_tol', 1.0e-3),
                           ('honor_original_bounds', 'yes'),
-                          ('bound_relax_factor', 0.0),
                           ('max_cpu_time', 20),
-                          ('max_iter', 2000)]
+                          ('max_iter', 1000),
+                          ('bound_relax_factor', 0.0)]
     nlp_solver_rand_seed_option = None
     nlp_solver_max_seed = 2**31 - 2
 

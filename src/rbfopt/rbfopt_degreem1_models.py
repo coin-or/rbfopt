@@ -86,15 +86,11 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     model.k = Param(initialize=k)
     model.K = RangeSet(0, model.k - 1)
 
-    # Dimension of u_pi
-    model.q = Param(initialize=k)
-    model.Q = RangeSet(0, model.q - 1)
-
     # Coefficients of the RBF
     lambda_h_param = {}
     for i in range(k):
         lambda_h_param[i] = float(rbf_lambda[i])
-    model.lambda_h = Param(model.Q, initialize=lambda_h_param)
+    model.lambda_h = Param(model.K, initialize=lambda_h_param)
 
     # Coordinates of the nodes
     node_param = {}
@@ -196,10 +192,6 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     model.k = Param(initialize=k)
     model.K = RangeSet(0, model.k - 1)
 
-    # Dimension of the matrix
-    model.q = Param(initialize=k)
-    model.Q = RangeSet(0, model.q - 1)
-
     # Coordinates of the nodes
     node_param = {}
     for i in range(k):
@@ -227,7 +219,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
                     Ainv_param[i, j] = float(mat[i, j])
                 else:
                     Ainv_param[i, j] = float(2*mat[i, j])
-    model.Ainv = Param(model.Q, model.Q, initialize=Ainv_param,
+    model.Ainv = Param(model.K, model.K, initialize=Ainv_param,
                        default=0.0)
 
     if (settings.rbf == 'gaussian'):
@@ -329,15 +321,11 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     model.k = Param(initialize=k)
     model.K = RangeSet(0, model.k - 1)
 
-    # Dimension of the matrix
-    model.q = Param(initialize=k)
-    model.Q = RangeSet(0, model.q - 1)
-
     # Coefficients of the RBF
     lambda_h_param = {}
     for i in range(k):
         lambda_h_param[i] = float(rbf_lambda[i])
-    model.lambda_h = Param(model.Q, initialize=lambda_h_param)
+    model.lambda_h = Param(model.K, initialize=lambda_h_param)
 
     # Coordinates of the nodes
     node_param = {}
@@ -366,7 +354,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
                     Ainv_param[i, j] = float(mat[i, j])
                 else:
                     Ainv_param[i, j] = float(2*mat[i, j])
-    model.Ainv = Param(model.Q, model.Q, initialize=Ainv_param,
+    model.Ainv = Param(model.K, model.K, initialize=Ainv_param,
                        default=0.0)
 
     # Target value
@@ -575,7 +563,8 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
     # Auxiliary variable: value of the minimum distance to the nodes
-    model.mindistsq = Var(domain=NonNegativeReals)
+    model.mindistsq = Var(domain=NonNegativeReals,
+                          bounds=(settings.min_dist,float('inf')))
 
     # Objective function.
     model.OBJ = Objective(expr=(model.mindistsq), sense=maximize)
@@ -682,15 +671,11 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     model.k = Param(initialize=k)
     model.K = RangeSet(0, model.k - 1)
 
-    # Dimension of u_pi
-    model.q = Param(initialize=k)
-    model.Q = RangeSet(0, model.q - 1)
-
     # Coefficients of the RBF
     lambda_h_param = {}
     for i in range(k):
         lambda_h_param[i] = float(rbf_lambda[i])
-    model.lambda_h = Param(model.Q, initialize=lambda_h_param)
+    model.lambda_h = Param(model.K, initialize=lambda_h_param)
 
     # Coordinates of the nodes
     node_param = {}
@@ -733,7 +718,8 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
     # Auxiliary variable: value of the min distance to the nodes
-    model.mindistsq = Var(domain=NonNegativeReals)
+    model.mindistsq = Var(domain=NonNegativeReals,
+                          bounds=(settings.min_dist,float('inf')))
 
     # Objective function.
     if (settings.rbf == 'gaussian'):
@@ -819,23 +805,23 @@ def _min_rbf_obj_expression_gaussian(model):
 # Objective function for the "maximize 1/\mu" problem. The expression is:
 # max -\sum_{i in K, j in K} A^{-1}_{ij} e^{-\gamma d_i} e^{-\gamma d_j};
 def _max_one_over_mu_obj_expression_gaussian(model):
-    return (-sum(model.Ainv[i,j] *
+    return -(sum(model.Ainv[i,j] *
                  exp(-model.gamma *
                      sum((model.x[h] - model.node[i, h])**2 for h in model.N)
                      -model.gamma *
                      sum((model.x[h] - model.node[j, h])**2 for h in model.N))
-                 for i in model.N for j in model.N) + model.phi_0)
+                 for i in model.K for j in model.K) - model.phi_0)
 
 
 # Objective function for the "maximize h_k" problem. The expression is:
 # 1/(\mu_k(x) [s_k(x) - f^\ast]^2)
 def _max_h_k_obj_expression_gaussian(model):
-    return ((-sum(model.Ainv[i,j] *
-                 exp(-model.gamma *
-                     sum((model.x[h] - model.node[i, h])**2 for h in model.N)
-                     -model.gamma *
-                     sum((model.x[h] - model.node[j, h])**2 for h in model.N))
-                 for i in model.N for j in model.N) + model.phi_0) /
+    return (-(sum(model.Ainv[i,j] *
+                  exp(-model.gamma *
+                      sum((model.x[h] - model.node[i, h])**2 for h in model.N)
+                      -model.gamma *
+                      sum((model.x[h] - model.node[j, h])**2 for h in model.N))
+                  for i in model.K for j in model.K) - model.phi_0) /
             ((sum(model.lambda_h[i] *
                   exp(-model.gamma *
                       sum((model.x[j] - model.node[i, j])**2 for j in model.N))

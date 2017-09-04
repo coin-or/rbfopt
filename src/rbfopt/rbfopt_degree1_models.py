@@ -605,7 +605,8 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
     # Auxiliary variable: value of the minimum distance to the nodes
-    model.mindistsq = Var(domain=NonNegativeReals)
+    model.mindistsq = Var(domain=NonNegativeReals,
+                          bounds=(settings.min_dist,float('inf')))
 
     # Objective function.
     model.OBJ = Objective(expr=(model.mindistsq), sense=maximize)
@@ -764,7 +765,8 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     model.x = Var(model.N, domain=Reals, bounds=_x_bounds)
 
     # Auxiliary variable: value of the minimum distance to the nodes
-    model.mindistsq = Var(domain=NonNegativeReals)
+    model.mindistsq = Var(domain=NonNegativeReals,
+                          bounds=(settings.min_dist,float('inf')))
 
     # Objective function.
     if (settings.rbf == 'cubic'):
@@ -873,42 +875,87 @@ def _min_rbf_obj_expression_tps(model):
 # Objective function for the "maximize 1/\mu" problem. The expression is:
 # max -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j;
 def _max_one_over_mu_obj_expression_cubic(model):
-    return -(sum(model.Ainv[i,j] *
-                 (_DISTANCE_SHIFT +
-                  sum((model.x[h] - model.node[i, h])**2 for h in model.N) *
-                  sum((model.x[h] - model.node[j, h])**2 for h in model.N)
-                 )**1.5 for i in model.K for j in model.K) +
-             sum(model.Ainv[model.k + i, model.k + j]*model.x[i]*model.x[j]
-                 for i in model.N for j in model.N) +
-             sum(model.Ainv[j, model.k + model.n] for j in model.Q) -
-             model.phi_0)
+    # We need all the products between index sets.
+    return -(# Product 0..k-1 with 0..k-1
+        sum(model.Ainv[i,j] *   
+            (_DISTANCE_SHIFT +
+             sum((model.x[h] - model.node[i, h])**2 for h in model.N) *
+             sum((model.x[h] - model.node[j, h])**2 for h in model.N)
+            )**1.5 for i in model.K for j in model.K) +
+        # Product 0..k-1 with k..k+n-1
+        sum(model.Ainv[i, model.k + j] * model.x[j] *
+            (_DISTANCE_SHIFT +
+             sum((model.x[h] - model.node[i, h])**2 for h in model.N)
+            )**1.5 for i in model.K for j in model.N) +
+        # Product 0..k-1 with k+n
+        sum(model.Ainv[i, model.k + model.n] * 
+            (_DISTANCE_SHIFT +
+             sum((model.x[h] - model.node[i, h])**2 for h in model.N)
+            )**1.5 for i in model.K) +
+        # Product k..k+n-1 with k..k+n-1
+        sum(model.Ainv[model.k + i, model.k + j]*model.x[i]*model.x[j]
+            for i in model.N for j in model.N) +
+        # Product k..k+n-1 with k+n
+        sum(model.Ainv[model.k + i, model.k + model.n]*model.x[i]
+            for i in model.N) +
+        # Product k+n with k+n
+        model.Ainv[model.k + model.n, model.k + model.n] -
+        model.phi_0)
 
 def _max_one_over_mu_obj_expression_tps(model):
-    return -(sum(model.Ainv[i,j] *
-                 (sum((model.x[h] - model.node[i, h])**2 for h in model.N)) *
-                 0.5 * log(sum((model.x[h] - model.node[i, h])**2
-                               for h in model.N) + _DISTANCE_SHIFT) *
-                 (sum((model.x[h] - model.node[j, h])**2 for h in model.N)) *
-                 0.5 * log(sum((model.x[h] - model.node[j, h])**2
-                               for h in model.N) + _DISTANCE_SHIFT)
-                 for i in model.K for j in model.K) +
-             sum(model.Ainv[model.k + i, model.k + j]*model.x[i]*model.x[j]
-                 for i in model.N for j in model.N) +
-             sum(model.Ainv[j, model.k + model.n] for j in model.Q) -
-             model.phi_0)
-
+    # We need all the products between index sets.
+    return -(# Product 0..k-1 with 0..k-1
+        sum(model.Ainv[i,j] *
+            (sum((model.x[h] - model.node[i, h])**2 for h in model.N)) *
+            0.5 * log(sum((model.x[h] - model.node[i, h])**2
+                          for h in model.N) + _DISTANCE_SHIFT) *
+            (sum((model.x[h] - model.node[j, h])**2 for h in model.N)) *
+            0.5 * log(sum((model.x[h] - model.node[j, h])**2
+                          for h in model.N) + _DISTANCE_SHIFT)
+            for i in model.K for j in model.K) +
+        # Product 0..k-1 with k..k+n-1
+        sum(model.Ainv[i, model.k + j] * model.x[j] *
+            (sum((model.x[h] - model.node[i, h])**2 for h in model.N)) *
+            0.5 * log(sum((model.x[h] - model.node[i, h])**2
+                          for h in model.N) + _DISTANCE_SHIFT)
+            for i in model.K for j in model.N) +
+        # Product 0..k-1 with k+n
+        sum(model.Ainv[i, model.k + model.n] * 
+            (sum((model.x[h] - model.node[i, h])**2 for h in model.N)) *
+            0.5 * log(sum((model.x[h] - model.node[i, h])**2
+                          for h in model.N) + _DISTANCE_SHIFT)
+            for i in model.K) +
+        # Product k..k+n-1 with k..k+n-1
+        sum(model.Ainv[model.k + i, model.k + j]*model.x[i]*model.x[j]
+            for i in model.N for j in model.N) +
+        # Product k..k+n-1 with k+n
+        sum(model.Ainv[model.k + i, model.k + model.n]*model.x[i]
+            for i in model.N) +
+        # Product k+n with k+n
+        model.Ainv[model.k + model.n, model.k + model.n] -
+        model.phi_0)
 
 # Objective function for the "maximize h_k" problem. The expression is:
 # 1/(\mu_k(x) [s_k(x) - f^\ast]^2)
 def _max_h_k_obj_expression_cubic(model):
-    return (-(sum(model.Ainv[i,j] *
+    return (-(sum(model.Ainv[i,j] *   
                  (_DISTANCE_SHIFT +
                   sum((model.x[h] - model.node[i, h])**2 for h in model.N) *
                   sum((model.x[h] - model.node[j, h])**2 for h in model.N)
                  )**1.5 for i in model.K for j in model.K) +
+              sum(model.Ainv[i, model.k + j] * model.x[j] *
+                  (_DISTANCE_SHIFT +
+                   sum((model.x[h] - model.node[i, h])**2 for h in model.N)
+                   )**1.5 for i in model.K for j in model.N) +
+              sum(model.Ainv[i, model.k + model.n] * 
+                  (_DISTANCE_SHIFT +
+                   sum((model.x[h] - model.node[i, h])**2 for h in model.N)
+                   )**1.5 for i in model.K) +
               sum(model.Ainv[model.k + i, model.k + j]*model.x[i]*model.x[j]
                   for i in model.N for j in model.N) +
-              sum(model.Ainv[j, model.k + model.n] for j in model.Q) -
+              sum(model.Ainv[model.k + i, model.k + model.n]*model.x[i]
+                  for i in model.N) +
+              model.Ainv[model.k + model.n, model.k + model.n] -
               model.phi_0) /
             ((sum(model.lambda_h[i] *
                   (_DISTANCE_SHIFT +
@@ -926,9 +973,21 @@ def _max_h_k_obj_expression_tps(model):
                   0.5 * log(sum((model.x[h] - model.node[j, h])**2
                                 for h in model.N) + _DISTANCE_SHIFT)
                   for i in model.K for j in model.K) +
+              sum(model.Ainv[i, model.k + j] * model.x[j] *
+                  (sum((model.x[h] - model.node[i, h])**2 for h in model.N)) *
+                  0.5 * log(sum((model.x[h] - model.node[i, h])**2
+                                for h in model.N) + _DISTANCE_SHIFT)
+                  for i in model.K for j in model.N) +
+              sum(model.Ainv[i, model.k + model.n] * 
+                  (sum((model.x[h] - model.node[i, h])**2 for h in model.N)) *
+                  0.5 * log(sum((model.x[h] - model.node[i, h])**2
+                                for h in model.N) + _DISTANCE_SHIFT)
+                  for i in model.K) +
               sum(model.Ainv[model.k + i, model.k + j]*model.x[i]*model.x[j]
                   for i in model.N for j in model.N) +
-              sum(model.Ainv[j, model.k + model.n] for j in model.Q) -
+              sum(model.Ainv[model.k + i, model.k + model.n]*model.x[i]
+                  for i in model.N) +
+              model.Ainv[model.k + model.n, model.k + model.n] -
               model.phi_0) /
             ((sum(model.lambda_h[i] *
                   (sum((model.x[j] - model.node[i, j])**2 for j in model.N)) *

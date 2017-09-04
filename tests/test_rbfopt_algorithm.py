@@ -146,7 +146,6 @@ class TestGutmann(unittest.TestCase):
             print('Solving branin with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
-                                      rbf_shape_parameter=0.1,
                                       global_search_method='solver',
                                       target_objval=optimum,
                                       eps_opt=self.eps_opt,
@@ -204,14 +203,15 @@ class TestGutmannParallel(unittest.TestCase):
             print('Solving ex8_1_4 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
+                                      rbf='gaussian',
                                       global_search_method='solver',
                                       target_objval=optimum,
-                                      max_stalled_iterations=70,
-                                      eps_impr=0.01,
+                                      max_stalled_iterations=50,
+                                      eps_impr=0.05,
+                                      refinement_frequency=6,
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
                                       max_evaluations=300,
-                                      refinement_frequency=5,
                                       num_cpus=2,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
@@ -249,15 +249,15 @@ class TestGutmannParallel(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg=msg)
     # -- end function
 
-    def test_gutmann_parallel_ex8_1_4_log(self):
-        """Check solution of ex8_1_4 with Gutmann, log scaling, infstep.
+    def test_gutmann_parallel_ex8_1_4_infstep(self):
+        """Check solution of ex8_1_4 with Gutmann, infstep.
 
         Genetic algorithm."""
         bb = tf.TestBlackBox('ex8_1_4')
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving ex8_1_4 with log and random seed ' +
+            print('Solving ex8_1_4 with infstep and random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
                                       global_search_method='genetic',
@@ -267,7 +267,6 @@ class TestGutmannParallel(unittest.TestCase):
                                       max_iterations=200,
                                       max_evaluations=300,
                                       num_cpus=2,
-                                      function_scaling='log',
                                       do_infstep=True,
                                       refinement_frequency=5,
                                       rand_seed=seed)
@@ -280,13 +279,13 @@ class TestGutmannParallel(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg=msg)
     # -- end function
 
-    def test_gutmann_parallel_st_test1_noisy(self):
-        """Check solution of noisy st_test1 with Gutmann, solver."""
-        bb = tf.TestNoisyBlackBox('st_test1', 0.1, 0.01)
+    def test_gutmann_parallel_st_miqp3_noisy(self):
+        """Check solution of noisy st_miqp3 with Gutmann, solver."""
+        bb = tf.TestNoisyBlackBox('st_miqp3', 0.1, 0.01)
         optimum = bb._function.optimum_value
         for seed in self.rand_seeds:
             print()
-            print('Solving st_test1 with random seed ' +
+            print('Solving st_miqp3 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='Gutmann',
                                       global_search_method='solver',
@@ -714,10 +713,10 @@ class TestBlackBoxFixed(RbfoptBlackBox):
                      range(self._function.dimension, 
                            self._function.dimension + self.num_fixed_vars)]))
         
-    def evaluate_fast(self, point):
-        raise NotImplementedError('evaluate_fast() not implemented')
+    def evaluate_noisy(self, point):
+        raise NotImplementedError('evaluate_noisy() not implemented')
 
-    def has_evaluate_fast(self):
+    def has_evaluate_noisy(self):
         return False
         
     def get_obj_shift(self):
