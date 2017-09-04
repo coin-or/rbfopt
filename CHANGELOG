@@ -1,3 +1,14 @@
+2017-09-05  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 4.0.0 release. List of major changes:
+	* Added:
+	Option max_cross_validations to limit the total number of cross
+	validations performed.
+	* Changed:
+	Improved numerical stability for nonlinear models in Gutmann's
+	algorithm.
+	Cross validation now uses Gaussian RBFs and different values of
+	the shape parameter.
+
 2017-08-31  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_cl_interface.py, rbfopt_test_interface.py, __init__.py:
 	Set environment variable OMP_NUM_THREADS=1 to avoid problems with
