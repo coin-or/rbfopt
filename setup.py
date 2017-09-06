@@ -7,6 +7,8 @@ import io
 import os
 import re
 
+POST_VERSION = '.post2'
+
 def readme():
     with open('README.rst') as f:
         return f.read()
@@ -27,7 +29,7 @@ def find_version(*file_paths):
     raise RuntimeError("Unable to find version string.")
 
 setup(name='rbfopt',
-      version=find_version('src/rbfopt', '__init__.py'),
+      version=find_version('src/rbfopt', '__init__.py') + POST_VERSION,
       description='Library for black-box (derivative-free) optimization',
       long_description=readme(),
       classifiers=[

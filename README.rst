@@ -160,11 +160,11 @@ Installation instructions and getting started
    can be given as::
 
      import rbfopt
-     settings = rbfopt.RbfoptSettings(minlp_solver_option='full/path/to/bonmin', nlp_solver_option='full/path/to/ipopt')
+     settings = rbfopt.RbfoptSettings(minlp_solver_path='full/path/to/bonmin', nlp_solver_path='full/path/to/ipopt')
 
    If you use the command-line tools, you can simply provide the option preceded by double hyphen, as in::
 
-     rbfopt_test_interface.py --minlp_solver_option='full/path/to/bonmin' branin
+     rbfopt_test_interface.py --minlp_solver_path='full/path/to/bonmin' branin
 
 3) Enjoy!
 
