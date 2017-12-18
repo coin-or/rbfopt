@@ -105,7 +105,13 @@ The code is mainly developed for Python 3, but it also runs on Python
 2.7. We recommend using Python 3 if possible.
 
 The easiest way to install the package is via the Python module
-manager pip, using the command::
+manager pip. The code is on PyPI, therefore it can be installed from
+PyPI using::
+
+  pip install rbfopt
+
+You can install from source, downloading an archive or cloning from
+git, using the command::
 
   pip install .
 
@@ -134,7 +140,7 @@ To obtain pre-compiled binaries for Bonmin and Ipopt for several
 platforms, we suggest having a look at the AMPL `opensource solvers
 <http://ampl.com/products/solvers/open-source/>` (also `here
 <http://ampl.com/dl/open/>`) for static binaries. **Note:** These
-binaries are quite outdated: *much* better performance can be obtained
+binaries are quite outdated: better performance can be obtained
 compiling Bonmin from scratch (Bonmin contains Ipopt as well),
 especially if using a different solver from the default Mumps, e.g.,
 ma27. Remember to compile Bonmin and Ipopt with ASL support.
