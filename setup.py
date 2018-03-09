@@ -7,7 +7,7 @@ import io
 import os
 import re
 
-POST_VERSION = '.post2'
+POST_VERSION = ''
 
 def readme():
     with open('README.rst') as f:

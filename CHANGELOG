@@ -1,3 +1,7 @@
+2018-03-09  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 4.0.1 release.
+	* rbfopt_user_black_box.py: fixed naming of abstract methods.
+
 2017-09-05  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 4.0.0 release. List of major changes:
 	* Added:

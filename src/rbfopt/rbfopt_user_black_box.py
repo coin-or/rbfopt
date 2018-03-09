@@ -42,7 +42,7 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
         The function to optimize. Must take a numpy array as argument,
         and return a float.
 
-    obj_funct_fast : Callable[1D numpy.ndarray[float]] or None
+    obj_funct_noisy : Callable[1D numpy.ndarray[float]] or None
         The noisy but fast version of the function to optimize. If
         given, it must take a numpy array as argument, and return a
         numpy array with three floats, in the following order: the
@@ -60,7 +60,7 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
     """
 
     def __init__(self, dimension, var_lower, var_upper, var_type,
-                 obj_funct, obj_funct_fast=None):
+                 obj_funct, obj_funct_noisy=None):
         """Constructor.
         """
         assert(len(var_lower) == dimension)
@@ -72,7 +72,7 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
         self.var_upper = np.array(var_upper)
         self.var_type = np.array(var_type)
         self.obj_funct = obj_funct
-        self.obj_funct_fast = obj_funct_fast
+        self.obj_funct_noisy = obj_funct_noisy
     # -- end function
 
     def get_dimension(self):
@@ -140,11 +140,11 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
         return self.obj_funct(x)
     # -- end function
     
-    def evaluate_fast(self, x):
+    def evaluate_noisy(self, x):
         """Evaluate a fast approximation of the black-box function.
 
         Returns an approximation of the value of evaluate(), hopefully
-        much more quickly. If has_evaluate_fast() returns False, this
+        much more quickly. If has_evaluate_noisy() returns False, this
         function will never be queried and therefore it does not have
         to return any value.
 
@@ -160,28 +160,28 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
 
         """
         assert(len(x) == self.dimension)
-        if (self.obj_funct_fast is None):
-            raise NotImplementedError('evaluate_fast not available')
+        if (self.obj_funct_noisy is None):
+            raise NotImplementedError('evaluate_noisy not available')
         else:
-            return self.obj_funct_fast(x)
+            return self.obj_funct_noisy(x)
         
     # -- end function
 
-    def has_evaluate_fast(self):
-        """Indicate whether evaluate_fast is available.
+    def has_evaluate_noisy(self):
+        """Indicate whether evaluate_noisy is available.
 
         Indicate if a fast but potentially noisy version of evaluate
-        is available through the function evaluate_fast. If True, such
+        is available through the function evaluate_noisy. If True, such
         function will be used to try to accelerate convergence of the
-        optimization algorithm. If False, the function evaluate_fast
+        optimization algorithm. If False, the function evaluate_noisy
         will never be queried.
 
         Returns
         -------
         bool
-            Is evaluate_fast available?
+            Is evaluate_noisy available?
         """
-        return (self.obj_funct_fast is not None)
+        return (self.obj_funct_noisy is not None)
     # -- end function
 
 # -- end class
