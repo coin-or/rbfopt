@@ -144,19 +144,25 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
         """Evaluate a fast approximation of the black-box function.
 
         Returns an approximation of the value of evaluate(), hopefully
-        much more quickly. If has_evaluate_noisy() returns False, this
+        much more quickly, and provides error bounds on the
+        evaluation. If has_evaluate_noisy() returns False, this
         function will never be queried and therefore it does not have
         to return any value.
 
         Parameters
         ----------
-        x : List[float]
+        x : 1D numpy.ndarray[float]
             Value of the decision variables.
 
         Returns
         -------
-        float
-            Approximate value of the function at x.
+        1D numpy.ndarray[float]
+            A numpy array with three floats (value, lower, upper)
+            containing the approximate value of the function at x, the
+            lower error bound, and the upper error bound, such that
+            the true function value is contained between value + lower
+            and value + upper. Hence, lower should be <= 0 while upper
+            should be >= 0.
 
         """
         assert(len(x) == self.dimension)
