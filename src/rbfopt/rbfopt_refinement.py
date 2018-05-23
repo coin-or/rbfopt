@@ -279,11 +279,12 @@ def get_integer_candidate(settings, n, k, h, start_point, tr_radius,
 def get_model_improving_point(settings, n, k, var_lower, var_upper,
                               node_pos, model_set, start_point_index,
                               tr_radius, integer_vars):
-    """Compute the next candidate point of the trust region method.
+    """Compute a point to improve the model used in the trust region.
 
-    Starting from a given point, compute a descent direction and move
-    in that direction to find the point with lowest value of the
-    linear model, within the radius of the trust region.
+    Determine a point that improves the geometry of the set of points
+    used to build the trust region model. This point may not have a
+    good objective function value, but it ensures that the model is
+    well behaved.
 
     Parameters
     ----------
@@ -396,11 +397,12 @@ def update_trust_region_radius(settings, tr_radius, model_obj_diff,
         Current radius of the trust region.
 
     model_obj_diff : float
-        Objective function value of the new point according to the
-        linear model.
+        Difference in objective function value of the new point and
+        the previous point, according to the linear model.
 
     real_obj_diff : float
-        Real objective function value of the new point.
+        Difference in the real objective function value of the new
+        point and the previous point.
 
     Returns
     -------

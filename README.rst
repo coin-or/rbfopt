@@ -130,11 +130,13 @@ RBFOpt requires the solution of convex and nonconvex nonlinear
 programs (NLPs), as well as nonconvex mixed-integer nonlinear programs
 (MINLPs) if some of the decision variables (design parameters) are
 constrained to be integer. Solution of these subproblems is performed
-through Pyomo, which supports any solver with an AMPL interface (.nl
-file format). In our tests we employed BonMin and Ipopt, that are
-open-source, with a permissive license, and available through the
-COIN-OR repository. The end-user is responsible for checking that they
-have the right to use whatever solver they employs.
+through Pyomo, which in principle supports any solver with an AMPL
+interface (.nl file format). The code is setup to employ Bonmin and
+Ipopt, that are open-source, with a permissive license, and available
+through the COIN-OR repository. The end-users are responsible for
+checking that they have the right to use these solvers. To use
+different solvers, a few lines of the source code have to be modified:
+ask for help on GitHub or on the mailing list, see below.
 
 To obtain pre-compiled binaries for Bonmin and Ipopt for several
 platforms, we suggest having a look at the AMPL `opensource solvers

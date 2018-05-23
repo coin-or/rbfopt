@@ -154,7 +154,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         # Instantiate optimizer
         opt = pyomo.opt.SolverFactory(
             'bonmin', executable=settings.minlp_solver_path, solver_io='nl')
-        if opt is None:
+        if (not opt.available()):
             raise RuntimeError('Solver ' + 'bonmin' + ' not found')
         set_minlp_solver_options(opt)
 
@@ -275,7 +275,7 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     # Instantiate optimizer
     opt = pyomo.opt.SolverFactory(
         'bonmin', executable=settings.minlp_solver_path, solver_io='nl')
-    if opt is None:
+    if (not opt.available()):
         raise RuntimeError('Solver ' + 'bonmin' + 'not found')
     set_minlp_solver_options(opt)
 
@@ -471,7 +471,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         # Instantiate optimizer
         opt = pyomo.opt.SolverFactory(
             'bonmin', executable=settings.minlp_solver_path, solver_io='nl')
-        if opt is None:
+        if (not opt.available()):
             raise RuntimeError('Solver ' + 'bonmin' + ' not found')
         set_minlp_solver_options(opt)
 
@@ -650,7 +650,7 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     # Instantiate optimizer
     opt = pyomo.opt.SolverFactory(
         'ipopt', executable=settings.nlp_solver_path, solver_io='nl')
-    if opt is None:
+    if (not opt.available()):
         raise RuntimeError('Solver ' + 'ipopt' + ' not found')
     set_nlp_solver_options(opt)
 
@@ -659,7 +659,6 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     if (init_rbf_lambda is not None and init_rbf_h is not None):
         for i in range(len(init_rbf_lambda)):
             instance.rbf_lambda[i] = init_rbf_lambda[i]
-            instance.slack[i] = 0.0
         for i in range(len(init_rbf_h)):
             instance.rbf_h[i] = init_rbf_h[i]
 

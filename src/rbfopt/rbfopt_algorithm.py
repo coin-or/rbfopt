@@ -913,7 +913,7 @@ class RbfoptAlgorithm:
                     self.node_pos, rbf_l, rbf_h, tfv[:4], 
                     Amat, Amatinv, self.fmin_index, 
                     self.two_phase_optimization, self.eval_mode, 
-                    self.node_err_bounds)
+                    self.node_is_noisy)
 
                 # Re-evaluate point if necessary
                 if (ind is not None):
@@ -1717,9 +1717,7 @@ class RbfoptAlgorithm:
         """
         restoration_done = False
         cons_restoration = 0
-        self.node_val = np.delete(self.node_val, -1)
-        self.node_pos = np.delete(np.atleast_2d(self.node_pos), -1, axis=0)
-        self.node_is_noisy = np.delete(self.node_is_noisy, -1)
+        self.remove_node(len(self.node_pos) - 1, self.num_nodes_at_restart)
 
         while (not restoration_done and cons_restoration < 
                self.l_settings.max_consecutive_restoration):
@@ -1740,6 +1738,7 @@ class RbfoptAlgorithm:
                 next_p = (np.random.rand(self.n) * 
                           (self.var_upper - self.var_lower) + self.var_lower)
 
+            node_pos = np.vstack((self.node_pos, next_p))
             ru.round_integer_vars(next_p, self.integer_vars)
             if (ru.get_min_distance(next_p, self.node_pos) >
                 self.l_settings.min_dist):
@@ -1747,8 +1746,7 @@ class RbfoptAlgorithm:
                 # nonsingularity is restored
                 try:
                     Amat = ru.get_rbf_matrix(self.l_settings, self.n, 
-                                             len(self.node_pos) + 1,
-                                             self.node_pos + [next_p])
+                                             len(node_pos), node_pos)
                     Amatinv = ru.get_matrix_inverse(self.l_settings, Amat)
                     restoration_done = True
                 except np.linalg.LinAlgError:

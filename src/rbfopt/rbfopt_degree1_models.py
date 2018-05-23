@@ -471,24 +471,15 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     model.k = Param(initialize=k)
     model.K = RangeSet(0, model.k - 1)
 
-    # Node values, i.e. right hand sides of the first set of equations
-    # in the constraints
-    node_val_param = {}
+    # Lower and upper bounds on node values, i.e. bounds for the first
+    # set of equations in the constraints
+    node_val_lower_param = {}
+    node_val_upper_param = {}
     for i in range(k):
-        node_val_param[i] = float(node_val[i])
-    model.node_val = Param(model.K, initialize=node_val_param)
-
-    # Slack variable bounds
-    slack_lower_param = {}
-    slack_upper_param = {}
-    for i in np.where(node_err_bounds[:, 1] - node_err_bounds[:, 0] >
-                      settings.eps_zero)[0]:
-        slack_lower_param[i] = float(node_err_bounds[i, 0])
-        slack_upper_param[i] = float(node_err_bounds[i, 1])
-    model.slack_lower = Param(model.K, initialize=slack_lower_param,
-                              default=0.0)
-    model.slack_upper = Param(model.K, initialize=slack_upper_param,
-                              default=0.0)
+        node_val_lower_param[i] = float(node_val[i] + node_err_bounds[i, 0])
+        node_val_upper_param[i] = float(node_val[i] + node_err_bounds[i, 1])
+    model.node_val_lower = Param(model.K, initialize=node_val_lower_param)
+    model.node_val_upper = Param(model.K, initialize=node_val_upper_param)
 
     # Phi matrix.
     Phi_param = {}
@@ -513,9 +504,6 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
 
     # Variable: the h coefficients of the RBF
     model.rbf_h = Var(model.P, domain=Reals)
-
-    # Variable: the slacks for the equality constraints
-    model.slack = Var(model.K, domain=Reals, bounds=_slack_bounds)
 
     # Objective function.
     model.OBJ = Objective(rule=_min_bump_obj_expression, sense=minimize)
@@ -831,12 +819,18 @@ def add_integrality_constraints(model, integer_vars):
 def _x_bounds(model, i):
     return (model.var_lower[i], model.var_upper[i])
 
-# Constraints: definition of the interpolation conditions. Expression:
-# Phi lambda + P h + slack = F
+# Constraints: definition of the interpolation conditions with
+# slack. Expression: f^L <= Phi lambda + P h <= f^U
 def _intr_constraint_rule(model, i):
-    return (sum(model.Phi[i, j]*model.rbf_lambda[j] for j in model.K) +
-            sum(model.Pm[i, j]*model.rbf_h[j] for j in model.P) +
-            model.slack[i] == model.node_val[i])
+    if (model.node_val_lower[i] >= model.node_val_upper[i]):
+        return (sum(model.Phi[i, j]*model.rbf_lambda[j] for j in model.K) +
+                sum(model.Pm[i, j]*model.rbf_h[j] for j in model.P) ==
+                model.node_val_lower[i])
+    else:
+        return (model.node_val_lower[i] <=
+                sum(model.Phi[i, j]*model.rbf_lambda[j] for j in model.K) +
+                sum(model.Pm[i, j]*model.rbf_h[j] for j in model.P)
+                <= model.node_val_upper[i])
 
 # Constraints: definition of the unisolvence conditions. Expression:
 # P \lambda = 0
@@ -1033,11 +1027,6 @@ def _min_msrsm_obj_expression_tps(model):
              sum(model.lambda_h[model.k + i]*model.x[i] for i in model.N) +
              model.lambda_h[model.k + model.n] - model.fmin) / 
             (model.fmax - model.fmin))
-
-# Function to return bounds on the slack variables
-def _slack_bounds(model, i):
-    return (model.slack_lower[i], model.slack_upper[i])
-
 
 # Function to return bounds of the y variables
 def _y_bounds(model, i):

@@ -846,10 +846,10 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
         solution = np.linalg.solve(Amat, rhs)
     except np.linalg.LinAlgError as e:
         print('Exception raised in the solution of the RBF linear system',
-              file = sys.stderr)
-        print('Exception details:', file = sys.stderr)
-        print(e, file = sys.stderr)
-        sys.exit()
+              file=sys.stderr)
+        print('Exception details:', file=sys.stderr)
+        print(e, file=sys.stderr)
+        raise e
 
     return (solution[0:k], solution[k:])
 
