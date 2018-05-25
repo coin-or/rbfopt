@@ -28,28 +28,30 @@ def find_version(*file_paths):
         return version_match.group(1)
     raise RuntimeError("Unable to find version string.")
 
-setup(name='rbfopt',
-      version=find_version('src/rbfopt', '__init__.py') + POST_VERSION,
-      description='Library for black-box (derivative-free) optimization',
-      long_description=readme(),
-      classifiers=[
-          'Development Status :: 5 - Production/Stable',
-          'License :: OSI Approved :: BSD License',
-          'Programming Language :: Python :: 2.7',
-          'Programming Language :: Python :: 3',
-          'Topic :: Scientific/Engineering :: Mathematics'
-      ],
-      url='https://github.com/coin-or/rbfopt',
-      author='Giacomo Nannicini',
-      author_email='nannicini@us.ibm.com',
-      license='Revised BSD',
-      package_dir={'': 'src'},
-      packages=['rbfopt'],
-      package_data={'rbfopt': ['doc/*.rst', 'doc/conf.py', 'doc/Makefile',
-                               'doc/make.bat', 'examples/*.py']},
-      install_requires=['numpy', 'scipy', 'pyomo'],
-      setup_requires=['nose>=1.0'],
-      test_suite='nose.collector',
-      scripts=['bin/rbfopt_cl_interface.py', 'bin/rbfopt_test_interface.py'],
-      zip_safe=False)
+if (__name__ == '__main__'):
+    setup(name='rbfopt',
+          version=find_version('src/rbfopt', '__init__.py') + POST_VERSION,
+          description='Library for black-box (derivative-free) optimization',
+          long_description=readme(),
+          classifiers=[
+              'Development Status :: 5 - Production/Stable',
+              'License :: OSI Approved :: BSD License',
+              'Programming Language :: Python :: 2.7',
+              'Programming Language :: Python :: 3',
+              'Topic :: Scientific/Engineering :: Mathematics'
+          ],
+          url='https://github.com/coin-or/rbfopt',
+          author='Giacomo Nannicini',
+          author_email='nannicini@us.ibm.com',
+          license='Revised BSD',
+          package_dir={'': 'src'},
+          packages=['rbfopt'],
+          package_data={'rbfopt': ['doc/*.rst', 'doc/conf.py', 'doc/Makefile',
+                                   'doc/make.bat', 'examples/*.py']},
+          install_requires=['numpy', 'scipy', 'pyomo'],
+          setup_requires=['nose>=1.0'],
+          test_suite='nose.collector',
+          scripts=['bin/rbfopt_cl_interface.py',
+                   'bin/rbfopt_test_interface.py'],
+          zip_safe=False)
 
