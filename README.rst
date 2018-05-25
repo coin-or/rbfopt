@@ -90,6 +90,8 @@ Contents of this directory:
     rbfopt_degreeX_models.py.
   * test_rbfopt_env.py: Environment variables for testing
     environment.
+  * test_rbfopt_mwe.py: Test the minimal working example given in the
+    documentation.
   * test_rbfopt_refinement: Testing module for rbfopt_refinement.py
   * test_rbfopt_settings.py: Testing module for rbfopt_settings.py.
   * test_rbfopt_utils.py Testing module for rbfopt_utils.py.
