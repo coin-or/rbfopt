@@ -58,7 +58,7 @@ class RbfoptSettings:
         evaluations or other computations. This parameter is only used
         by the parallel optimizer. Default 0.1.
 
-    rbf : str
+    rbf : string
         Radial basis function used by the method. Choice of 'cubic',
         'thin_plate_spline', 'linear', 'multiquadric', 'gaussian',
         'auto'. In case of 'auto', the type of rbf and the shape
@@ -99,17 +99,17 @@ class RbfoptSettings:
     min_dist : float
         Minimum Euclidean distance between nodes. A new point will be
         discarded if it is closer than this value from existing
-        nodes. This prevents the RBF pairwise distance matrix from
-        becoming singular. Default 1.0e-5.
+        nodes. This prevents the RBF matrix, which depends on pairwise
+        distances, from becoming singular. Default 1.0e-5.
 
     do_infstep : bool
         Perform a pure global search in every optimization
-        loop. Default False.
+        cycle. Default False.
 
     num_global_searches : int
         Number of steps in the global search phase. Default 5.
 
-    init_strategy : str
+    init_strategy : string
         Strategy to select initial points. Choice of 'all_corners',
         'lower_corners', 'rand_corners', 'lhd_maximin',
         'lhd_corr'. Default 'lhd_maximin'.
@@ -120,7 +120,7 @@ class RbfoptSettings:
         samples. After this number of trials, the initialization
         algorithm will bail out. Default 50.
 
-    function_scaling : str
+    function_scaling : string
         Rescaling method for the function values. Choice of 'off',
         'affine', 'log', 'auto'. Default 'auto'.
 
@@ -129,11 +129,11 @@ class RbfoptSettings:
         function value before a log scaling of the function values is
         applied in the 'auto' setting. Default 1.0e6.
 
-    domain_scaling : str
+    domain_scaling : string
         Rescaling method for the domain. Choice of 'off', 'affine',
         'auto'. Default 'auto'.
 
-    dynamism_clipping : str
+    dynamism_clipping : string
         Dynamism clipping strategy. Choice of 'off', 'median',
         'clip_at_dyn', 'auto'. Default 'auto'.
 
@@ -305,19 +305,19 @@ class RbfoptSettings:
     Attributes
     ----------
 
-    _allowed_rbf : Dict[str]
+    _allowed_rbf : Dict[string]
         Allowed types of RBF functions.
-    _allowed_init_strategy : Dict[str]
+    _allowed_init_strategy : Dict[string]
         Allowed initialization strategies.
-    _allowed_function_scaling : Dict[str]
+    _allowed_function_scaling : Dict[string]
         Allowed function scaling strategies.
-    _allowed_domain_scaling : Dict[str]
+    _allowed_domain_scaling : Dict[string]
         Allowed domain scaling strategies.
-    _allowed_dynamism_clipping : Dict[str]
+    _allowed_dynamism_clipping : Dict[string]
         Allowed dynamism clipping strategies.
-    _allowed_algorithm : Dict[str]
+    _allowed_algorithm : Dict[string]
         Allowed algorithms.
-    _allowed_global_search_method : Dict[str]
+    _allowed_global_search_method : Dict[string]
         Allowed global search methods.
 
     """

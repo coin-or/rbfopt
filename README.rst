@@ -18,22 +18,28 @@ this software, you are implicitly accepting the terms of the license.
 
 RBFOpt is a Python library for black-box optimization (also known as
 derivative-free optimization). It supports Python 2.7 and Python 3.
+This README contains installation instructions and a brief
+overview. More details can be found in the user manual.
 
 Contents of this directory:
 
-* LICENSE: Licensing information.
-* VERSION: Version of the library.
 * AUTHORS: Authors of the library.
-* README.rst: This file.
 * CHANGELOG: Changelog.
+* LICENSE: Licensing information.
+* MANIFEST.in: List of additional files to be included in archives.
+* README.rst: This file.
+* VERSION: Version of the library.
+* manual.pdf: User manual.
 * requirements.txt: List of dependencies for this project.
+* setup.cfg: Configuration file for setup.py
+* setup.py: Setup file.
 * bin/
 
   * rbfopt_cl_interface.py: Script for the command-line interface,
     to run the library on a user-defined black-box function
     implemented in a user-specified file.
   * rbfopt_test_interface.py: Script to test the library on a
-    standard global optimization test set.
+    global optimization test set.
 
 * src/
 
@@ -55,6 +61,7 @@ Contents of this directory:
     * rbfopt_user_black_box.py: A black-box class constructed from
       user data.
     * rbfopt_utils.py: Utility routines.
+
     * doc/
 
       * conf.py: Configuration file for Sphinx.
@@ -74,7 +81,9 @@ Contents of this directory:
   * context.py: Configuration file for nose.
   * test_functions.py: Global optimization test functions.
   * test_rbfopt_algorithm.py: Testing module for
-    rbfopt_algorithm.py.
+    rbfopt_algorithm.py (regular unit tests).
+  * test_rbfopt_algorithm_slow.py: Testing module for
+    rbfopt_algorithm.py (additional, slow tests).
   * test_rbfopt_aux_problems.py: Testing module for
     rbfopt_aux_problems.py.
   * test_rbfopt_degreeX_models.py: Testing module for
@@ -104,18 +113,20 @@ work with Pyomo version 4 and earlier versions of Scipy.
 The code is mainly developed for Python 3, but it also runs on Python
 2.7. We recommend using Python 3 if possible.
 
-The easiest way to install the package is via the Python module
-manager pip. The code is on PyPI, therefore it can be installed from
-PyPI using::
+The easiest, and recommended, way to install the package is via the
+Python module manager pip. The code is on PyPI, therefore it can be
+installed from PyPI using::
 
   pip install rbfopt
 
 You can install from source, downloading an archive or cloning from
-git, using the command::
+git (for example if you want to use a development version that is not
+released on PyPI yet), using the command::
 
   pip install .
 
-To build the documentation, you also need numpydoc::
+You may need the -e switch to install in a virtual environment. To
+build the documentation, you also need numpydoc::
 
   pip install numpydoc
 
@@ -142,10 +153,11 @@ To obtain pre-compiled binaries for Bonmin and Ipopt for several
 platforms, we suggest having a look at the AMPL `opensource solvers
 <http://ampl.com/products/solvers/open-source/>` (also `here
 <http://ampl.com/dl/open/>`) for static binaries. **Note:** These
-binaries are quite outdated: better performance can be obtained
-compiling Bonmin from scratch (Bonmin contains Ipopt as well),
-especially if using a different solver from the default Mumps, e.g.,
-ma27. Remember to compile Bonmin and Ipopt with ASL support.
+binaries might be outdated: better performance can sometimes be
+obtained compiling Bonmin from scratch (Bonmin contains Ipopt as
+well), especially if compiling with a different solver for linear
+systems rather than the default Mumps, e.g., ma27.  Bonmin and Ipopt
+must be compiled with ASL support.
 
 In case any of the packages indicated above is missing, some features
 may be disabled, not function properly, or the software may not run at
@@ -184,7 +196,7 @@ Installation instructions and getting started
 
      rbfopt_test_interface.py --help
 
-   for more details on command-line options for the testing utility.
+   for more details on command-line options for the testing tool.
 
    Many more test functions, with different characteristics, are
    implemented in the file rbfopt_test_functions.py. They can all be
@@ -202,11 +214,18 @@ Installation instructions and getting started
 
      nosetests
 
-   from the current (main) directory. This may take some time. If some
-   of the tests fail, the library may or may not work correctly. Some
-   of the test failures are relatively harmless. You are advised to
-   contact the mailing list (see below) if you are unsure about some
-   test failure.
+   from the current (main) directory. If some of the tests fail, the
+   library may or may not work correctly. Some of the test failures
+   are relatively harmless. You are advised to contact the mailing
+   list (see below) if you are unsure about some test failure.
+
+   Additional slow tests, that check if various parametrizations of
+   the optimization algorithm can solve some global optimization
+   problems, are found in the file test_rbfopt_algorithm_slow.py,
+   which is ignored by nosetests by default. To execute these tests,
+   run::
+
+     python -m nose tests/test_rbfopt_algorithm_slow.py
    
 =======================
 Minimal working example
@@ -234,7 +253,7 @@ interface on the file. An example is provided under
 src/rbfopt/examples, in the file rbfopt_black_box_example.py. This can
 be executed with::
 
-  rbfopt_cl_interface.py -m src/rbfopt/examples/rbfopt_black_box_example.py
+  rbfopt_cl_interface.py src/rbfopt/examples/rbfopt_black_box_example.py
 
 =====================
 Parallel optimization
@@ -336,12 +355,16 @@ if you could cite the following paper:
   <http://www.optimization-online.org/DB_HTML/2014/09/4538.html>`.
 
 The paper above describes version 1.0 of RBFOpt. Some of the
-improvements introduced for version 2.0 are described in the following
-paper.
+improvements introduced later are described in the following papers.
 
 * A. Fokoue, G. Diaz, G. Nannicini, H. Samulowitz. An effective
   algorithm for hyperparameter optimization of neural networks. IBM
-  Journal of Research and Development, 61(4-5), 2017, to appear.
+  Journal of Research and Development, 61(4-5), 2017.
+
+* A. Costa, E. Di Buccio, M. Melucci, G. Nannicini. Efficient
+  parameter estimation for information retrieval using black-box
+  optimization. IEEE Transactions on Knowledge and Data Engineering,
+  online first, 2017.
 
 =======
 Support

@@ -127,7 +127,8 @@ def get_linear_model(settings, n, k, node_pos, node_val, model_set):
     rank_deficient = False
     # Solve least squares system and recover quadratic form
     try:
-        x, res, rank, s = np.linalg.lstsq(lstsq_mat, node_val[model_set])
+        x, res, rank, s = np.linalg.lstsq(lstsq_mat, node_val[model_set],
+                                          rcond=None)
         if (rank < model_size):
             rank_deficient = True
     except np.linalg.LinAlgError as e:

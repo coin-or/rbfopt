@@ -1,3 +1,13 @@
+2018-05-24  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (refinement_step): fixed bug in node
+	deletion.
+	* rbfopt_degreeX_models.py: reduced size of noisy interpolation
+	models.
+	* tests/test_rbfopt_algorithm.py: now only contains relatively
+	fast tests; the slow tests have been isolated and are not run by
+	default.
+	* setup.cfg: added for fine-grained test definition.
+	
 2018-03-09  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 4.0.1 release.
 	* rbfopt_user_black_box.py: fixed naming of abstract methods.

@@ -1,11 +1,8 @@
-Main developers:
+Developers:
 
 Giacomo Nannicini, project manager (IBM).
 
-Contributors:
+Contributors to the project (in various forms):
 
-Alberto Costa (National University of Singapore) contributed various
-ideas and numerical testing.
-
-Giorgio Sartor (Singapore University of Technology and Design) did
-most of the work to integrate RBFOpt with Numpy and Cython.
+Alberto Costa (National University of Singapore).
+Giorgio Sartor (Singapore University of Technology and Design).
