@@ -1,3 +1,12 @@
+2018-05-25  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 4.0.2 release.
+	* Added:
+	Detailed user manual.
+	Improved testing tools.
+	* Changed:
+	Smaller formulation for the noisy interpolation models.
+	Improved stability of the restoration step.
+
 2018-05-24  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_algorithm.py (refinement_step): fixed bug in node
 	deletion.
@@ -7,13 +16,15 @@
 	fast tests; the slow tests have been isolated and are not run by
 	default.
 	* setup.cfg: added for fine-grained test definition.
+	* setup.py: fixed possible infinite loop on Windows when using
+	multiprocessing.
 	
 2018-03-09  Giacomo Nannicini  <nannicini@us.ibm.com>
-	Version 4.0.1 release.
+	Version 4.0.1 released.
 	* rbfopt_user_black_box.py: fixed naming of abstract methods.
 
 2017-09-05  Giacomo Nannicini  <nannicini@us.ibm.com>
-	Version 4.0.0 release. List of major changes:
+	Version 4.0.0 released. List of major changes:
 	* Added:
 	Option max_cross_validations to limit the total number of cross
 	validations performed.
