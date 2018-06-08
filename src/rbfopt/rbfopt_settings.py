@@ -41,6 +41,9 @@ class RbfoptSettings:
         Maximum number of function evaluations in noisy mode.
         Default 200.
 
+    max_cycles : int
+        Maximum number of cycles. Default 50.
+
     max_clock_time : float
         Maximum wall clock time in seconds. Default 1.0e30.
 
@@ -221,11 +224,17 @@ class RbfoptSettings:
         Maximum number of consecutive refinement steps. Default 5.
 
     thresh_unlimited_refinement : float
-        Lower threshold for the amounf of search budget depleted,
+        Lower threshold for the amount of search budget depleted,
         after which the maximum limit on consecutive refinement is
         ignored. The search budget here is in terms of number of
         iterations, number of evaluations, wall clock time. Default
         0.9.
+
+    thresh_unlimited_refinement_stalled : float
+        Lower threshold for the number of stalled iterations,
+        after which the maximum limit on consecutive refinement is
+        ignored. This threshold is relative to the maximum number of
+        stalled iterations (max_stalled_iterations). Default 0.9. 
 
     refinement_frequency : int
         In serial search mode, this indicates the number of full
@@ -337,6 +346,7 @@ class RbfoptSettings:
                  max_iterations=1000,
                  max_evaluations=300,
                  max_noisy_evaluations=200,
+                 max_cycles=50,
                  max_clock_time=1.0e30,
                  num_cpus=1,
                  parallel_wakeup_time=0.1,
@@ -361,6 +371,7 @@ class RbfoptSettings:
                  local_search_threshold=0.25,
                  local_search_box_scaling=0.5,
                  max_stalled_iterations=100,
+                 thresh_cycle_unlimited_refinement=0.9,
                  max_consecutive_discarded=10,
                  max_consecutive_restoration=15,
                  max_cross_validations=50,
@@ -393,6 +404,7 @@ class RbfoptSettings:
         self.max_iterations = max_iterations
         self.max_evaluations = max_evaluations
         self.max_noisy_evaluations = max_noisy_evaluations
+        self.max_cycles = max_cycles
         self.max_clock_time = max_clock_time
         self.num_cpus = num_cpus
         self.parallel_wakeup_time = parallel_wakeup_time
@@ -416,6 +428,7 @@ class RbfoptSettings:
         self.local_search_threshold = local_search_threshold
         self.local_search_box_scaling = local_search_box_scaling
         self.max_stalled_iterations = max_stalled_iterations
+        self.thresh_cycle_unlimited_refinement = thresh_cycle_unlimited_refinement
         self.max_consecutive_discarded = max_consecutive_discarded
         self.max_consecutive_restoration = max_consecutive_restoration
         self.max_cross_validations = max_cross_validations
