@@ -27,6 +27,7 @@
   <ItemGroup>
     <Compile Include="bin\rbfopt_cl_interface.py" />
     <Compile Include="bin\rbfopt_test_interface.py" />
+    <Compile Include="MOpossum.py" />
     <Compile Include="setup.py" />
     <Compile Include="src\rbfopt\doc\conf.py" />
     <Compile Include="src\rbfopt\examples\rbfopt_black_box_example.py" />
