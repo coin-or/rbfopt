@@ -230,12 +230,6 @@ class RbfoptSettings:
         iterations, number of evaluations, wall clock time. Default
         0.9.
 
-    thresh_unlimited_refinement_stalled : float
-        Lower threshold for the number of stalled iterations,
-        after which the maximum limit on consecutive refinement is
-        ignored. This threshold is relative to the maximum number of
-        stalled iterations (max_stalled_iterations). Default 0.9. 
-
     refinement_frequency : int
         In serial search mode, this indicates the number of full
         global search cycles after which the refinement step can be
