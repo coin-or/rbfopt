@@ -1,0 +1,68 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003" DefaultTargets="Build">
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <SchemaVersion>2.0</SchemaVersion>
+    <ProjectGuid>{842eb808-56b4-465d-9ce5-249e2ea89d58}</ProjectGuid>
+    <ProjectHome />
+    <StartupFile>bin\rbfopt_test_interface.py</StartupFile>
+    <SearchPath>src\rbfopt\doc;src\rbfopt\examples;src\rbfopt</SearchPath>
+    <WorkingDirectory>.</WorkingDirectory>
+    <OutputPath>.</OutputPath>
+    <ProjectTypeGuids>{888888a0-9f3d-457c-b088-3a5042f75d52}</ProjectTypeGuids>
+    <LaunchProvider>Standard Python launcher</LaunchProvider>
+    <InterpreterId />
+    <IsWindowsApplication>False</IsWindowsApplication>
+    <CommandLineArguments>branin</CommandLineArguments>
+    <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
+  </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)' == 'Debug'" />
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'" />
+  <PropertyGroup>
+    <VisualStudioVersion Condition=" '$(VisualStudioVersion)' == '' ">10.0</VisualStudioVersion>
+  </PropertyGroup>
+  <ItemGroup>
+    <Content Include="requirements.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="bin\rbfopt_cl_interface.py" />
+    <Compile Include="bin\rbfopt_test_interface.py" />
+    <Compile Include="MOpossum.py" />
+    <Compile Include="setup.py" />
+    <Compile Include="src\rbfopt\doc\conf.py" />
+    <Compile Include="src\rbfopt\examples\rbfopt_black_box_example.py" />
+    <Compile Include="src\rbfopt\rbfopt_algorithm.py" />
+    <Compile Include="src\rbfopt\rbfopt_aux_problems.py" />
+    <Compile Include="src\rbfopt\rbfopt_black_box.py" />
+    <Compile Include="src\rbfopt\rbfopt_degree0_models.py" />
+    <Compile Include="src\rbfopt\rbfopt_degree1_models.py" />
+    <Compile Include="src\rbfopt\rbfopt_degreem1_models.py" />
+    <Compile Include="src\rbfopt\rbfopt_refinement.py" />
+    <Compile Include="src\rbfopt\rbfopt_settings.py" />
+    <Compile Include="src\rbfopt\rbfopt_test_functions.py" />
+    <Compile Include="src\rbfopt\rbfopt_user_black_box.py" />
+    <Compile Include="src\rbfopt\rbfopt_utils.py" />
+    <Compile Include="src\rbfopt\__init__.py" />
+    <Compile Include="tests\context.py" />
+    <Compile Include="tests\test_rbfopt_algorithm.py" />
+    <Compile Include="tests\test_rbfopt_algorithm_slow.py" />
+    <Compile Include="tests\test_rbfopt_aux_problems.py" />
+    <Compile Include="tests\test_rbfopt_degree0_models.py" />
+    <Compile Include="tests\test_rbfopt_degree1_models.py" />
+    <Compile Include="tests\test_rbfopt_degreem1_models.py" />
+    <Compile Include="tests\test_rbfopt_mwe.py" />
+    <Compile Include="tests\test_rbfopt_refinement.py" />
+    <Compile Include="tests\test_rbfopt_settings.py" />
+    <Compile Include="tests\test_rbfopt_utils.py" />
+    <Compile Include="tests\__init__.py" />
+  </ItemGroup>
+  <ItemGroup>
+    <Folder Include="bin" />
+    <Folder Include="src\" />
+    <Folder Include="src\rbfopt" />
+    <Folder Include="src\rbfopt\doc" />
+    <Folder Include="src\rbfopt\examples" />
+    <Folder Include="tests" />
+  </ItemGroup>
+  <Import Project="$(MSBuildExtensionsPath32)\Microsoft\VisualStudio\v$(VisualStudioVersion)\Python Tools\Microsoft.PythonTools.targets" />
+</Project>

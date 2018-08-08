@@ -91,6 +91,9 @@ class RbfoptAlgorithm:
         Identifier of the current step within the cyclic optimization
         strategy counter.
 
+    current_cycle : int
+        Identifier of the current cycle within the optimization.
+
     num_cons_refinement : int
         Current number of consecutive refinement steps.
 
@@ -226,7 +229,7 @@ class RbfoptAlgorithm:
 
     """
     def __init__(self, settings, black_box,
-                 init_node_pos=None, init_node_val=None):
+                 init_node_pos=None, init_node_val=None, do_init_strategy=False):
         """Constructor.
         
         """
@@ -284,6 +287,7 @@ class RbfoptAlgorithm:
                                                   var_upper, integer_vars)
         # Save references
         self.l_settings = l_settings
+        self.do_init_strategy = do_init_strategy
 
         # Local and global RBF models are initially the same
         self.best_local_rbf = (l_settings.rbf, l_settings.rbf_shape_parameter)
@@ -305,6 +309,7 @@ class RbfoptAlgorithm:
         self.evalcount = 0
         self.noisy_evalcount = 0
         self.current_step = 0
+        self.current_cycle = 0
         self.num_cons_refinement = 0
         self.num_stalled_iter = 0
         self.num_cons_discarded = 0
@@ -435,6 +440,7 @@ class RbfoptAlgorithm:
                   file=self.output_stream)
         else:
             print('Iter {:3d}'.format(self.itercount) + 
+                  'Cyc {:3d}'.format(self.current_cycle) +
                   ' {:15s}'.format(tag) +
                   ': obj{:s}'.format('~' if node_is_noisy else ' ') +
                   ' {:16.6f}'.format(obj_value) +
@@ -826,6 +832,14 @@ class RbfoptAlgorithm:
                     self.best_local_rbf = counter.most_common(1)[0][0]
                     counter = collections.Counter(self.best_global_rbf_list)
                     self.best_global_rbf = counter.most_common(1)[0][0]
+
+            # If we are at the first step check if we have exceeded the max cycle count
+            # If so, stop; otherwise increase the cycle count.
+            if(self.current_step == self.first_step):
+                if(self.current_cycle >= settings.max_cycles):
+                    break
+                else:
+                    self.current_cycle += 1
             # If we are in local search or just before local search, use a
             # local model.
             if (self.current_step >= (self.local_search_step - 1)):
@@ -1565,65 +1579,69 @@ class RbfoptAlgorithm:
                                    else 0)
         # Store the current number of nodes
         self.num_nodes_at_restart = len(self.all_node_pos)
-        # Compute a new set of starting points
-        node_pos = ru.initialize_nodes(self.l_settings, self.var_lower, 
-                                       self.var_upper, self.integer_vars)
-        # Check if some points were previously evaluated, i.e. before
-        # the restart. If so, remove them from the list of nodes that
-        # will be evaluated now.
-        if (self.num_nodes_at_restart):
-            dist = ru.bulk_get_min_distance(
-                node_pos, self.all_node_pos[:self.num_nodes_at_restart])
-            indices = np.where(dist <= self.l_settings.eps_zero)[0]
-            prev_node_pos = list()
-            prev_node_val = list()
-            prev_node_is_noisy = list()
-            prev_node_err_bounds = list()
-            for i in reversed(sorted(indices)):
-                val, j = ru.get_min_distance_and_index(
-                    node_pos[i], self.all_node_pos[:self.num_nodes_at_restart])
-                if (self.eval_mode == 'noisy' or 
-                    not self.all_node_is_noisy[j]):
-                    prev_node_pos.append(self.all_node_pos[j])
-                    prev_node_val.append(self.all_node_val[j])
-                    prev_node_is_noisy.append(self.all_node_is_noisy[j])
-                    prev_node_err_bounds.append(self.all_node_err_bounds[j])
-                    node_pos = np.delete(np.atleast_2d(node_pos), i, axis=0)
-        # Evaluate new points
-        if (self.eval_mode == 'accurate' or
-            self.num_noisy_restarts > self.l_settings.max_noisy_restarts or
-            (self.noisy_evalcount + self.n + 1 >=
-             self.l_settings.max_noisy_evaluations)):
-            if (pool is None):
-                node_val = np.array([objfun([self.bb, point, self.fixed_vars])
-                                     for point in node_pos])
+
+        # Check if the user wants to suppress sampling at the beginning.
+        if(self.current_cycle != 0 or self.do_init_strategy):
+            # Compute a new set of starting points
+            node_pos = ru.initialize_nodes(self.l_settings, self.var_lower, 
+                                           self.var_upper, self.integer_vars)
+            # Check if some points were previously evaluated, i.e. before
+            # the restart. If so, remove them from the list of nodes that
+            # will be evaluated now.
+            if (self.num_nodes_at_restart):
+                dist = ru.bulk_get_min_distance(
+                    node_pos, self.all_node_pos[:self.num_nodes_at_restart])
+                indices = np.where(dist <= self.l_settings.eps_zero)[0]
+                prev_node_pos = list()
+                prev_node_val = list()
+                prev_node_is_noisy = list()
+                prev_node_err_bounds = list()
+                for i in reversed(sorted(indices)):
+                    val, j = ru.get_min_distance_and_index(
+                        node_pos[i], self.all_node_pos[:self.num_nodes_at_restart])
+                    if (self.eval_mode == 'noisy' or 
+                        not self.all_node_is_noisy[j]):
+                        prev_node_pos.append(self.all_node_pos[j])
+                        prev_node_val.append(self.all_node_val[j])
+                        prev_node_is_noisy.append(self.all_node_is_noisy[j])
+                        prev_node_err_bounds.append(self.all_node_err_bounds[j])
+                        node_pos = np.delete(np.atleast_2d(node_pos), i, axis=0)
+            # Evaluate new points
+            if (self.eval_mode == 'accurate' or
+                self.num_noisy_restarts > self.l_settings.max_noisy_restarts or
+                (self.noisy_evalcount + self.n + 1 >=
+                 self.l_settings.max_noisy_evaluations)):
+                if (pool is None):
+                    node_val = np.array([objfun([self.bb, point, self.fixed_vars])
+                                         for point in node_pos])
+                else:
+                    map_arg = [[self.bb, point, self.fixed_vars] 
+                               for point in node_pos]
+                    node_val = np.array(pool.map(objfun, map_arg))
+                node_err_bounds = np.zeros((len(node_val), 2))
+                self.evalcount += len(node_val)
             else:
-                map_arg = [[self.bb, point, self.fixed_vars] 
-                           for point in node_pos]
-                node_val = np.array(pool.map(objfun, map_arg))
-            node_err_bounds = np.zeros((len(node_val), 2))
-            self.evalcount += len(node_val)
-        else:
-            if (pool is None):
-                res = np.array([objfun_noisy([self.bb, point, self.fixed_vars])
-                                for point in node_pos])
-            else:
-                map_arg = [[self.bb, point, self.fixed_vars] 
-                           for point in node_pos]
-                res = np.array(pool.map(objfun_noisy, map_arg))
-            node_val = res[:, 0]
-            node_err_bounds = res[:, 1:]
-            self.noisy_evalcount += len(node_val)
-        node_is_noisy = np.array([self.eval_mode == 'noisy'
-                                 for val in node_val])
-        # Add previously evaluated points, if any
-        if (self.num_nodes_at_restart and prev_node_pos):
-            node_pos = np.vstack((node_pos, np.array(prev_node_pos)))
-            node_val = np.append(node_val, np.array(prev_node_val))
-            node_is_noisy = np.append(
-                node_is_noisy, np.array(prev_node_is_noisy, dtype = bool))
-            node_err_bounds = np.vstack((node_err_bounds,
-                                         np.array(prev_node_err_bounds)))
+                if (pool is None):
+                    res = np.array([objfun_noisy([self.bb, point, self.fixed_vars])
+                                    for point in node_pos])
+                else:
+                    map_arg = [[self.bb, point, self.fixed_vars] 
+                               for point in node_pos]
+                    res = np.array(pool.map(objfun_noisy, map_arg))
+                node_val = res[:, 0]
+                node_err_bounds = res[:, 1:]
+                self.noisy_evalcount += len(node_val)
+            node_is_noisy = np.array([self.eval_mode == 'noisy'
+                                     for val in node_val])
+            # Add previously evaluated points, if any
+            if (self.num_nodes_at_restart and prev_node_pos):
+                node_pos = np.vstack((node_pos, np.array(prev_node_pos)))
+                node_val = np.append(node_val, np.array(prev_node_val))
+                node_is_noisy = np.append(
+                    node_is_noisy, np.array(prev_node_is_noisy, dtype = bool))
+                node_err_bounds = np.vstack((node_err_bounds,
+                                             np.array(prev_node_err_bounds)))
+
         # Add user-provided points if this is the first iteration
         if (self.init_node_pos.size and self.itercount == 0):
             # Determine which points can be added
@@ -1852,7 +1870,9 @@ class RbfoptAlgorithm:
         bool
             True if unlimited refinement is active, False otherwise.
         """
-        return ((self.itercount >= self.l_settings.max_iterations * 
+        return ((self.num_stalled_iter >= self.l_settings.max_stalled_iterations * 
+                 self.l_settings.thresh_cycle_unlimited_refinement) or
+                (self.itercount >= self.l_settings.max_iterations * 
                  self.l_settings.thresh_unlimited_refinement) or
                 (self.evalcount >= self.l_settings.max_evaluations * 
                  self.l_settings.thresh_unlimited_refinement) or
