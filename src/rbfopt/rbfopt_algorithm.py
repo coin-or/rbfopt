@@ -97,11 +97,11 @@ class RbfoptAlgorithm:
     num_stalled_iter : int
         Number of consecutive iterations without improvement.
 
-    num_cons_discarded : int
-        Number of consecutive discarded points.
-
     num_noisy_restarts : int
         Number of restarts in noisy mode.
+
+    discarded_iters : collections.deque
+        Rolling window to keep track of discarded iterations
 
     inf_step : int
         Identifier of the InfStep.
@@ -307,8 +307,9 @@ class RbfoptAlgorithm:
         self.current_step = 0
         self.num_cons_refinement = 0
         self.num_stalled_iter = 0
-        self.num_cons_discarded = 0
         self.num_noisy_restarts = 0
+        self.discarded_iters = collections.deque(
+            maxlen=l_settings.discarded_window_size*l_settings.num_cpus)
     
         # Initialize identifiers of the search steps
         self.inf_step = 0
@@ -771,8 +772,11 @@ class RbfoptAlgorithm:
 
             # Check if we should restart. 
             if (self.current_step <= self.first_step and
-                (self.num_cons_discarded >= 
-                 l_settings.max_consecutive_discarded) or 
+                (len(self.discarded_iters) >=
+                 l_settings.discarded_window_size/2 and
+                 self.discarded_iters.count(True) >=
+                 l_settings.max_fraction_discarded *
+                 len(self.discarded_iters)) or 
                 (self.num_stalled_iter >= l_settings.max_stalled_iterations
                  and self.evalcount + 3*(n + 1 + self.cycle_length) < 
                  l_settings.max_evaluations)):
@@ -822,10 +826,17 @@ class RbfoptAlgorithm:
                 # frequency
                 if (len(self.best_local_rbf_list) ==
                     l_settings.max_cross_validations):
-                    counter = collections.Counter(self.best_local_rbf_list)
-                    self.best_local_rbf = counter.most_common(1)[0][0]
-                    counter = collections.Counter(self.best_global_rbf_list)
-                    self.best_global_rbf = counter.most_common(1)[0][0]
+                    best_local_rbf = ru.get_most_common_element(
+                        self.best_local_rbf_list, ['failed'])
+                    self.best_local_rbf = (best_local_rbf
+                                           if best_local_rbf is not None
+                                           else ('cubic', 0.1))
+                    best_global_rbf = ru.get_most_common_element(
+                        self.best_global_rbf_list, ['failed'])
+                    self.best_global_rbf = (best_global_rbf
+                                           if best_global_rbf is not None
+                                           else ('cubic', 0.1))
+                    
             # If we are in local search or just before local search, use a
             # local model.
             if (self.current_step >= (self.local_search_step - 1)):
@@ -858,9 +869,15 @@ class RbfoptAlgorithm:
                             l_settings, n, k, Amat, scaled_node_val)
                 
                 except np.linalg.LinAlgError:
+                    # Record statistics on failed model
+                    if (self.current_step >= (self.local_search_step - 1)):
+                        self.best_local_rbf_list[-1] = 'failed'
+                    else:
+                        self.best_global_rbf_list[-1] = 'failed'
                     # Error in the solution of the linear system. We must
                     # switch to a restoration phase.
                     self.current_step = self.restoration_step
+
             elif (self.current_step == self.refinement_step):
                 if (self.num_cons_refinement == 0):
                     # For the first refinement step iteration, some data
@@ -900,9 +917,10 @@ class RbfoptAlgorithm:
                 # Restoration
                 next_p = self.restoration_search()
                 if (next_p is None ):
-                    self.update_log('Restoration phase failed. Abort.')
-                    # This will force the optimization process to return
-                    break
+                    self.update_log('Restoration phase failed. Restart.')
+                    self.update_log('Restart')
+                    self.restart()
+                    continue
                 k = len(self.node_pos)
                 iteration_id = 'Restoration'
             
@@ -949,7 +967,7 @@ class RbfoptAlgorithm:
                 (ru.get_min_distance(next_p, self.node_pos) <= 
                  l_settings.min_dist)):
                 self.advance_step_counter()
-                self.num_cons_discarded += 1
+                self.discarded_iters.append(True)
                 self.num_cons_refinement = 0
                 self.update_log('Discarded')
             else:
@@ -1022,7 +1040,7 @@ class RbfoptAlgorithm:
                     self.iter_last_refine = self.itercount
                 else:
                     self.advance_step_counter()
-                self.num_cons_discarded = 0
+                self.discarded_iters.append(False)
 
             # Update iteration number
             self.itercount += 1
@@ -1131,7 +1149,11 @@ class RbfoptAlgorithm:
                     next_val, err_l, err_u = res.get()
                 else:
                     next_val = res.get()
-                min_dist = ru.get_min_distance(next_p, self.node_pos)
+                # If distance is too small for whatever reason, better
+                # to skip this point
+                if (ru.get_min_distance(next_p, self.node_pos) <= 
+                    l_settings.min_dist):
+                    continue
                 # Transform back to original space if necessary
                 next_p_orig = ru.transform_domain(l_settings, var_lower,
                                                   var_upper, next_p, True)
@@ -1144,8 +1166,20 @@ class RbfoptAlgorithm:
                         ([self.bb, next_p_orig, self.fixed_vars], ))
                     self.evalcount += 1
                     res_eval.append([new_res, next_p, node_is_noisy, iid])
-                    # Update temporary node value
-                    temp_node_val[j] = next_val
+                    # Update temporary node values. First, remove old node.
+                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
+                                              j, axis=0)
+                    temp_node_val = np.delete(temp_node_val, j)
+                    temp_node_is_noisy = np.delete(temp_node_is_noisy, j)
+                    # Then add again at the end of the array
+                    if (temp_node_pos.size):
+                        temp_node_pos = np.vstack((temp_node_pos, next_p))
+                    else:
+                        temp_node_pos = np.atleast_2d(next_p)
+                    temp_node_val = np.append(
+                        temp_node_val, np.clip(next_val, self.fmin, self.fmax))
+                    temp_node_is_noisy = np.append(temp_node_is_noisy,
+                                                   node_is_noisy)
                 else:
                     # Add to data structures.
                     if (node_is_noisy):
@@ -1203,10 +1237,9 @@ class RbfoptAlgorithm:
                             ind = np.where(np.all(
                                 self.node_pos == next_p, axis=1))[0][0]
                         self.remove_node(ind, self.num_nodes_at_restart)
-                        # We must update k here to make sure it is
-                        # consistent until the start of the next
-                        # iteration.
-                        k = len(node_pos)
+                        # Since node_pos is a copy of self.node_pos
+                        # and temp_node_pos, there is no need to
+                        # adjust k
                     if (adj):
                         iteration_id = 'AdjLocalStep'
                     else:
@@ -1222,7 +1255,7 @@ class RbfoptAlgorithm:
                     (temp_node_pos.size and
                      (ru.get_min_distance(next_p, temp_node_pos) <= 
                       l_settings.min_dist))):
-                    self.num_cons_discarded += 1
+                    self.discarded_iters.append(True)
                     if (iteration_id == 'RefinementStep'):
                         refinement_itercount += 1
                         refinement_in_progress = False
@@ -1280,10 +1313,16 @@ class RbfoptAlgorithm:
                             self.evalcount += 1
                         res_eval.append([new_res, next_p, node_is_noisy, 
                                          iteration_id])
-                        self.num_cons_discarded = 0
-                        # Append point to the list of temporary nodes
-                        val = ru.evaluate_rbf(l_settings, next_p, n, k, 
-                                              node_pos, rbf_l, rbf_h)
+                        self.discarded_iters.append(False)
+                        # Append point to the list of temporary nodes.
+                        # When evaluating the surrogate model, use the
+                        # RbfoptSettings object that was used when
+                        # rbf_l and rbf_h were last computed.
+                        # Furthermore, ensure we only pick
+                        # nodes used to compute coefficients.
+                        val = ru.evaluate_rbf(
+                            rbf_coeff_settings, next_p, n, len(rbf_l),
+                            node_pos[:len(rbf_l)], rbf_l, rbf_h)
                         if (temp_node_pos.size):
                             temp_node_pos = np.vstack((temp_node_pos, next_p))
                         else:
@@ -1310,9 +1349,12 @@ class RbfoptAlgorithm:
                 continue
 
             # Check if we should restart. 
-            if (self.current_step <= self.first_step and 
-                (self.num_cons_discarded >= 
-                 l_settings.max_consecutive_discarded*l_settings.num_cpus) or 
+            if (self.current_step <= self.first_step and
+                (len(self.discarded_iters) >=
+                 l_settings.discarded_window_size*l_settings.num_cpus/2
+                 and self.discarded_iters.count(True) >=
+                 l_settings.max_fraction_discarded *
+                 len(self.discarded_iters)) or 
                 (self.num_stalled_iter >= l_settings.max_stalled_iterations
                  and self.evalcount + 3*(n + 1 + self.cycle_length) < 
                  l_settings.max_evaluations)):
@@ -1320,11 +1362,15 @@ class RbfoptAlgorithm:
                 # them, then try again.
                 if (res_eval or res_search):
                     [result[0].wait() for result in res_eval]
+                    [result[0].wait() for result in res_search]
                     continue
                 # If there were no results in the pipeline, we should
                 # restart.
                 self.update_log('Restart')
                 self.restart(pool=pool)
+                temp_node_pos = np.array([])
+                temp_node_val = np.array([])
+                temp_node_is_noisy = np.array([])
 
             # Nodes at current iteration, including temporary ones
             if (temp_node_pos.size):
@@ -1332,8 +1378,8 @@ class RbfoptAlgorithm:
                 node_err_bounds = np.vstack(
                     (self.node_err_bounds, np.zeros((len(temp_node_pos), 2))))
             else:
-                node_pos = self.node_pos
-                node_err_bounds = self.node_err_bounds
+                node_pos = np.array(self.node_pos)
+                node_err_bounds = np.array(self.node_err_bounds)
             node_val = np.append(self.node_val, temp_node_val)
             node_is_noisy = np.append(self.node_is_noisy, temp_node_is_noisy)
             k = len(node_pos)
@@ -1379,10 +1425,16 @@ class RbfoptAlgorithm:
                 # frequency
                 if (len(self.best_local_rbf_list) ==
                     l_settings.max_cross_validations):
-                    counter = collections.Counter(self.best_local_rbf_list)
-                    self.best_local_rbf = counter.most_common(1)[0][0]
-                    counter = collections.Counter(self.best_global_rbf_list)
-                    self.best_global_rbf = counter.most_common(1)[0][0]
+                    best_local_rbf = ru.get_most_common_element(
+                        self.best_local_rbf_list, ['failed'])
+                    self.best_local_rbf = (best_local_rbf
+                                           if best_local_rbf is not None
+                                           else ('cubic', 0.1))
+                    best_global_rbf = ru.get_most_common_element(
+                        self.best_global_rbf_list, ['failed'])
+                    self.best_global_rbf = (best_global_rbf
+                                           if best_global_rbf is not None
+                                           else ('cubic', 0.1))
             
             # If we are in local search or just before local search, use a
             # local model.
@@ -1413,8 +1465,15 @@ class RbfoptAlgorithm:
                     # Fully accurate RBF
                     rbf_l, rbf_h = ru.get_rbf_coefficients(
                         l_settings, n, k, Amat, scaled_node_val)
+                # Copy in case something goes wrong
+                rbf_coeff_settings = copy.deepcopy(l_settings)
                 
             except np.linalg.LinAlgError:
+                # Record statistics on failed model
+                if (self.current_step >= (self.local_search_step - 1)):
+                    self.best_local_rbf_list[-1] = 'failed'
+                else:
+                    self.best_global_rbf_list[-1] = 'failed'
                 # Error in the solution of the linear system. We must
                 # switch to a restoration phase.
                 self.current_step = self.restoration_step
@@ -1428,22 +1487,21 @@ class RbfoptAlgorithm:
             curr_is_noisy = (self.eval_mode == 'noisy')
 
             if (self.current_step == self.restoration_step):
-                # Restoration
-                next_p, to_remove = self.restoration_search_parallel(
-                    temp_node_pos)
-                if (next_p is None):
-                    self.update_log('Restoration phase failed. Abort.')
-                    # This will force the optimization process to return
-                    break
-                # Remove necessary nodes and move them to the
-                # temporary list
-                for j in reversed(to_remove):
-                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
-                                              j, axis=0)
-                    temp_node_val = np.delete(temp_node_val, j)
-                    temp_node_is_noisy = np.delete(temp_node_is_noisy, j)
-                    res_removed.append(res_eval.pop(j))
-                iteration_id = 'Restoration'
+                # If there are still results in the pipeline, wait for
+                # them, then try again.
+                if (res_eval or res_search):
+                    [result[0].wait() for result in res_eval]
+                    [result[0].wait() for result in res_search]
+                    continue
+                # If we failed, we restart because in parallel mode
+                # many things can go wrong when deleting points
+                self.update_log('Restoration phase failed. Restart.')
+                self.update_log('Restart')
+                self.restart(pool=pool)
+                temp_node_pos = np.array([])
+                temp_node_val = np.array([])
+                temp_node_is_noisy = np.array([])
+                continue
 
             # If no refinement is in progress, and the frequency is
             # not excessive, start it or keep it going
@@ -1681,7 +1739,7 @@ class RbfoptAlgorithm:
         self.fmin_last_refine = self.fmin
         self.iter_last_refine = self.itercount
         self.num_stalled_iter = 0
-        self.num_cons_discarded = 0
+        self.discarded_iters.clear()
         self.num_cons_refinement = 0
         self.is_fmin_noisy = self.node_is_noisy[self.fmin_index]
         if (self.fmin < self.fbest):
@@ -1756,71 +1814,6 @@ class RbfoptAlgorithm:
         return (next_p if restoration_done else None)
     # -- end function
 
-    def restoration_search_parallel(self, temp_node_pos):
-        """Perform restoration step; version for parallel optimizer. 
-
-        Try to repair an ill-conditioned RBF matrix by selecting
-        points far enough from current interpolation nodes, until
-        numerical stability is restored. This version of the function
-        only works for the parallel optimizer, because it works with
-        the list of temporary nodes, i.e. points that are in the
-        process of being evaluated.
-
-        Parameters
-        ----------
-        temp_node_pos : List[List[float]]
-            List of coordinates of temporary nodes.
-
-        Returns
-        -------
-        (List[float] or None, List[index])
-            The next point to be evaluated, or None if it cannot be
-            found, and the list of indices of temporary nodes to be
-            removed for stability.
-
-        """
-        restoration_done = False
-        cons_restoration = 0
-        to_be_removed = list()
-        # Get a point far from all current nodes
-        next_p = pure_global_step(
-            RbfoptSettings(rbf='linear', algorithm='MSRSM', 
-                           global_search_method='genetic'),
-            self.n, len(self.node_pos) + len(temp_node_pos), 
-            self.l_lower, self.l_upper, self.integer_vars,
-            np.vstack((self.node_pos, temp_node_pos)), None)
-        # Loop through all temporary nodes, and try to restore the
-        # matrix by substituting the above point.
-        i = len(temp_node_pos) - 1
-        while (not restoration_done and i >= 0 and
-               cons_restoration <  
-               self.l_settings.max_consecutive_restoration):
-            red_node_pos = np.vstack((temp_node_pos[:i], 
-                                      temp_node_pos[(i+1):]))
-            # Try inverting the RBF matrix to see if
-            # nonsingularity is restored
-            try:
-                Amat = ru.get_rbf_matrix(self.l_settings, self.n,
-                                         len(red_node_pos), red_node_pos)
-                Amatinv = ru.get_matrix_inverse(self.l_settings, Amat)
-                to_be_removed = [i]
-                restoration_done = True
-            except np.linalg.LinAlgError:
-                cons_restoration += 1
-        # At this point, if the restoration is complete we are done,
-        # otherwise we try to remove all indices of temporary nodes
-        if (not restoration_done):
-            try:
-                Amat = ru.get_rbf_matrix(self.l_settings, self.n,
-                                         len(self.node_pos), self.node_pos)
-                Amatinv = ru.get_matrix_inverse(self.l_settings, Amat)
-                to_be_removed = [i for i in range(len(temp_node_pos))]
-                restoration_done = True
-            except np.linalg.LinAlgError:
-                cons_restoration += 1
-        return (next_p if restoration_done else None, to_be_removed)
-
-    # -- end function
 
     def phase_update(self):
         """Check if we should switch phase in two-phase optimization.

@@ -1,3 +1,11 @@
+2018-08-29  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (restoration_search_parallel): deleted.
+	* rbfopt_algorithm.py (optimize_parallel): solved bug in parallel
+	optimizer when evaluating RBF model (for temp_node_pos) after
+	restarts.
+	* rbfopt_algorithm.py (discarded_list): discarded points are now
+	evaluated on a rolling basis.
+
 2018-05-25  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 4.0.2 release.
 	* Added:

@@ -353,8 +353,10 @@ if you could cite the following paper:
 
 * A. Costa and G. Nannicini. RBFOpt: an open-source library for
   black-box optimization with costly function
-  evaluations. `Optimization Online paper 4538
-  <http://www.optimization-online.org/DB_HTML/2014/09/4538.html>`.
+  evaluations. Mathematical Programming Computation, online
+  first, 2018. (The paper can be downloaded as: `Optimization Online
+  paper 4538
+  <http://www.optimization-online.org/DB_HTML/2014/09/4538.html>`)
 
 The paper above describes version 1.0 of RBFOpt. Some of the
 improvements introduced later are described in the following papers.
@@ -366,7 +368,7 @@ improvements introduced later are described in the following papers.
 * A. Costa, E. Di Buccio, M. Melucci, G. Nannicini. Efficient
   parameter estimation for information retrieval using black-box
   optimization. IEEE Transactions on Knowledge and Data Engineering,
-  online first, 2017.
+  30(7):1240-1253, 2018.
 
 =======
 Support

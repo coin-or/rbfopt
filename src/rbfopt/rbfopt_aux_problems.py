@@ -21,6 +21,7 @@ import numpy as np
 import scipy.spatial as ss
 import pyomo.environ
 import pyomo.opt
+import logging
 import rbfopt.rbfopt_utils as ru
 import rbfopt.rbfopt_degree1_models as rbfopt_degree1_models
 import rbfopt.rbfopt_degree0_models as rbfopt_degree0_models
@@ -271,7 +272,6 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     # Initialize variables for local search
     initialize_instance_variables(settings, instance,
                                   start_point=best_node_pos)
-
     # Instantiate optimizer
     opt = pyomo.opt.SolverFactory(
         'bonmin', executable=settings.minlp_solver_path, solver_io='nl')

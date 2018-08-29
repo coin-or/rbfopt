@@ -21,8 +21,8 @@ import os
 import math
 import itertools
 import warnings
-import ctypes
-import ctypes.util
+import collections
+import logging
 import numpy as np
 import scipy.spatial as ss
 import scipy.linalg as la
@@ -789,9 +789,10 @@ def get_matrix_inverse(settings, Amat):
     try:
         Amatinv = Amat.getI()
     except np.linalg.LinAlgError as e:
-        print('Exception raised trying to invert the RBF matrix',
-              file=sys.stderr)
-        print(e, file=sys.stderr)
+        if (settings.debug):
+            print('Exception raised trying to invert the RBF matrix',
+                  file=sys.stderr)
+            print(e, file=sys.stderr)
         raise e
 
     # Zero out tiny elements of the inverse -- this is potentially
@@ -845,10 +846,11 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
     try:
         solution = np.linalg.solve(Amat, rhs)
     except np.linalg.LinAlgError as e:
-        print('Exception raised in the solution of the RBF linear system',
-              file=sys.stderr)
-        print('Exception details:', file=sys.stderr)
-        print(e, file=sys.stderr)
+        if (settings.debug):
+            print('Exception raised in the solution of the RBF linear system',
+                  file=sys.stderr)
+            print('Exception details:', file=sys.stderr)
+            print(e, file=sys.stderr)
         raise e
 
     return (solution[0:k], solution[k:])
@@ -1523,8 +1525,7 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
     original_gamma = settings.rbf_shape_parameter
     rbf_list = ['cubic', 'thin_plate_spline', 'multiquadric', 'linear',
                 'gaussian']
-    gamma_list = [[original_gamma], [original_gamma], [0.1, 1.0],
-                  [original_gamma], [0.001, 0.01]]
+    gamma_list = [[0.1], [0.1], [0.1, 1.0], [0.1], [0.001, 0.01]]
     with warnings.catch_warnings():
         warnings.filterwarnings('error')
         for (i, rbf_type) in enumerate(rbf_list):
@@ -1551,6 +1552,29 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
     settings.rbf_shape_parameter = original_gamma
     return best_model, best_gamma
 
+# -- end function
+
+def get_most_common_element(array, to_exclude=[]):
+    """Get most common element in a list.
+
+    Parameters
+    ----------
+    array : List[any]
+        The list whose most common element is sought.
+
+    to_exclude : List[any]
+        A list of elements to exclude from the count.
+    
+    Returns
+    -------
+    Any
+        The most common element, None if all elements were excluded.
+    """
+    counter = collections.Counter(
+        val for val in array if val not in to_exclude)
+    if (counter.most_common(1)):
+        return counter.most_common(1)[0][0]
+    return None
 # -- end function
 
 def results_ready(results):
@@ -1609,7 +1633,7 @@ def get_one_ready_index(results):
 # -- end if
 
 def init_environment(settings):
-    """Initialize the environment: random seed.
+    """Initialize the environment: random seed, logger.
 
     Parameters
     ----------
@@ -1619,6 +1643,11 @@ def init_environment(settings):
     assert(isinstance(settings, RbfoptSettings))
     # Numpy's random seed
     np.random.seed(settings.rand_seed)
+    # Pyomo's logger
+    if (not settings.debug):
+        logging.getLogger('pyomo.core').setLevel(logging.CRITICAL)
+        logging.getLogger('pyomo.opt').setLevel(logging.CRITICAL)
+        logging.getLogger('pyomo.solvers').setLevel(logging.CRITICAL)
     
 
 # -- end if
