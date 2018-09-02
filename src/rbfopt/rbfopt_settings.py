@@ -41,6 +41,9 @@ class RbfoptSettings:
         Maximum number of function evaluations in noisy mode.
         Default 200.
 
+    max_cycles : int
+        Maximum number of cycles. Default 50.
+
     max_clock_time : float
         Maximum wall clock time in seconds. Default 1.0e30.
 
@@ -156,16 +159,11 @@ class RbfoptSettings:
         Maximum number of iterations without improvement before we
         perform a full restart. Default 100.
 
-    discarded_window_size : int
-        Number of consecutive iterations that are considered to
-        determine if a restart should be triggered, based on too many
-        discarded points. This number is multiplied by the number of
-        cpus to determine the actual rolling window size. Default 30.
-
-    max_fraction_discarded : float
-        Maximum fraction of discarded points within the last
-        discarded_window_size*num_cpus iterations before a restart is
-        triggered. Default 0.5.
+    max_consecutive_discarded : int
+        Maximum number of discarded points before a restart is
+        triggered. This number is multiplied by the number of cpus to
+        determine the actual maximum number of consecutive discarded
+        points. Default 10.
 
     max_consecutive_restoration : int
         Maximum number of consecutive nonsingularity restoration
@@ -226,10 +224,17 @@ class RbfoptSettings:
         Maximum number of consecutive refinement steps. Default 5.
 
     thresh_unlimited_refinement : float
-        Lower threshold for the amounf of search budget depleted,
+        Lower threshold for the amount of search budget depleted,
         after which the maximum limit on consecutive refinement is
         ignored. The search budget here is in terms of number of
         iterations, number of evaluations, wall clock time. Default
+        0.9.
+        
+    thresh_unlimited_refinement_stalled : float
+        Lower threshold for the percentage of stalled iterations relative
+        to the number of stalled iterations that will trigger a restart
+        (max_stalled_iterations), after which the maximum limit on 
+        consecutive refinement is ignored.
         0.9.
 
     refinement_frequency : int
@@ -302,12 +307,6 @@ class RbfoptSettings:
         solver is part of your system path and can be called from
         anywhere. Default 'ipopt'.
 
-    debug : bool
-        Print debug output. Internal error messages are typically
-        printed to stderr, Pyomo error messages are determined by its
-        logger. If False, all warnings and error messages are
-        suppressed. Default False.
-
     rand_seed : int
         Seed for the random number generator. The maximum number
         supported by numpy on all platforms is 2^32. Default
@@ -348,6 +347,7 @@ class RbfoptSettings:
                  max_iterations=1000,
                  max_evaluations=300,
                  max_noisy_evaluations=200,
+                 max_cycles=50,
                  max_clock_time=1.0e30,
                  num_cpus=1,
                  parallel_wakeup_time=0.1,
@@ -372,8 +372,7 @@ class RbfoptSettings:
                  local_search_threshold=0.25,
                  local_search_box_scaling=0.5,
                  max_stalled_iterations=100,
-                 discarded_window_size=30,
-                 max_fraction_discarded=0.5,
+                 max_consecutive_discarded=10,
                  max_consecutive_restoration=15,
                  max_cross_validations=50,
                  max_noisy_restarts=2,
@@ -386,6 +385,7 @@ class RbfoptSettings:
                  modified_msrsm_score=True,
                  max_consecutive_refinement=5,
                  thresh_unlimited_refinement=0.9,
+                 thresh_unlimited_refinement_stalled=0.9,
                  refinement_frequency=3,
                  tr_num_integer_candidates=10,
                  tr_acceptable_decrease_shrink=0.2,
@@ -399,13 +399,13 @@ class RbfoptSettings:
                  save_state_file='rbfopt_algorithm_state.dat',
                  minlp_solver_path='bonmin',
                  nlp_solver_path='ipopt',
-                 debug=False,
                  rand_seed=937627691):
         """Class constructor with default values. 
         """
         self.max_iterations = max_iterations
         self.max_evaluations = max_evaluations
         self.max_noisy_evaluations = max_noisy_evaluations
+        self.max_cycles = max_cycles
         self.max_clock_time = max_clock_time
         self.num_cpus = num_cpus
         self.parallel_wakeup_time = parallel_wakeup_time
@@ -429,8 +429,8 @@ class RbfoptSettings:
         self.local_search_threshold = local_search_threshold
         self.local_search_box_scaling = local_search_box_scaling
         self.max_stalled_iterations = max_stalled_iterations
-        self.discarded_window_size = discarded_window_size
-        self.max_fraction_discarded = max_fraction_discarded
+        self.thresh_unlimited_refinement_stalled = thresh_unlimited_refinement_stalled
+        self.max_consecutive_discarded = max_consecutive_discarded
         self.max_consecutive_restoration = max_consecutive_restoration
         self.max_cross_validations = max_cross_validations
         self.max_noisy_restarts = max_noisy_restarts
@@ -457,7 +457,6 @@ class RbfoptSettings:
         self.save_state_file = save_state_file
         self.minlp_solver_path = minlp_solver_path
         self.nlp_solver_path = nlp_solver_path
-        self.debug = debug
         self.rand_seed = rand_seed
 
         if (self.rbf not in RbfoptSettings._allowed_rbf):

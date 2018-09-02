@@ -21,8 +21,8 @@ import os
 import math
 import itertools
 import warnings
-import collections
-import logging
+import ctypes
+import ctypes.util
 import numpy as np
 import scipy.spatial as ss
 import scipy.linalg as la
@@ -616,9 +616,57 @@ def get_min_distance(point, other_points):
     # Create distance matrix
     dist = ss.distance.cdist(np.atleast_2d(point), other_points)
     return np.amin(dist, 1)
+    
 # -- end function
 
 
+def get_indices_with_dis_not_smaller_than_min(points, min_dist):
+    """Get the indicies to retain from a set of points based on min_dist.
+    
+    Compute the Euclidean distances that a set of points has with each other, 
+    and return the indices of points with larger or equal the minimum distance. 
+    For each pair of points with a distance smaller than the minimum, 
+    retain the first point.
+    
+    Parameters
+    ----------
+    points : 1D numpy.ndarray[float]
+        The points we compute the distances from.
+
+    min_dist : [float]
+        The minimum distance.
+    
+    Returns
+    -------
+    List[int]
+        List of integers of points to retain.
+    """
+    
+    assert(isinstance(points, np.ndarray))
+    assert(points.size)
+    
+    m = len(points) 
+    remove_index = [False] * m
+    dis_indices = []
+    
+    #Create the condendsed distance matrix Y. 
+    #For each i and j (where i < j < m),
+    #where m is the number of original observations. 
+    #The metric dist(u=X[i], v=X[j]) is computed and stored in entry ij.
+    Y = ss.distance.pdist(points)
+    combinations = itertools.combinations(range(m), 2)
+     
+    #Enumerate the possible combinations
+    for dist, (u,v) in zip(Y, combinations):             
+        #Check distance, if too small, mark second value for removal
+        if(remove_index[u] == False and dist < min_dist): remove_index[v] = True
+    
+    #Return indices to points to retain    
+    return np.array([i for i in range(m) if remove_index[i] == False])
+
+# -- end function
+   
+   
 def get_min_distance_and_index(point, other_points):
     """Compute the distance and index of the point with minimum distance.
 
@@ -789,10 +837,9 @@ def get_matrix_inverse(settings, Amat):
     try:
         Amatinv = Amat.getI()
     except np.linalg.LinAlgError as e:
-        if (settings.debug):
-            print('Exception raised trying to invert the RBF matrix',
-                  file=sys.stderr)
-            print(e, file=sys.stderr)
+        print('Exception raised trying to invert the RBF matrix',
+              file=sys.stderr)
+        print(e, file=sys.stderr)
         raise e
 
     # Zero out tiny elements of the inverse -- this is potentially
@@ -846,11 +893,10 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
     try:
         solution = np.linalg.solve(Amat, rhs)
     except np.linalg.LinAlgError as e:
-        if (settings.debug):
-            print('Exception raised in the solution of the RBF linear system',
-                  file=sys.stderr)
-            print('Exception details:', file=sys.stderr)
-            print(e, file=sys.stderr)
+        print('Exception raised in the solution of the RBF linear system',
+              file=sys.stderr)
+        print('Exception details:', file=sys.stderr)
+        print(e, file=sys.stderr)
         raise e
 
     return (solution[0:k], solution[k:])
@@ -1525,7 +1571,8 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
     original_gamma = settings.rbf_shape_parameter
     rbf_list = ['cubic', 'thin_plate_spline', 'multiquadric', 'linear',
                 'gaussian']
-    gamma_list = [[0.1], [0.1], [0.1, 1.0], [0.1], [0.001, 0.01]]
+    gamma_list = [[original_gamma], [original_gamma], [0.1, 1.0],
+                  [original_gamma], [0.001, 0.01]]
     with warnings.catch_warnings():
         warnings.filterwarnings('error')
         for (i, rbf_type) in enumerate(rbf_list):
@@ -1552,29 +1599,6 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
     settings.rbf_shape_parameter = original_gamma
     return best_model, best_gamma
 
-# -- end function
-
-def get_most_common_element(array, to_exclude=[]):
-    """Get most common element in a list.
-
-    Parameters
-    ----------
-    array : List[any]
-        The list whose most common element is sought.
-
-    to_exclude : List[any]
-        A list of elements to exclude from the count.
-    
-    Returns
-    -------
-    Any
-        The most common element, None if all elements were excluded.
-    """
-    counter = collections.Counter(
-        val for val in array if val not in to_exclude)
-    if (counter.most_common(1)):
-        return counter.most_common(1)[0][0]
-    return None
 # -- end function
 
 def results_ready(results):
@@ -1633,7 +1657,7 @@ def get_one_ready_index(results):
 # -- end if
 
 def init_environment(settings):
-    """Initialize the environment: random seed, logger.
+    """Initialize the environment: random seed.
 
     Parameters
     ----------
@@ -1643,12 +1667,6 @@ def init_environment(settings):
     assert(isinstance(settings, RbfoptSettings))
     # Numpy's random seed
     np.random.seed(settings.rand_seed)
-    # Pyomo's logger
-    if (not settings.debug):
-        logging.getLogger('pyomo.core').setLevel(logging.CRITICAL)
-        logging.getLogger('pyomo.opt').setLevel(logging.CRITICAL)
-        logging.getLogger('pyomo.solvers').setLevel(logging.CRITICAL)
     
 
 # -- end if
-
