@@ -22,7 +22,6 @@ import math
 import itertools
 import warnings
 import collections
-import logging
 import numpy as np
 import scipy.spatial as ss
 import scipy.linalg as la

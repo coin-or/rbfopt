@@ -21,6 +21,7 @@ import os
 import pickle
 import copy
 import collections
+import logging
 import numpy as np
 from multiprocessing import Pool
 import rbfopt.rbfopt_utils as ru
