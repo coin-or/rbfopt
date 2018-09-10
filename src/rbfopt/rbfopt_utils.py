@@ -1633,7 +1633,7 @@ def get_one_ready_index(results):
 # -- end if
 
 def init_environment(settings):
-    """Initialize the environment: random seed, logger.
+    """Initialize the random seed.
 
     Parameters
     ----------
@@ -1643,11 +1643,6 @@ def init_environment(settings):
     assert(isinstance(settings, RbfoptSettings))
     # Numpy's random seed
     np.random.seed(settings.rand_seed)
-    # Pyomo's logger
-    if (not settings.debug):
-        logging.getLogger('pyomo.core').setLevel(logging.CRITICAL)
-        logging.getLogger('pyomo.opt').setLevel(logging.CRITICAL)
-        logging.getLogger('pyomo.solvers').setLevel(logging.CRITICAL)
     
 
 # -- end if

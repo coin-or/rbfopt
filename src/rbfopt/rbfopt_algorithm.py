@@ -299,6 +299,11 @@ class RbfoptAlgorithm:
         # generator. This is taken care of by an appropriate function
         # (useful for parallelization).
         ru.init_environment(l_settings)
+        # Disable Pyomo's logger if necessary
+        if (not l_settings.debug):
+            logging.getLogger('pyomo.core').setLevel(logging.CRITICAL)
+            logging.getLogger('pyomo.opt').setLevel(logging.CRITICAL)
+            logging.getLogger('pyomo.solvers').setLevel(logging.CRITICAL)
 
         # Initialize counters
         self.itercount = 0
