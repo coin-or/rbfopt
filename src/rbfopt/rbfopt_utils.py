@@ -22,6 +22,7 @@ import math
 import itertools
 import warnings
 import collections
+import logging
 import numpy as np
 import scipy.spatial as ss
 import scipy.linalg as la
@@ -1632,7 +1633,7 @@ def get_one_ready_index(results):
 # -- end if
 
 def init_environment(settings):
-    """Initialize the random seed.
+    """Initialize the random seed and disable Pyomo output.
 
     Parameters
     ----------
@@ -1642,6 +1643,12 @@ def init_environment(settings):
     assert(isinstance(settings, RbfoptSettings))
     # Numpy's random seed
     np.random.seed(settings.rand_seed)
+    # Disable Pyomo's logger if necessary
+    if (not settings.debug):
+        logging.getLogger('pyomo.core').setLevel(logging.CRITICAL)
+        logging.getLogger('pyomo.opt').setLevel(logging.CRITICAL)
+        logging.getLogger('pyomo.solvers').setLevel(logging.CRITICAL)
+
     
 
 # -- end if

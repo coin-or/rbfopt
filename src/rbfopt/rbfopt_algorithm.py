@@ -21,7 +21,6 @@ import os
 import pickle
 import copy
 import collections
-import logging
 import numpy as np
 from multiprocessing import Pool
 import rbfopt.rbfopt_utils as ru
@@ -62,6 +61,13 @@ class RbfoptAlgorithm:
         the points in init_node_pos will be evaluated in the
         initialization phase of the algorithm.
 
+    do_init_strategy : bool 
+        Perform initialization strategy. If True, the algorithm will
+        generate an initial set of points on top of any user-provided
+        points. If False, we will rely on user-provided points
+        only. Notice that the algorithm may fail if not enough points
+        are provided, and do_init_strategy is False. Default True.
+
 
     Attributes
     ----------
@@ -92,6 +98,9 @@ class RbfoptAlgorithm:
         Identifier of the current step within the cyclic optimization
         strategy counter.
 
+    cyclecount : int
+        Number of cycles.
+
     num_cons_refinement : int
         Current number of consecutive refinement steps.
 
@@ -103,6 +112,9 @@ class RbfoptAlgorithm:
 
     discarded_iters : collections.deque
         Rolling window to keep track of discarded iterations
+
+    do_init_strategy : bool
+        If True, perform initialization strategy on first cycle.
 
     inf_step : int
         Identifier of the InfStep.
@@ -226,8 +238,8 @@ class RbfoptAlgorithm:
         for the trust region refinement method.
 
     """
-    def __init__(self, settings, black_box,
-                 init_node_pos=None, init_node_val=None):
+    def __init__(self, settings, black_box, init_node_pos=None,
+                 init_node_val=None, do_init_strategy=True):
         """Constructor.
         
         """
@@ -279,6 +291,8 @@ class RbfoptAlgorithm:
         assert((len(integer_vars) == 0) or (max(integer_vars) < dimension))
         assert(init_node_pos is None or init_node_val is None or
                len(init_node_pos) == len(init_node_val))
+        assert(do_init_strategy or (init_node_pos is not None and
+                len(init_node_pos) >= dimension + 1))
 
         # Set the value of 'auto' parameters if necessary
         l_settings = settings.set_auto_parameters(dimension, var_lower,
@@ -296,26 +310,23 @@ class RbfoptAlgorithm:
         # of the paper. This is redundant but it simplifies our life.
         self.n = dimension
 
-        # Set random seed. We always use numpy's random
-        # generator. This is taken care of by an appropriate function
-        # (useful for parallelization).
+        # Set random seed and external loggers. We always use numpy's
+        # random generator. This is taken care of by an appropriate
+        # function (useful for parallelization).
         ru.init_environment(l_settings)
-        # Disable Pyomo's logger if necessary
-        if (not l_settings.debug):
-            logging.getLogger('pyomo.core').setLevel(logging.CRITICAL)
-            logging.getLogger('pyomo.opt').setLevel(logging.CRITICAL)
-            logging.getLogger('pyomo.solvers').setLevel(logging.CRITICAL)
 
         # Initialize counters
         self.itercount = 0
         self.evalcount = 0
         self.noisy_evalcount = 0
         self.current_step = 0
+        self.cyclecount = -1
         self.num_cons_refinement = 0
         self.num_stalled_iter = 0
         self.num_noisy_restarts = 0
         self.discarded_iters = collections.deque(
             maxlen=l_settings.discarded_window_size*l_settings.num_cpus)
+        self.do_init_strategy = do_init_strategy
     
         # Initialize identifiers of the search steps
         self.inf_step = 0
@@ -412,6 +423,27 @@ class RbfoptAlgorithm:
         self.output_stream = output_stream
     # -- end function
 
+    def print_init_line(self):
+        """Print first line of the output, with headers.
+        
+        """
+        print(' {:>5s}'.format('Iter') +
+              ' {:>6s}'.format('Cycle') +
+              '  {:15s}'.format('Action') +
+              ' {:>18s}'.format('Objective value') +
+              '  {:>8s}'.format('Time') +
+              ' {:>8s}'.format('Gap'),
+              file=self.output_stream)
+        print(' {:>5s}'.format('----') +
+              ' {:>6s}'.format('-----') +
+              '  {:15s}'.format('------') +
+              ' {:>18s}'.format('---------------') +
+              '  {:>8s}'.format('----') +
+              ' {:>8s}'.format('---'),
+              file=self.output_stream)
+        self.output_stream.flush()
+    # -- end function
+
     def update_log(self, tag, node_is_noisy=None, obj_value=None, gap=None):
         """Print a single line in the log.
 
@@ -436,17 +468,19 @@ class RbfoptAlgorithm:
             multiplied by 100 before printing.
         """        
         if (node_is_noisy is None or obj_value is None or gap is None):
-            print('Iter {:3d}'.format(self.itercount) + 
-                  ' {:38s}'.format(tag) +
-                  ' time {:7.2f}'.format(time.time() - self.start_time),
+            print(' {:5d}'.format(self.itercount) +
+                  ' {:6d}'.format(self.cyclecount) +
+                  '  {:35s}'.format(tag) +
+                  ' {:8.2f}'.format(time.time() - self.start_time),
                   file=self.output_stream)
         else:
-            print('Iter {:3d}'.format(self.itercount) + 
-                  ' {:15s}'.format(tag) +
-                  ': obj{:s}'.format('~' if node_is_noisy else ' ') +
-                  ' {:16.6f}'.format(obj_value) +
-                  ' time {:7.2f}'.format(time.time() - self.start_time) +
-                  ' gap {:8.2f}'.format(gap*100) +
+            print(' {:5d}'.format(self.itercount) +
+                  ' {:6d}'.format(self.cyclecount) +
+                  '  {:15s}'.format(tag) +
+                  ' {:18.6f}'.format(obj_value) +
+                  '{:s}'.format('~' if node_is_noisy else ' ') +
+                  ' {:8.2f}'.format(time.time() - self.start_time) +
+                  ' {:8.2f}'.format(gap*100) +
                   ' {:s}'.format('*' if (gap < self.best_gap_shown and
                                          obj_value == self.fbest) else ' '),
                   file=self.output_stream)
@@ -470,7 +504,8 @@ class RbfoptAlgorithm:
         """
         print('Summary: iters {:3d}'.format(self.itercount) + 
               ' evals {:3d}'.format(self.evalcount) + 
-              ' noisy_evals {:3d}'.format(self.noisy_evalcount) + 
+              ' noisy_evals {:3d}'.format(self.noisy_evalcount) +
+              ' cycles {:3d}'.format(self.cyclecount) +
               ' opt_time {:7.2f}'.format(time.time() - self.start_time) + 
               ' tot_time {:7.2f}'.format(self.elapsed_time) + 
               ' obj{:s}'.format('~' if node_is_noisy else ' ') +
@@ -702,6 +737,7 @@ class RbfoptAlgorithm:
 
         """
         self.start_time = time.time()
+        self.print_init_line()
         if (self.n == 0 and len(self.fixed_vars[0])):
             # There is nothing to do in this case
             self.update_log('All variables fixed, nothing to do!')
@@ -767,6 +803,7 @@ class RbfoptAlgorithm:
         while (self.itercount - itercount_at_start < pause_after_iters and
                self.itercount < l_settings.max_iterations and
                self.evalcount < l_settings.max_evaluations and
+               self.cyclecount < l_settings.max_cycles and
                time.time() - start_time < l_settings.max_clock_time and
                gap > l_settings.eps_opt):
             # If the user wants to skip inf_step, we proceed to the
@@ -778,14 +815,15 @@ class RbfoptAlgorithm:
 
             # Check if we should restart. 
             if (self.current_step <= self.first_step and
-                (len(self.discarded_iters) >=
-                 l_settings.discarded_window_size/2 and
-                 self.discarded_iters.count(True) >=
-                 l_settings.max_fraction_discarded *
-                 len(self.discarded_iters)) or 
-                (self.num_stalled_iter >= l_settings.max_stalled_iterations
-                 and self.evalcount + 3*(n + 1 + self.cycle_length) < 
-                 l_settings.max_evaluations)):
+                ((len(self.discarded_iters) >=
+                  l_settings.discarded_window_size/2 and
+                  self.discarded_iters.count(True) >=
+                  l_settings.max_fraction_discarded *
+                  len(self.discarded_iters)) or 
+                 (self.num_stalled_iter >= l_settings.max_stalled_iterations
+                  and self.evalcount + 3*(n + 1 + self.cycle_length) < 
+                  l_settings.max_evaluations and
+                  self.cyclecount < l_settings.max_cycles - 1))):
                 self.update_log('Restart')
                 self.restart()
 
@@ -902,6 +940,7 @@ class RbfoptAlgorithm:
                     # Error in the solution of the linear system. We
                     # go back to the usual search.
                     self.current_step = self.first_step
+                    self.cyclecount += 1
                     continue
                 
 
@@ -1143,6 +1182,7 @@ class RbfoptAlgorithm:
         while (self.itercount - itercount_at_start < pause_after_iters and
                self.itercount < l_settings.max_iterations and
                self.evalcount < l_settings.max_evaluations and
+               self.cyclecount < l_settings.max_cycles and
                time.time() - start_time < l_settings.max_clock_time and
                gap > l_settings.eps_opt):
             itercount_before_rescheck = self.itercount
@@ -1356,14 +1396,15 @@ class RbfoptAlgorithm:
 
             # Check if we should restart. 
             if (self.current_step <= self.first_step and
-                (len(self.discarded_iters) >=
-                 l_settings.discarded_window_size*l_settings.num_cpus/2
-                 and self.discarded_iters.count(True) >=
-                 l_settings.max_fraction_discarded *
-                 len(self.discarded_iters)) or 
-                (self.num_stalled_iter >= l_settings.max_stalled_iterations
-                 and self.evalcount + 3*(n + 1 + self.cycle_length) < 
-                 l_settings.max_evaluations)):
+                ((len(self.discarded_iters) >=
+                  l_settings.discarded_window_size*l_settings.num_cpus/2
+                  and self.discarded_iters.count(True) >=
+                  l_settings.max_fraction_discarded *
+                  len(self.discarded_iters)) or 
+                 (self.num_stalled_iter >= l_settings.max_stalled_iterations
+                  and self.evalcount + 3*(n + 1 + self.cycle_length) < 
+                  l_settings.max_evaluations and
+                  self.cyclecount < l_settings.max_cycles - 1))):
                 # If there are still results in the pipeline, wait for
                 # them, then try again.
                 if (res_eval or res_search):
@@ -1620,6 +1661,12 @@ class RbfoptAlgorithm:
             A pool of workers to evaluate the initialization points in
             parallel. If None, parallel evaluation will not be
             performed.
+
+        Raises
+        ------
+        ValueError
+            If the routine does not find enough good initialization points.
+
         """
         # We update the number of noisy restarts here, so that if
         # we hit the limit on noisy restarts, we can evaluate
@@ -1629,73 +1676,96 @@ class RbfoptAlgorithm:
                                    else 0)
         # Store the current number of nodes
         self.num_nodes_at_restart = len(self.all_node_pos)
-        # Compute a new set of starting points
-        node_pos = ru.initialize_nodes(self.l_settings, self.var_lower, 
-                                       self.var_upper, self.integer_vars)
-        # Check if some points were previously evaluated, i.e. before
-        # the restart. If so, remove them from the list of nodes that
-        # will be evaluated now.
-        if (self.num_nodes_at_restart):
-            dist = ru.bulk_get_min_distance(
-                node_pos, self.all_node_pos[:self.num_nodes_at_restart])
-            indices = np.where(dist <= self.l_settings.eps_zero)[0]
-            prev_node_pos = list()
-            prev_node_val = list()
-            prev_node_is_noisy = list()
-            prev_node_err_bounds = list()
-            for i in reversed(sorted(indices)):
-                val, j = ru.get_min_distance_and_index(
-                    node_pos[i], self.all_node_pos[:self.num_nodes_at_restart])
-                if (self.eval_mode == 'noisy' or 
-                    not self.all_node_is_noisy[j]):
-                    prev_node_pos.append(self.all_node_pos[j])
-                    prev_node_val.append(self.all_node_val[j])
-                    prev_node_is_noisy.append(self.all_node_is_noisy[j])
-                    prev_node_err_bounds.append(self.all_node_err_bounds[j])
-                    node_pos = np.delete(np.atleast_2d(node_pos), i, axis=0)
-        # Evaluate new points
-        if (self.eval_mode == 'accurate' or
-            self.num_noisy_restarts > self.l_settings.max_noisy_restarts or
-            (self.noisy_evalcount + self.n + 1 >=
-             self.l_settings.max_noisy_evaluations)):
-            if (pool is None):
-                node_val = np.array([objfun([self.bb, point, self.fixed_vars])
-                                     for point in node_pos])
+        if (self.itercount > 0 or self.do_init_strategy):
+            # Compute a new set of starting points
+            node_pos = ru.initialize_nodes(self.l_settings, self.var_lower, 
+                                           self.var_upper, self.integer_vars)
+            # Check if some points were previously evaluated, i.e. before
+            # the restart. If so, remove them from the list of nodes that
+            # will be evaluated now.
+            if (self.num_nodes_at_restart):
+                dist = ru.bulk_get_min_distance(
+                    node_pos, self.all_node_pos[:self.num_nodes_at_restart])
+                indices = np.where(dist <= self.l_settings.eps_zero)[0]
+                prev_node_pos = list()
+                prev_node_val = list()
+                prev_node_is_noisy = list()
+                prev_node_err_bounds = list()
+                for i in reversed(sorted(indices)):
+                    val, j = ru.get_min_distance_and_index(
+                        node_pos[i],
+                        self.all_node_pos[:self.num_nodes_at_restart])
+                    if (self.eval_mode == 'noisy' or 
+                        not self.all_node_is_noisy[j]):
+                        prev_node_pos.append(self.all_node_pos[j])
+                        prev_node_val.append(self.all_node_val[j])
+                        prev_node_is_noisy.append(self.all_node_is_noisy[j])
+                        prev_node_err_bounds.append(
+                            self.all_node_err_bounds[j])
+                        node_pos = np.delete(np.atleast_2d(node_pos), i,
+                                             axis=0)
+            # Evaluate new points
+            if (self.eval_mode == 'accurate' or
+                self.num_noisy_restarts > self.l_settings.max_noisy_restarts
+                or (self.noisy_evalcount + self.n + 1 >=
+                    self.l_settings.max_noisy_evaluations)):
+                if (pool is None):
+                    node_val = np.array([objfun([self.bb, point,
+                                                 self.fixed_vars])
+                                         for point in node_pos])
+                else:
+                    map_arg = [[self.bb, point, self.fixed_vars] 
+                               for point in node_pos]
+                    node_val = np.array(pool.map(objfun, map_arg))
+                node_err_bounds = np.zeros((len(node_val), 2))
+                self.evalcount += len(node_val)
             else:
-                map_arg = [[self.bb, point, self.fixed_vars] 
-                           for point in node_pos]
-                node_val = np.array(pool.map(objfun, map_arg))
-            node_err_bounds = np.zeros((len(node_val), 2))
-            self.evalcount += len(node_val)
+                if (pool is None):
+                    res = np.array([objfun_noisy([self.bb, point,
+                                                  self.fixed_vars])
+                                    for point in node_pos])
+                else:
+                    map_arg = [[self.bb, point, self.fixed_vars] 
+                               for point in node_pos]
+                    res = np.array(pool.map(objfun_noisy, map_arg))
+                node_val = res[:, 0]
+                node_err_bounds = res[:, 1:]
+                self.noisy_evalcount += len(node_val)
+            node_is_noisy = np.array([self.eval_mode == 'noisy'
+                                      for val in node_val])
+            # Add previously evaluated points, if any
+            if (self.num_nodes_at_restart and prev_node_pos):
+                node_pos = np.vstack((node_pos, np.array(prev_node_pos)))
+                node_val = np.append(node_val, np.array(prev_node_val))
+                node_is_noisy = np.append(
+                    node_is_noisy, np.array(prev_node_is_noisy, dtype=bool))
+                node_err_bounds = np.vstack((node_err_bounds,
+                                             np.array(prev_node_err_bounds)))
         else:
-            if (pool is None):
-                res = np.array([objfun_noisy([self.bb, point, self.fixed_vars])
-                                for point in node_pos])
-            else:
-                map_arg = [[self.bb, point, self.fixed_vars] 
-                           for point in node_pos]
-                res = np.array(pool.map(objfun_noisy, map_arg))
-            node_val = res[:, 0]
-            node_err_bounds = res[:, 1:]
-            self.noisy_evalcount += len(node_val)
-        node_is_noisy = np.array([self.eval_mode == 'noisy'
-                                 for val in node_val])
-        # Add previously evaluated points, if any
-        if (self.num_nodes_at_restart and prev_node_pos):
-            node_pos = np.vstack((node_pos, np.array(prev_node_pos)))
-            node_val = np.append(node_val, np.array(prev_node_val))
-            node_is_noisy = np.append(
-                node_is_noisy, np.array(prev_node_is_noisy, dtype = bool))
-            node_err_bounds = np.vstack((node_err_bounds,
-                                         np.array(prev_node_err_bounds)))
+            # We did not perform the initialization strategy, so use
+            # empty arrays
+            node_pos = np.zeros(shape=(0, self.n))
+            node_val = np.zeros(shape=(0, 1))
+            node_is_noisy = np.zeros(shape=(0, 1), dtype=bool)
+            node_err_bounds = np.zeros(shape=(0, 2))
         # Add user-provided points if this is the first iteration
         if (self.init_node_pos.size and self.itercount == 0):
-            # Determine which points can be added
-            dist = ru.bulk_get_min_distance(self.init_node_pos,
-                                            node_pos)
-            init_node_pos = np.array([self.init_node_pos[i]
-                                      for i in range(len(self.init_node_pos)) 
-                                      if dist[i] > self.l_settings.min_dist])
+            # Determine which points can be added, based on distance
+            # from other points
+            self_dist = ([float('+inf')] +
+                         [ru.get_min_distance(self.init_node_pos[i],
+                                              self.init_node_pos[:i])
+                          for i in range(1, len(self.init_node_pos))])
+            if (node_pos.size > 0):
+                dist = ru.bulk_get_min_distance(self.init_node_pos,
+                                                node_pos)
+                selected = [i for i in range(len(self.init_node_pos))
+                            if (dist[i] > self.l_settings.min_dist and
+                                self_dist[i] > self.l_settings.min_dist)]
+            else:
+                selected = [i for i in range(len(self.init_node_pos))
+                            if (self_dist[i] > self.l_settings.min_dist)]
+            init_node_pos = np.array(self.init_node_pos[selected])
             if (self.init_node_val.size < len(self.init_node_pos)):
                 # Not enough values are provided, so we evaluate each node.
                 if (pool is None):
@@ -1708,8 +1778,7 @@ class RbfoptAlgorithm:
                     init_node_val = np.array(pool.map(objfun, map_arg))
                 self.evalcount += len(init_node_val)
             else:
-                init_node_val = self.init_node_val[dist >
-                                                   self.l_settings.min_dist]
+                init_node_val = self.init_node_val[selected]
             if (init_node_pos.size):
                 node_pos = np.vstack((node_pos, init_node_pos))
                 node_val = np.append(node_val, init_node_val)
@@ -1755,14 +1824,17 @@ class RbfoptAlgorithm:
 
         gap = ru.compute_gap(self.l_settings, self.fbest +
                              self.all_node_err_bounds[self.fbest_index, 1])
-
+        self.current_step = self.first_step
+        self.cyclecount += 1
         # Print the initialization points
         for (i, val) in enumerate(self.node_val):
             min_dist = ru.get_min_distance(self.node_pos[i],
                                            np.vstack((self.node_pos[:i],
                                                       self.node_pos[(i+1):])))
             self.update_log('Initialization', self.node_is_noisy[i], val, gap)
-        self.current_step = self.first_step
+        if (len(self.node_pos) < self.n + 1):
+            raise ValueError('Not enough initialization points; try ' +
+                             'again with do_init_strategy=True.')
     # -- end function
 
     def restoration_search(self):
@@ -1856,7 +1928,10 @@ class RbfoptAlgorithm:
                 (self.evalcount >= self.l_settings.max_evaluations * 
                  self.l_settings.thresh_unlimited_refinement) or
                 (self.elapsed_time >= self.l_settings.max_clock_time * 
-                 self.l_settings.thresh_unlimited_refinement))
+                 self.l_settings.thresh_unlimited_refinement) or
+                (self.num_stalled_iter >=
+                 self.l_settings.max_stalled_iterations *
+                 self.l_settings.thresh_unlimited_refinement_stalled))
     # -- end function
 
     def refinement_update(self, model_impr, real_impr, to_replace):
@@ -1894,6 +1969,7 @@ class RbfoptAlgorithm:
             # Do no continue refinement
             self.num_cons_refinement = 0
             self.current_step = self.first_step
+            self.cyclecount += 1
         else:
             # Continue refinement. Update set of points
             # used to build model.
@@ -1949,12 +2025,15 @@ class RbfoptAlgorithm:
     def advance_step_counter(self):
         """Advance the step counter of the optimization algorithm.
 
-        Advance the step counter of the optimization algorithm if
-        necessary.
+        Advance the step counter of the optimization algorithm, and
+        update cycle number.
 
         """
         # Advance to next step.
+        if (self.current_step > (self.current_step + 1) % self.cycle_length):
+            self.cyclecount += 1
         self.current_step = (self.current_step + 1) % self.cycle_length
+
     # -- end function
 
     def stalling_update(self):
