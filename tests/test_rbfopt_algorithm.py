@@ -296,3 +296,48 @@ class TestFixedVariables(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg=msg)
     # -- end function
 # -- end class
+
+class TestInitPoints(unittest.TestCase):
+    """Test RbfoptAlgorithms when providing initial points."""
+
+    def test_distinct_init_points(self):
+        """Verify that distinct points are accepted."""
+        bb = tf.TestBlackBox('branin')
+        optimum = bb._function.optimum_value
+        init_node_pos = [[0, 0], [1, 1], [0, 10], [5, 0]]
+        settings = RbfoptSettings(target_objval=optimum, max_iterations=10,
+                                  eps_opt=0.0, rand_seed=89123132)
+        alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos=init_node_pos)
+        res = alg.optimize()
+        for node in init_node_pos:
+            self.assertIn(node, alg.all_node_pos,
+                          msg='Initial point not found in all_node_pos')
+    # -- end function
+
+    def test_failed_init_points(self):
+        """Verify that not enough points raises an error."""
+        bb = tf.TestBlackBox('branin')
+        optimum = bb._function.optimum_value
+        init_node_pos = [[0, 0], [1, 1], [0, 10], [5, 0]]
+        settings = RbfoptSettings(target_objval=optimum, max_iterations=10,
+                                  eps_opt=0.0)
+        alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos=init_node_pos,
+                                 do_init_strategy=False)
+        res = alg.optimize()
+        for node in init_node_pos:
+            self.assertIn(node, alg.all_node_pos[:4],
+                          msg='Initial point not found in all_node_pos')
+    # -- end function
+
+    def test_duplicate_init_points(self):
+        """Verify that duplicate points are removed."""
+        bb = tf.TestBlackBox('branin')
+        optimum = bb._function.optimum_value
+        init_node_pos = [[0, 0], [1, 1], [0, 1.0e-12]]
+        settings = RbfoptSettings(target_objval=optimum, max_iterations=10,
+                                  eps_opt=0.0)
+        alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos=init_node_pos,
+                                 do_init_strategy=False)
+        self.assertRaises(RuntimeError, alg.optimize)
+    # -- end function
+# -- end class

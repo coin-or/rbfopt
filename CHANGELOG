@@ -1,3 +1,12 @@
+2018-09-23  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_algorithm.py (update_log): changed log format.
+	* rbfopt_algorithm.py (RbfoptAlgorithm): constructor now accepts
+	do_init_strategy option.
+	* rbfopt_algorithm.py (restart): added distance check for
+	user-provided points.
+	* rbfopt_settings.py : added options max_cycles and
+	thresh_unlimited_refinement_stalled.
+
 2018-08-29  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_algorithm.py (restoration_search_parallel): deleted.
 	* rbfopt_algorithm.py (optimize_parallel): solved bug in parallel

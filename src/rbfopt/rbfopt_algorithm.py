@@ -1664,7 +1664,7 @@ class RbfoptAlgorithm:
 
         Raises
         ------
-        ValueError
+        RuntimeError
             If the routine does not find enough good initialization points.
 
         """
@@ -1833,8 +1833,8 @@ class RbfoptAlgorithm:
                                                       self.node_pos[(i+1):])))
             self.update_log('Initialization', self.node_is_noisy[i], val, gap)
         if (len(self.node_pos) < self.n + 1):
-            raise ValueError('Not enough initialization points; try ' +
-                             'again with do_init_strategy=True.')
+            raise RuntimeError('Not enough initialization points; try ' +
+                               'again with do_init_strategy=True.')
     # -- end function
 
     def restoration_search(self):
