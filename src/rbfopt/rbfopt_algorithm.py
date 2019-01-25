@@ -44,8 +44,8 @@ class RbfoptAlgorithm:
     settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
 
-    black_box : :class:`rbfopt_black_box.BlackBox`
-        An object derived from class BlackBox, that describes the
+    black_box : :class:`rbfopt_black_box.RbfoptBlackBox`
+        An object derived from class RbfoptBlackBox, that describes the
         problem.
 
     init_node_pos : 2D numpy.ndarray[float] or None

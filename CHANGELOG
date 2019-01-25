@@ -1,3 +1,13 @@
+2018-10-06  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 4.0.3 release.
+	* Added:
+	More ways for the user to control the initial points and
+	optimization process.
+	Ability to control debug messages from solvers.
+	* Changed:
+	Format of the output log is more compact.
+	Improved management of failed/discarded iterations.
+
 2018-09-23  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_algorithm.py (update_log): changed log format.
 	* rbfopt_algorithm.py (RbfoptAlgorithm): constructor now accepts
