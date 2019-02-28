@@ -858,7 +858,7 @@ def _min_rbf_obj_expression_linear(model):
     return (sum(model.lambda_h[i] *
                 sqrt(_DISTANCE_SHIFT +
                      sum((model.x[j] - model.node[i, j])**2 for j in model.N))
-                for i in model.K) + model.lambda_h[model.k])
+                for i in model.K) + model.lambda_h[model.k.value])
 
 # Objective function for the "minimize rbf" problem. The expression is:
 # min sum_{j in K} lambda_j \sqrt{d_j + gamma^2} + h_{0}
@@ -866,7 +866,7 @@ def _min_rbf_obj_expression_mq(model):
     return (sum(model.lambda_h[i] *
                 sqrt(model.gamma*model.gamma +
                      sum((model.x[j] - model.node[i, j])**2 for j in model.N))
-                for i in model.K) + model.lambda_h[model.k])
+                for i in model.K) + model.lambda_h[model.k.value])
 
 # Objective function for the "maximize 1/\mu" problem. The expression is:
 # max -\sum_{i in Q, j in Q} A^{-1}_{ij} upi_i upi_j;
@@ -884,7 +884,7 @@ def _max_one_over_mu_obj_expression_linear(model):
                  sum((model.x[h] - model.node[j, h])**2 for h in model.N))
             for j in model.K) +
         # Product k with k
-        model.Ainv[model.k, model.k] - model.phi_0)
+        model.Ainv[model.k.value, model.k.value] - model.phi_0)
 
 def _max_one_over_mu_obj_expression_mq(model):
     # We need all products between index sets
@@ -901,7 +901,7 @@ def _max_one_over_mu_obj_expression_mq(model):
                  sum((model.x[h] - model.node[j, h])**2 for h in model.N))
             for j in model.K) +
         # Product k with k
-        model.Ainv[model.k, model.k] - model.phi_0)
+        model.Ainv[model.k.value, model.k.value] - model.phi_0)
 
 # Objective function for the "maximize h_k" problem. The expression is:
 # 1/(\mu_k(x) [s_k(x) - f^\ast]^2)
@@ -915,13 +915,13 @@ def _max_h_k_obj_expression_linear(model):
                 sqrt(_DISTANCE_SHIFT +
                      sum((model.x[h] - model.node[j, h])**2 for h in model.N))
                 for j in model.K) +
-            model.Ainv[model.k, model.k] - model.phi_0) /
+            model.Ainv[model.k.value, model.k.value] - model.phi_0) /
             ((sum(model.lambda_h[i] *
                   sqrt(_DISTANCE_SHIFT +
                        sum((model.x[j] - model.node[i, j])**2
                            for j in model.N))
                   for i in model.K) +
-              model.lambda_h[model.k] - model.fstar)**2))
+              model.lambda_h[model.k.value] - model.fstar)**2))
 
 def _max_h_k_obj_expression_mq(model):
     return ((sum(model.Ainv[i,j] *
@@ -934,13 +934,13 @@ def _max_h_k_obj_expression_mq(model):
                  sqrt(model.gamma*model.gamma +
                       sum((model.x[h] - model.node[j, h])**2 for h in model.N))
                  for j in model.K) +
-             model.Ainv[model.k, model.k] - model.phi_0)/
+             model.Ainv[model.k.value, model.k.value] - model.phi_0)/
             ((sum(model.lambda_h[i] *
                   sqrt(model.gamma*model.gamma +
                        sum((model.x[j] - model.node[i, j])**2
                            for j in model.N))
                   for i in model.K) +
-              model.lambda_h[model.k] - model.fstar)**2))
+              model.lambda_h[model.k.value] - model.fstar)**2))
 
 
 # Objective function for the "minimize bumpiness with variable nodes"
@@ -961,7 +961,8 @@ def _min_msrsm_obj_expression_linear(model):
             (sum(model.lambda_h[i] *
                  sqrt(_DISTANCE_SHIFT +
                       sum((model.x[j] - model.node[i, j])**2 for j in model.N))
-                 for i in model.K) + model.lambda_h[model.k] - model.fmin) / 
+                 for i in model.K) + model.lambda_h[model.k.value] -
+             model.fmin) / 
             (model.fmax - model.fmin))
 
 def _min_msrsm_obj_expression_mq(model):
@@ -971,7 +972,8 @@ def _min_msrsm_obj_expression_mq(model):
             (sum(model.lambda_h[i] *
                  sqrt(model.gamma*model.gamma +
                       sum((model.x[j] - model.node[i, j])**2 for j in model.N))
-                 for i in model.K) + model.lambda_h[model.k] - model.fmin) / 
+                 for i in model.K) + model.lambda_h[model.k.value] -
+             model.fmin) / 
             (model.fmax - model.fmin))
 
 # Function to return bounds of the y variables
