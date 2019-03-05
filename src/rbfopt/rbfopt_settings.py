@@ -106,8 +106,12 @@ class RbfoptSettings:
         distances, from becoming singular. Default 1.0e-5.
 
     do_infstep : bool
-        Perform a pure global search in every optimization
-        cycle. Default False.
+        Perform a pure global search in every optimization cycle.
+        Default False.
+
+    do_local_search : bool
+        Perform a pure local search in every optimization cycle. 
+        Default True.
 
     num_global_searches : int
         Number of steps in the global search phase. Default 5.
@@ -116,6 +120,14 @@ class RbfoptSettings:
         Strategy to select initial points. Choice of 'all_corners',
         'lower_corners', 'rand_corners', 'lhd_maximin',
         'lhd_corr'. Default 'lhd_maximin'.
+
+    init_include_midpoint : bool
+        Include midpoint of the box among the initialization points. 
+        Default False.
+
+    init_sample_fraction : float
+        The initial sample size is set to n + 1 times this number. 
+        Default 1.0.
 
     max_random_init : int
         Maximum number of trials for the random initialization
@@ -371,8 +383,11 @@ class RbfoptSettings:
                  eps_linear_dependence=1.0e-6,
                  min_dist=1.0e-5,
                  do_infstep=False,
+                 do_local_search=True,
                  num_global_searches=5,
                  init_strategy='lhd_maximin',
+                 init_include_midpoint=False,
+                 init_sample_fraction=1.0,
                  max_random_init=50,
                  function_scaling='auto',
                  log_scaling_threshold=1.0e6,
@@ -430,8 +445,11 @@ class RbfoptSettings:
         self.eps_linear_dependence = eps_linear_dependence
         self.min_dist = min_dist
         self.do_infstep = do_infstep
+        self.do_local_search = do_local_search
         self.num_global_searches = num_global_searches
         self.init_strategy = init_strategy
+        self.init_include_midpoint = init_include_midpoint
+        self.init_sample_fraction = init_sample_fraction
         self.max_random_init = max_random_init
         self.function_scaling = function_scaling
         self.log_scaling_threshold = log_scaling_threshold

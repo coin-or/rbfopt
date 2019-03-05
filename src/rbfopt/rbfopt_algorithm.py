@@ -291,8 +291,9 @@ class RbfoptAlgorithm:
         assert((len(integer_vars) == 0) or (max(integer_vars) < dimension))
         assert(init_node_pos is None or init_node_val is None or
                len(init_node_pos) == len(init_node_val))
-        assert(do_init_strategy or (init_node_pos is not None and
-                len(init_node_pos) >= dimension + 1))
+        assert(do_init_strategy or
+               (init_node_pos is not None and len(init_node_pos) >=
+                round((dimension + 1)*settings.init_sample_fraction)))
 
         # Set the value of 'auto' parameters if necessary
         l_settings = settings.set_auto_parameters(dimension, var_lower,
@@ -808,8 +809,10 @@ class RbfoptAlgorithm:
                gap > l_settings.eps_opt):
             # If the user wants to skip inf_step, we proceed to the
             # next iteration.
-            if (self.current_step == self.inf_step and 
-                not l_settings.do_infstep):
+            if ((self.current_step == self.inf_step and 
+                 not l_settings.do_infstep) or
+                (self.current_step == self.local_search_step and
+                 not l_settings.do_local_search)):
                 self.advance_step_counter()
                 continue
 
@@ -907,6 +910,10 @@ class RbfoptAlgorithm:
                         rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
                             l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
                             scaled_node_val, scaled_err_bounds, rbf_l, rbf_h)
+                    elif (k < n+1):
+                        # Underdetermined RBF
+                        rbf_l, rbf_h = ru.get_rbf_coefficients_underdet(
+                            l_settings, n, k, Amat, scaled_node_val)
                     else:
                         # Fully accurate RBF
                         rbf_l, rbf_h = ru.get_rbf_coefficients(
@@ -1075,7 +1082,9 @@ class RbfoptAlgorithm:
                     self.refinement_update(model_impr, real_impr,
                                            tr_to_replace)
                     self.iter_last_refine = self.itercount
-                elif ((self.current_step == self.local_search_step) and
+                elif ((self.current_step == self.local_search_step or
+                       (self.current_step == self.local_search_step - 1 and
+                        not l_settings.do_local_search)) and
                       (self.itercount >= self.iter_last_refine +
                        self.l_settings.refinement_frequency *
                        (self.cycle_length - 
@@ -1376,7 +1385,7 @@ class RbfoptAlgorithm:
                         temp_node_val = np.append(
                             temp_node_val, np.clip(val, self.fmin, self.fmax))
                         temp_node_is_noisy = np.append(temp_node_is_noisy,
-                                                      node_is_noisy)
+                                                       node_is_noisy)
             # -- end while
             
             # If no CPUs are available, wait a bit and try again.
@@ -1389,8 +1398,10 @@ class RbfoptAlgorithm:
 
             # If the user wants to skip inf_step, we proceed to the
             # next iteration.
-            if (self.current_step == self.inf_step and 
-                not l_settings.do_infstep):
+            if ((self.current_step == self.inf_step and 
+                 not l_settings.do_infstep) or
+                (self.current_step == self.local_search_step and
+                 not l_settings.do_local_search)):
                 self.advance_step_counter()
                 continue
 
@@ -1508,6 +1519,10 @@ class RbfoptAlgorithm:
                     rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
                         l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
                         scaled_node_val, scaled_err_bounds, rbf_l, rbf_h)
+                elif (k < n+1):
+                    # Underdetermined RBF
+                    rbf_l, rbf_h = ru.get_rbf_coefficients_underdet(
+                        l_settings, n, k, Amat, scaled_node_val)
                 else:
                     # Fully accurate RBF
                     rbf_l, rbf_h = ru.get_rbf_coefficients(
@@ -1832,9 +1847,9 @@ class RbfoptAlgorithm:
                                            np.vstack((self.node_pos[:i],
                                                       self.node_pos[(i+1):])))
             self.update_log('Initialization', self.node_is_noisy[i], val, gap)
-        if (len(self.node_pos) < self.n + 1):
-            raise RuntimeError('Not enough initialization points; try ' +
-                               'again with do_init_strategy=True.')
+        #if (len(self.node_pos) < self.n + 1):
+        #    raise RuntimeError('Not enough initialization points; try ' +
+        #                       'again with do_init_strategy=True.')
     # -- end function
 
     def restoration_search(self):

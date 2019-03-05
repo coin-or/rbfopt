@@ -192,6 +192,7 @@ class TestGutmannParallel(unittest.TestCase):
                                       eps_opt=self.eps_opt,
                                       max_iterations=200,
                                       max_evaluations=300,
+                                      max_fraction_discarded=0.2,
                                       num_cpus=2,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)

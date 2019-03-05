@@ -187,7 +187,7 @@ def get_all_corners(var_lower, var_upper):
     assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
-    node_pos = np.empty([2 ** n, n], np.float_)
+    node_pos = np.empty([2**n, n], np.float_)
     i = 0
     # Generate all corners
     for corner in itertools.product('lu', repeat=len(var_lower)):
@@ -313,10 +313,10 @@ def get_uniform_lhs(n, num_samples):
 # -- end function
 
 
-def get_lhd_maximin_points(var_lower, var_upper, num_trials=50):
+def get_lhd_maximin_points(var_lower, var_upper, sample_size, num_trials=50):
     """Compute a latin hypercube design with maximin distance.
 
-    Compute an array of (n+1) points in the given box, where n is the
+    Compute an array of points in the given box, where n is the
     dimension of the space. The selected points are picked according
     to a random latin hypercube design with maximin distance
     criterion.
@@ -329,6 +329,9 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials=50):
     var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
+    sample_size : int
+        Number of points to sample.
+
     num_trials : int
         Maximum number of generated LHs to choose from.
 
@@ -336,6 +339,7 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials=50):
     -------
     2D numpy.ndarray[float]
         List of points in the latin hypercube design.
+
     """
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
@@ -347,9 +351,9 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials=50):
         # of the interval as starting points
         return np.vstack((var_lower, var_upper))
     # Otherwise, generate a bunch of Latin Hypercubes, and rank them
-    lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
+    lhs = [get_uniform_lhs(n, sample_size) for i in range(num_trials)]
     # Indices of upper triangular matrix (without the diagonal)
-    indices = np.triu_indices(n + 1, 1)
+    indices = np.triu_indices(sample_size, 1)
     # Compute distance matrix of points to themselves, get upper
     # triangular part of the matrix, and get minimum
     dist_values = [np.amin(ss.distance.cdist(mat, mat)[indices])
@@ -362,14 +366,14 @@ def get_lhd_maximin_points(var_lower, var_upper, num_trials=50):
 # -- end function
 
 
-def get_lhd_corr_points(var_lower, var_upper, num_trials=50):
+def get_lhd_corr_points(var_lower, var_upper, sample_size, num_trials=50):
 
     """Compute a latin hypercube design with min correlation.
 
-    Compute a list of (n+1) points in the given box, where n is the
+    Compute a list of points in the given box, where n is the
     dimension of the space. The selected points are picked according
     to a random latin hypercube design with minimum correlation
-    criterion. This function relies on the library pyDOE.
+    criterion. 
 
     Parameters
     ----------
@@ -379,6 +383,9 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials=50):
     var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
+    sample_size : int
+        Number of points to sample.
+
     num_trials : int
         Maximum number of generated LHs to choose from.
 
@@ -386,6 +393,7 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials=50):
     -------
     2D numpy.ndarray[float]
         List of points in the latin hypercube design.
+
     """
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
@@ -397,7 +405,7 @@ def get_lhd_corr_points(var_lower, var_upper, num_trials=50):
         # of the interval as starting points
         return np.vstack((var_lower, var_upper))
     # Otherwise, generate a bunch of Latin Hypercubes, and rank them
-    lhs = [get_uniform_lhs(n, n + 1) for i in range(num_trials)]
+    lhs = [get_uniform_lhs(n, sample_size) for i in range(num_trials)]
     # Indices of upper triangular matrix (without the diagonal)
     indices = np.triu_indices(n, 1)
     # Compute correlation matrix of points to themselves, get upper
@@ -454,6 +462,8 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     assert(isinstance(integer_vars, np.ndarray))
     assert(len(var_lower) == len(var_upper))
 
+    sample_size = max(2, round((len(var_lower) + 1) *
+                               settings.init_sample_fraction))
     # We must make sure points are linearly independent; if they are
     # not, we perform a given number of iterations
     dependent = True
@@ -467,9 +477,12 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         elif (settings.init_strategy == 'rand_corners'):
             nodes = get_random_corners(var_lower, var_upper)
         elif (settings.init_strategy == 'lhd_maximin'):
-            nodes = get_lhd_maximin_points(var_lower, var_upper)
+            nodes = get_lhd_maximin_points(var_lower, var_upper, sample_size)
         elif (settings.init_strategy == 'lhd_corr'):
-            nodes = get_lhd_corr_points(var_lower, var_upper)
+            nodes = get_lhd_corr_points(var_lower, var_upper, sample_size)
+
+        if (settings.init_include_midpoint):
+            nodes = np.vstack((nodes, (var_lower + var_upper)/2))
 
         if (len(integer_vars)):
             nodes[:, integer_vars] = np.around(nodes[:, integer_vars])
@@ -855,6 +868,57 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
 
     return (solution[0:k], solution[k:])
 
+# -- end function
+
+def get_rbf_coefficients_underdet(settings, n, k, Amat, node_val):
+    """Compute coefficients of RBF interpolant (underdetermined).
+
+    Solve an underdetermined linear system to compute the coefficients
+    of the RBF interpolant.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfoptSettings`.
+        Global and algorithmic settings.
+
+    n : int
+        Dimension of the problem, i.e. the size of the space.
+
+    k : int
+        Number of interpolation nodes.
+
+    Amat : numpy.matrix
+        Matrix [Phi P; P^T 0] defining the linear system. Must be a
+        square matrix of appropriate size.
+
+    node_val : 1D numpy.ndarray[float]
+        List of values of the function at the nodes.
+
+    Returns
+    -------
+    (1D numpy.ndarray[float], 1D numpy.ndarray[float])
+        Lambda coefficients (for the radial basis functions), and h
+        coefficients (for the polynomial).
+
+    """
+    assert(len(np.atleast_1d(node_val)) == k)
+    assert(isinstance(settings, RbfoptSettings))
+    assert(isinstance(Amat, np.matrix))
+    assert(isinstance(node_val, np.ndarray))
+    p = get_size_P_matrix(settings, n)
+    assert(Amat.shape == (k+p, k+p))
+    rhs = np.append(node_val, np.zeros(p))
+    try:
+        solution, res, rank, svd = np.linalg.lstsq(Amat, rhs, rcond=-1)
+    except np.linalg.LinAlgError as e:
+        if (settings.debug):
+            print('Exception raised in the solution of the RBF linear system',
+                  file=sys.stderr)
+            print('Exception details:', file=sys.stderr)
+            print(e, file=sys.stderr)
+        raise e
+
+    return (solution[0:k], solution[k:])
 # -- end function
 
 
@@ -1363,8 +1427,7 @@ def get_fmax_current_iter(settings, n, k, current_step, node_val):
     assert(k >= 1)
     assert(current_step >= 1)
     num_initial_points = (2**n if settings.init_strategy == 'all_corners'
-                           else n + 1)
-    assert(k >= num_initial_points)
+                          else round((n + 1)*settings.init_sample_fraction))
     sorted_node_val = np.sort(node_val)
     s_n = get_sigma_n(k, current_step, settings.num_global_searches,
                       num_initial_points)
@@ -1551,7 +1614,6 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
     settings.rbf = original_rbf_type
     settings.rbf_shape_parameter = original_gamma
     return best_model, best_gamma
-
 # -- end function
 
 def get_most_common_element(array, to_exclude=[]):
@@ -1601,7 +1663,7 @@ def results_ready(results):
         if res[0].ready():
             return True
     return False
-# -- end if
+# -- end function
 
 def get_one_ready_index(results):
     """Get index of a single async computation result that is ready.
@@ -1630,7 +1692,7 @@ def get_one_ready_index(results):
         if results[i][0].ready():
             return i
     return len(results)
-# -- end if
+# -- end function
 
 def init_environment(settings):
     """Initialize the random seed and disable Pyomo output.
@@ -1648,8 +1710,39 @@ def init_environment(settings):
         logging.getLogger('pyomo.core').setLevel(logging.CRITICAL)
         logging.getLogger('pyomo.opt').setLevel(logging.CRITICAL)
         logging.getLogger('pyomo.solvers').setLevel(logging.CRITICAL)
+# -- end function
 
-    
+def init_points_cleanup(settings, points):
+    """Clean up set of points to be used as initialization.
 
-# -- end if
+    Eliminate points that are too close to each other.
 
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfoptSettings`
+        Global and algorithmic settings.
+
+    points : 2D numpy.ndarray[float]
+        The list of points to be cleaned.
+
+    Returns
+    -------
+    numpy.ndarray[int]
+        Indices of points that can be used to initialize an
+        RbfoptAlgorithm object.
+    """
+    assert(isinstance(settings, RbfoptSettings))
+    assert(isinstance(points, np.ndarray))
+    assert(points.size)
+    dist = ss.distance.cdist(points, points)
+    # Indices of upper triangular matrix (without the diagonal)
+    dist = np.triu(dist, 1)
+    dist[np.tril_indices(len(points))] = float('+inf')
+    min_dist = np.amin(dist, 1)
+    points_to_take = np.array([True] * len(points))
+    bad_pair_indices = np.arange(len(points))[min_dist <= settings.min_dist]
+    for i in bad_pair_indices:
+        points_to_take[np.arange(i+1, len(points))[
+            dist[i, (i+1):] <= settings.min_dist]] = False
+    return np.arange(len(points))[points_to_take]
+# -- end function

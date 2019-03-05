@@ -333,11 +333,16 @@ class TestInitPoints(unittest.TestCase):
         """Verify that duplicate points are removed."""
         bb = tf.TestBlackBox('branin')
         optimum = bb._function.optimum_value
-        init_node_pos = [[0, 0], [1, 1], [0, 1.0e-12]]
+        init_node_pos = [[0, 0], [0, 1], [0, 1.0e-12]]
         settings = RbfoptSettings(target_objval=optimum, max_iterations=10,
                                   eps_opt=0.0)
         alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos=init_node_pos,
                                  do_init_strategy=False)
-        self.assertRaises(RuntimeError, alg.optimize)
+        res = alg.optimize()
+        for node in init_node_pos[:2]:
+            self.assertIn(node, alg.all_node_pos,
+                          msg='Initial point not found in all_node_pos')
+        self.assertNotIn(init_node_pos[-1], alg.all_node_pos[2:],
+                         msg='Duplicate initial point found in all_node_pos')
     # -- end function
 # -- end class

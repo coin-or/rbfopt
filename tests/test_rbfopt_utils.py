@@ -108,10 +108,10 @@ class TestUtils(unittest.TestCase):
         """Check that latin hypercube designs have the correct size."""
         var_lower = np.array([-1, 0, 1])
         var_upper = np.array([1, 2, 3])
-        corners = ru.get_lhd_maximin_points(var_lower, var_upper)
+        corners = ru.get_lhd_maximin_points(var_lower, var_upper, 4)
         self.assertEqual(len(corners), 4)
-        corners = ru.get_lhd_corr_points(var_lower, var_upper)
-        self.assertEqual(len(corners), 4)
+        corners = ru.get_lhd_corr_points(var_lower, var_upper, 5)
+        self.assertEqual(len(corners), 5)
     # -- end function
 
     def test_initialize_nodes(self):
@@ -133,6 +133,29 @@ class TestUtils(unittest.TestCase):
             for point in points:
                 for index in integer_vars:
                     self.assertEqual(point[index] - round(point[index]), 0)
+    # -- end function
+
+    def test_initialize_nodes_midpoint(self):
+        """Test initialization methods for the sample points.
+
+        This method verifies that returned sets of points have at
+        least n+1 points, and integer variables are integer.
+        """
+        var_lower = np.array([-1, 0, 1])
+        var_upper = np.array([1, 2, 3])
+        integer_vars = np.array([1, 2])
+        midpoint = np.array([0, 1, 2])
+        for method in RbfoptSettings._allowed_init_strategy:
+            settings = RbfoptSettings(init_strategy = method,
+                                      init_include_midpoint = True)
+            points = ru.initialize_nodes(settings, var_lower, var_upper,
+                                         integer_vars)
+            msg=('Number of points returned by {:s}'.format(method) +
+                   ' is insufficient')
+            self.assertGreaterEqual(len(points), 4, msg=msg)
+            dist = np.linalg.norm(points - midpoint, axis=1)
+            self.assertEqual(np.min(dist), 0.0,
+                             msg='Did not find midpoint')
     # -- end function
 
     def test_round_integer_vars(self):
@@ -443,6 +466,21 @@ class TestUtils(unittest.TestCase):
                          10, msg='Failed on n == k + 1')
     # -- end function
 
+    def test_init_points_cleanup(self):
+        """Verify that init_points_cleanup removes points too close.
+
+        Test that only points with distance larger than min_dist are
+        returned.
+        """
+        settings = RbfoptSettings(min_dist=1.0e-5)
+        points = np.array([[0, 0], [0, 0], [0, 0]])
+        ret = ru.init_points_cleanup(settings, points)
+        self.assertListEqual(ret.tolist(), [0],
+                             msg='Returned coinciding points')
+        points = np.array([[0, 0, 0], [0, 1, 1], [0, 1.0e-5, 0]])
+        ret = ru.init_points_cleanup(settings, points)
+        self.assertListEqual(ret.tolist(), [0, 1],
+                             msg='Returned coinciding points')
 # -- end class
 
 class TestModelSelection(unittest.TestCase):
@@ -470,7 +508,6 @@ class TestModelSelection(unittest.TestCase):
         rbf, gamma = ru.get_best_rbf_model(settings, self.n, self.k, 
                                            self.node_pos, self.node_val,
                                            self.k)
-        print(rbf, gamma)
         self.assertTrue(rbf == 'linear' or
                         (rbf == 'multiquadric' and gamma == 0.1),
                         msg='Did not obtain expected model')
