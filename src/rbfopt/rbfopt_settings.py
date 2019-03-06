@@ -123,11 +123,11 @@ class RbfoptSettings:
 
     init_include_midpoint : bool
         Include midpoint of the box among the initialization points. 
-        Default False.
+        Default True.
 
     init_sample_fraction : float
         The initial sample size is set to n + 1 times this number. 
-        Default 1.0.
+        Default 0.75.
 
     max_random_init : int
         Maximum number of trials for the random initialization
@@ -386,8 +386,8 @@ class RbfoptSettings:
                  do_local_search=True,
                  num_global_searches=5,
                  init_strategy='lhd_maximin',
-                 init_include_midpoint=False,
-                 init_sample_fraction=1.0,
+                 init_include_midpoint=True,
+                 init_sample_fraction=0.75,
                  max_random_init=50,
                  function_scaling='auto',
                  log_scaling_threshold=1.0e6,

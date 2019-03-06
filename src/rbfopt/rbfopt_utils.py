@@ -367,7 +367,6 @@ def get_lhd_maximin_points(var_lower, var_upper, sample_size, num_trials=50):
 
 
 def get_lhd_corr_points(var_lower, var_upper, sample_size, num_trials=50):
-
     """Compute a latin hypercube design with min correlation.
 
     Compute a list of points in the given box, where n is the
@@ -481,7 +480,9 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         elif (settings.init_strategy == 'lhd_corr'):
             nodes = get_lhd_corr_points(var_lower, var_upper, sample_size)
 
-        if (settings.init_include_midpoint):
+        if (settings.init_include_midpoint and
+            get_min_distance((var_lower + var_upper)/2, nodes) <=
+            settings.min_dist):
             nodes = np.vstack((nodes, (var_lower + var_upper)/2))
 
         if (len(integer_vars)):

@@ -1,3 +1,13 @@
+2019-03-05  Giacomo Nannicini  <nannicini@us.ibm.com>
+	* rbfopt_utils.py (initialize_nodes): more flexibility in choosing
+	the number of sample points, and adding the midpoint.
+	* rbfopt_utils.py (init_points_cleanup): added function to
+	eliminate duplicate points in initialization.
+	* rbfopt_algorithm.py (RbfoptAlgorithm): added several ways to
+	customize the search: early start, skipping local search.
+	* rbfopt_settings.py: added options init_include_midpoint,
+	init_sample_fraction, do_local_search.
+
 2018-10-06  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 4.0.3 release.
 	* Added:
