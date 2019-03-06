@@ -463,6 +463,9 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
 
     sample_size = max(2, round((len(var_lower) + 1) *
                                settings.init_sample_fraction))
+    if (settings.init_include_midpoint):
+        midpoint = (var_lower + var_upper)/2
+        midpoint[integer_vars] = np.around(midpoint[integer_vars])
     # We must make sure points are linearly independent; if they are
     # not, we perform a given number of iterations
     dependent = True
@@ -480,15 +483,15 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         elif (settings.init_strategy == 'lhd_corr'):
             nodes = get_lhd_corr_points(var_lower, var_upper, sample_size)
 
-        if (settings.init_include_midpoint and
-            get_min_distance((var_lower + var_upper)/2, nodes) <=
-            settings.min_dist):
-            nodes = np.vstack((nodes, (var_lower + var_upper)/2))
-
         if (len(integer_vars)):
             nodes[:, integer_vars] = np.around(nodes[:, integer_vars])
+            
+        if (settings.init_include_midpoint and
+            get_min_distance(midpoint, nodes) > settings.min_dist):
+            nodes = np.vstack((nodes, midpoint))
 
-        U, s, V = np.linalg.svd(nodes)
+        norms = la.norm(nodes, axis=1)
+        U, s, V = np.linalg.svd(nodes[norms > settings.eps_zero])
         if (min(s) > settings.eps_linear_dependence):
             dependent = False
 

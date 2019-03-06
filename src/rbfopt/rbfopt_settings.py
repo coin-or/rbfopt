@@ -126,8 +126,9 @@ class RbfoptSettings:
         Default True.
 
     init_sample_fraction : float
-        The initial sample size is set to n + 1 times this number. 
-        Default 0.75.
+        The initial sample size is set to n + 1 times this number. If
+        set to -1 (or any negative number), the size of the initial
+        sample set will be determined automatically. Default -1.
 
     max_random_init : int
         Maximum number of trials for the random initialization
@@ -387,7 +388,7 @@ class RbfoptSettings:
                  num_global_searches=5,
                  init_strategy='lhd_maximin',
                  init_include_midpoint=True,
-                 init_sample_fraction=0.75,
+                 init_sample_fraction=-1.0,
                  max_random_init=50,
                  function_scaling='auto',
                  log_scaling_threshold=1.0e6,
@@ -573,9 +574,9 @@ class RbfoptSettings:
             Vector of variable upper bounds.
 
         integer_vars : 1D numpy.ndarray[int]
-            A list containing the indices of the integrality
-            constrained variables. If empty list, all
-            variables are assumed to be continuous.
+            A list containing the indices of the integrality constrained 
+            variables. If empty list, all variables are assumed to be 
+            continuous.
 
         Returns
         -------
@@ -613,6 +614,18 @@ class RbfoptSettings:
                     l_settings.domain_scaling = 'affine'
                 else:
                     l_settings.domain_scaling = 'off'
+
+        if (l_settings.init_sample_fraction < 0):
+            if (l_settings.num_cpus <= 2):
+                l_settings.init_sample_fraction = (0.5 if dimension <= 20
+                                                   else 0.4)
+            else:
+                if (dimension <= 20):
+                    l_settings.init_sample_fraction = 1.0
+                elif (dimension <= 50):
+                    l_settings.init_sample_fraction = 0.75
+                else:
+                    l_settings.init_sample_fraction = 0.5                    
 
         return l_settings
 

@@ -124,7 +124,8 @@ class TestUtils(unittest.TestCase):
         var_upper = np.array([1, 2, 3])
         integer_vars = np.array([1, 2])
         for method in RbfoptSettings._allowed_init_strategy:
-            settings = RbfoptSettings(init_strategy = method)
+            settings = RbfoptSettings(init_strategy=method,
+                                      init_sample_fraction=1.0)
             points = ru.initialize_nodes(settings, var_lower, var_upper,
                                          integer_vars)
             msg=('Number of points returned by {:s}'.format(method) +
@@ -146,8 +147,9 @@ class TestUtils(unittest.TestCase):
         integer_vars = np.array([1, 2])
         midpoint = np.array([0, 1, 2])
         for method in RbfoptSettings._allowed_init_strategy:
-            settings = RbfoptSettings(init_strategy = method,
-                                      init_include_midpoint = True)
+            settings = RbfoptSettings(init_strategy=method,
+                                      init_include_midpoint=True,
+                                      init_sample_fraction=1.0)
             points = ru.initialize_nodes(settings, var_lower, var_upper,
                                          integer_vars)
             msg=('Number of points returned by {:s}'.format(method) +
@@ -457,7 +459,7 @@ class TestUtils(unittest.TestCase):
         there is a single-element list of node values, and when the
         list of node values is exactly the minimum required k + 1.
         """
-        settings = RbfoptSettings()
+        settings = RbfoptSettings(init_sample_fraction=0.75)
         fun = ru.get_fmax_current_iter
         self.assertEqual(fun(settings, 0, 1, 1, np.array([1])), 1,
                          msg='Failed on single-element list')

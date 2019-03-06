@@ -186,7 +186,7 @@ class TestGutmannParallel(unittest.TestCase):
                                       rbf='gaussian',
                                       global_search_method='solver',
                                       target_objval=optimum,
-                                      max_stalled_iterations=50,
+                                      max_stalled_iterations=20,
                                       eps_impr=0.05,
                                       refinement_frequency=6,
                                       eps_opt=self.eps_opt,
@@ -194,6 +194,7 @@ class TestGutmannParallel(unittest.TestCase):
                                       max_evaluations=300,
                                       max_fraction_discarded=0.2,
                                       num_cpus=2,
+                                      max_clock_time=600,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
