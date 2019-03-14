@@ -1,3 +1,11 @@
+2019-03-14  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 4.1.0 released.
+	* Added:
+	Finer control of the optimization process, via several options:
+	init_include_midpoint, init_sample_fraction, do_local_search.
+	* Changed:
+	More efficient initialization phase, requiring fewer points.
+
 2019-03-05  Giacomo Nannicini  <nannicini@us.ibm.com>
 	* rbfopt_utils.py (initialize_nodes): more flexibility in choosing
 	the number of sample points, and adding the midpoint.
@@ -9,7 +17,7 @@
 	init_sample_fraction, do_local_search.
 
 2018-10-06  Giacomo Nannicini  <nannicini@us.ibm.com>
-	Version 4.0.3 release.
+	Version 4.0.3 released.
 	* Added:
 	More ways for the user to control the initial points and
 	optimization process.
@@ -36,7 +44,7 @@
 	evaluated on a rolling basis.
 
 2018-05-25  Giacomo Nannicini  <nannicini@us.ibm.com>
-	Version 4.0.2 release.
+	Version 4.0.2 released.
 	* Added:
 	Detailed user manual.
 	Improved testing tools.
