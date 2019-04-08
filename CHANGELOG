@@ -1,3 +1,8 @@
+2019-04-08  Giacomo Nannicini  <nannicini@us.ibm.com>
+	Version 4.1.1 released.
+	* rbfopt_utils.py (initialize_nodes): fixed bug with sample_size
+	not cast to integer.
+	
 2019-03-14  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 4.1.0 released.
 	* Added:

@@ -461,8 +461,8 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     assert(isinstance(integer_vars, np.ndarray))
     assert(len(var_lower) == len(var_upper))
 
-    sample_size = max(2, round((len(var_lower) + 1) *
-                               settings.init_sample_fraction))
+    sample_size = int(max(2, round((len(var_lower) + 1) *
+                                   settings.init_sample_fraction)))
     if (settings.init_include_midpoint):
         midpoint = (var_lower + var_upper)/2
         midpoint[integer_vars] = np.around(midpoint[integer_vars])
