@@ -248,28 +248,28 @@ class TestBlackBoxFixed(RbfoptBlackBox):
 class TestFixedVariables(unittest.TestCase):
     """Test problems with fixed variables."""
     rand_seeds = [512319876, 231974198, 908652418]
-    eps_opt = 0.05
 
     def test_branin_fixed(self):
         """Check solution of branin with fixed variables."""
         for seed in self.rand_seeds:
             bb = TestBlackBoxFixed('branin', 4)
             optimum = bb._function.optimum_value + bb.get_obj_shift()
+            eps_opt = 0.2
             print()
             print('Solving branin with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='MSRSM',
                                       target_objval=optimum,
-                                      eps_opt=self.eps_opt,
+                                      eps_opt=eps_opt,
                                       max_iterations=200,
                                       max_evaluations=300,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
             msg = 'Could not solve branin with fixed variables'
-            target = optimum + (abs(optimum)*self.eps_opt if
+            target = optimum + (abs(optimum)*eps_opt if
                                 abs(optimum) > settings.eps_zero
-                                else self.eps_opt)
+                                else eps_opt)
             self.assertLessEqual(res[0], target, msg=msg)
     # -- end function
 
@@ -278,21 +278,46 @@ class TestFixedVariables(unittest.TestCase):
         for seed in self.rand_seeds:
             bb = TestBlackBoxFixed('prob03', 5)
             optimum = bb._function.optimum_value + bb.get_obj_shift()
+            eps_opt = 0.2
             print()
             print('Solving prob03 with random seed ' +
                   '{:d}'.format(seed))
             settings = RbfoptSettings(algorithm='MSRSM',
                                       target_objval=optimum,
-                                      eps_opt=self.eps_opt,
+                                      eps_opt=eps_opt,
                                       max_iterations=200,
                                       max_evaluations=300,
                                       rand_seed=seed)
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
             msg = 'Could not solve prob03 with fixed variables'
-            target = optimum + (abs(optimum)*self.eps_opt if
+            target = optimum + (abs(optimum)*eps_opt if
                                 abs(optimum) > settings.eps_zero
-                                else self.eps_opt)
+                                else eps_opt)
+            self.assertLessEqual(res[0], target, msg=msg)
+    # -- end function
+
+    def test_schoen_6_2_int_fixed(self):
+        """Check solution of schoen_6_2_int with fixed variables."""
+        for seed in self.rand_seeds:
+            bb = TestBlackBoxFixed('schoen_6_2_int', 8)
+            optimum = bb._function.optimum_value + bb.get_obj_shift()
+            eps_opt = 0.4
+            print()
+            print('Solving schoen_6_2_int with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfoptSettings(algorithm='MSRSM',
+                                      target_objval=optimum,
+                                      eps_opt=eps_opt,
+                                      max_iterations=400,
+                                      max_evaluations=500,
+                                      rand_seed=seed)
+            alg = ra.RbfoptAlgorithm(settings, bb)
+            res = alg.optimize()
+            msg = 'Could not solve schoen_6_2_int with fixed variables'
+            target = optimum + (abs(optimum)*eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else eps_opt)
             self.assertLessEqual(res[0], target, msg=msg)
     # -- end function
 # -- end class

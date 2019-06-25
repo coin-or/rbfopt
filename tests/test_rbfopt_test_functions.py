@@ -56,15 +56,19 @@ class TestFunctions(unittest.TestCase):
         for name in self.function_list:
             bb = tf.TestBlackBox(name)
             noisybb = tf.TestNoisyBlackBox(bb, 0.0, 0.1)
-            self.assertAlmostEqual(noisybb.evaluate(bb.optimum_point),
-                                   bb.optimum_value, delta=0.1,
-                                   msg='Noisy function ' + name +
-                                   ': absolute error exceeded')
+            self.assertAlmostEqual(
+                noisybb.evaluate(bb._function.optimum_point),
+                bb._function.optimum_value, delta=0.1,
+                msg='Noisy function ' + name + ': absolute error exceeded')
         for name in self.function_list:
             bb = tf.TestBlackBox(name)
             noisybb = tf.TestNoisyBlackBox(bb, 0.1, 0.0)
-            funval = noisybb.evaluate(bb.optimum_point)
-            error = abs(funval - bb.optimum_value) / abs(bb.optimum_value)
+            funval = noisybb.evaluate(bb._function.optimum_point)
+            if (abs(bb._function.optimum_value) > 1.0e-8):
+                error = (abs(funval - bb._function.optimum_value) /
+                         abs(bb._function.optimum_value))
+            else:
+                error = abs(funval - bb._function.optimum_value)
             self.assertLessEqual(error, 0.1,
                                  msg='Noisy function ' + name +
                                  ': relative error exceeded')

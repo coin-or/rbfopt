@@ -69,7 +69,7 @@ class hartman3:
     var_lower = np.array([0, 0, 0])
     var_upper = np.array([1, 1, 1])
     optimum_point = np.array([0.1, 0.55592003, 0.85218259])
-    optimum_value = -3.86278214782076
+    optimum_value = -3.8626347486217725
     var_type = np.array(['R'] * 3)
 
 # -- end class
@@ -127,7 +127,7 @@ class camel:
     dimension = 2
     var_lower = np.array([-3, -2])
     var_upper = np.array([3, 2])
-    optimum_point = np.array([0.08984201, -0.08984201])
+    optimum_point = np.array([0.08984201, -0.7126])
     optimum_value = -1.0316284535
     var_type = np.array(['R'] * 2)
 
@@ -183,7 +183,7 @@ class shekel5:
     var_lower = np.array([0, 0, 0, 0])
     var_upper = np.array([10, 10, 10, 10])
     optimum_point = np.array([4, 4, 4, 4])
-    optimum_value = -10.1531996790582
+    optimum_value = -10.1531958509790
     var_type = np.array(['R'] * 4)
 
 # -- end class
@@ -213,7 +213,7 @@ class shekel7:
     var_lower = np.array([0, 0, 0, 0])
     var_upper = np.array([10, 10, 10, 10])
     optimum_point = np.array([4, 4, 4, 4])
-    optimum_value = -10.4029405668187
+    optimum_value = -10.4028188369303
     var_type = np.array(['R'] * 4)
 
 # -- end class
@@ -243,7 +243,7 @@ class shekel10:
     var_lower = np.array([0, 0, 0, 0])
     var_upper = np.array([10, 10, 10, 10])
     optimum_point = np.array([4, 4, 4, 4])
-    optimum_value = -10.5364098166920
+    optimum_value = -10.53628372621960
     var_type = np.array(['R'] * 4)
 
 # -- end class
@@ -266,7 +266,7 @@ class ex4_1_1:
     var_lower = np.array([-2])
     var_upper = np.array([11])
     optimum_point = np.array([-1.19131])
-    optimum_value = -7.4873
+    optimum_value = -7.487312360731
     var_type = np.array(['R'])
 
 # -- end class
@@ -319,7 +319,7 @@ class ex8_1_1:
     var_lower = np.array([-1, -1])
     var_upper = np.array([2, 1])
     optimum_point = np.array([2.0, 0.105783])
-    optimum_value = -2.02181
+    optimum_value = -2.0218067833
     var_type = np.array(['R'] * 2)
 
 # -- end class
@@ -366,7 +366,7 @@ class least:
     var_lower = np.array([0, -200, -5])
     var_upper = np.array([600, 200, 5] )
     optimum_point = np.array([516.651174172, -149.351893696, -0.206642767973])
-    optimum_value = 14085.1398
+    optimum_value = 14085.139848928
     var_type = np.array(['R'] * 3)
 
 # -- end class
@@ -1008,7 +1008,7 @@ class gear4:
     var_lower = np.array([12, 12, 12, 12, 0])
     var_upper = np.array([60, 60, 60, 60, 100])
     optimum_point = np.array([19.0, 16.0, 43.0, 49.0, 1.64342847396619])
-    optimum_value = 1.643428
+    optimum_value = 1.6434284739
     var_type = np.array(['I'] * 4 + ['R'])    
 
 # -- end class
@@ -1050,7 +1050,7 @@ class nvs02:
     var_lower = np.array([0, 0, 0, 0, 0])
     var_upper = np.array([200, 200, 200, 200, 200])
     optimum_point = np.array([0.0, 9.0, 9.0, 200.0, 197.0])
-    optimum_value = -5.964184
+    optimum_value = 5.9223932564100004
     var_type = np.array(['I'] * 5)
 
 # -- end class
@@ -1147,8 +1147,8 @@ class nvs07:
     dimension = 3
     var_lower = np.array([0, 0, 0])
     var_upper = np.array([200, 200, 200])
-    optimum_point = np.array([1.0, 0.0, 0.0])
-    optimum_value = 0.0
+    optimum_point = np.array([4.0, 0.0, 0.0])
+    optimum_value = 4.0
     var_type = np.array(['I'] * 3)
 
 # -- end class
@@ -1221,7 +1221,7 @@ class nvs14:
     var_lower = np.array([0, 0, 0, 0, 0])
     var_upper = np.array([200, 200, 200, 200, 200])
     optimum_point = np.array([0.0, 7.0, 9.0, 175.0, 200.0])
-    optimum_value = -40358.154770
+    optimum_value = -40358.1547693
     var_type = np.array(['I'] * 5)
 
 # -- end class
@@ -1918,12 +1918,12 @@ class TestBlackBox(RbfoptBlackBox):
 # -- end class
 
 class TestNoisyBlackBox(RbfoptBlackBox):
-    """A noisy black-box constructed from a known test function.
+    """A noisy black-box constructed from a given black-box function.
 
     Parameters
     ----------
-    name : string
-        The name of the function to be implemented.
+    blackbox : `RbfoptBlackBox`
+        The black box function to which noise is added.
 
     max_rel_error: float
         Maximum relative error.
@@ -1931,36 +1931,37 @@ class TestNoisyBlackBox(RbfoptBlackBox):
     max_abs_error: float
         Maximum absolute error.
     """
-    def __init__(self, name, max_rel_error = 0.1, max_abs_error = 0.1):
+    def __init__(self, blackbox, max_rel_error = 0.1, max_abs_error = 0.1):
         """Constructor.
         """
         assert(max_rel_error >= 0.0)
         assert(max_abs_error >= 0.0)
         try:
-            thismodule = sys.modules[__name__]
-            self._function = getattr(thismodule, name.lower())
+            # Get the original function if it is one from this module
+            self._function = getattr(blackbox, '_function')
         except AttributeError:
-            raise ValueError('Function ' + name + ' not implemented')
+            pass
+        self._bb = blackbox
         self._max_rel_error = max_rel_error
         self._max_abs_error = max_abs_error
 
     def get_dimension(self):
-        return self._function.dimension
+        return self._bb.get_dimension()
 
     def get_var_lower(self):
-        return self._function.var_lower
+        return self._bb.get_var_lower()
 
     def get_var_upper(self):
-        return self._function.var_upper
+        return self._bb.get_var_upper()
 
     def get_var_type(self):
-        return self._function.var_type
+        return self._bb.get_var_type()
 
     def evaluate(self, point):
-        return self._function.evaluate(point)
+        return self._bb.evaluate(point)
 
     def evaluate_noisy(self, point):
-        value = self._function.evaluate(point)
+        value = self._bb.evaluate(point)
         rel_noise = np.random.uniform(-self._max_rel_error,
                                       self._max_rel_error)
         abs_noise = np.random.uniform(-self._max_abs_error,
@@ -1971,4 +1972,161 @@ class TestNoisyBlackBox(RbfoptBlackBox):
 
     def has_evaluate_noisy(self):
         return True
+# -- end class
+
+class TestEnlargedBlackBox(RbfoptBlackBox):
+    """A black-box constructed increasing the size of a test function.
+
+    Construct a black box function from a given function, increasing
+    its dimension by a given factor. The new function is put together
+    from several independent copies of the original function, plus a
+    coupling term. If the dimension muldiplier is `d` and the original
+    function has dimension `n`, the new function has dimension `n*d`
+    and is computed as:
+
+    .. math::
+
+        \sum_{j=1}^{d} a_j f(x_{(j-1)n+1},\dots,x_{jn}) + 0.4
+        f(g_1(x),\dots,g_n(x)),
+
+    where `a_j` are random weights that add up to 0.6, and `g_1`
+    through `g_n` are linear functions of a random subset of the
+    variables. These linear function are appropriately scaled and
+    clipped so that we do not exceed the original function bounds. The
+    optimum of the new function stays the same. Finally, all variables
+    are randomly permuted.
+
+    Parameters
+    ----------
+    name : string
+        The name of the function to be implemented.
+
+    dimension_multiplier : int
+        Dimension multiplier
+
+    """
+    def __init__(self, name, dimension_multiplier=1):
+        """Constructor.
+        """
+        assert(dimension_multiplier>=1)
+        try:
+            thismodule = sys.modules[__name__]
+            self._function = getattr(thismodule, name.lower())
+        except AttributeError:
+            raise ValueError('Function ' + name + ' not implemented')
+        dim = self._function.dimension
+        perm = np.random.permutation(dim * dimension_multiplier)
+        bounds = []
+        mult_factor = []
+        shift = []
+        # For the copy of the function coupling all variables,
+        # pick dimension_multiplier random variables to add together
+        coupling = np.reshape(np.random.permutation(dim*dimension_multiplier),
+                              (dim, dimension_multiplier))
+        for i in range(dim):
+            # The bounds of the sum are just the sum of the lower
+            # and upper bounds of the component variables
+            lb = sum(self._function.var_lower[perm[val] % dim]
+                     for val in coupling[i])
+            ub = sum(self._function.var_upper[perm[val] % dim]
+                     for val in coupling[i])
+            bounds.append([lb, ub])
+            # The coefficients are computed so that the optimum
+            # stays the same
+            shifted_opt = sum(self._function.optimum_point[perm[val] % dim]
+                              for val in coupling[i])
+            # Check the position of the optimum in the interval
+            ratio = (shifted_opt - lb)/(ub - lb)
+            orig_ratio = ((self._function.optimum_point[i] -
+                           self._function.var_lower[i]) /
+                          (self._function.var_upper[i] -
+                           self._function.var_lower[i]))
+            # The multiplication factor should bring the
+            # transformed optimum to the original optimum
+            if (ratio != 0.0 and orig_ratio != 0.0):
+                mult_factor.append(orig_ratio / ratio)
+                shift.append(0)
+            elif (orig_ratio == 0.0):
+                # The true optimum is at the lower bound. We have to
+                # ensure the transformed point is mapped to it. The
+                # correct ratio would be zero, but to let the point
+                # vary, we change the transformed bound instead.  The
+                # "max" in the bound is to prevent errors in case the
+                # shifted optimum is at the upper bound.
+                bounds[-1] = [shifted_opt, max(ub, shifted_opt+1)]
+                mult_factor.append(1.0)
+                shift.append(0)
+            else:
+                # The transformed point is at the lower bound. Ensure
+                # it can reach the true optimum.
+                mult_factor.append(1.0)
+                shift.append(self._function.optimum_point[i] -
+                             self._function.var_lower[i])
+        # Compute weight of each copy of the function
+        int_weights = np.random.randint(1, 10, dimension_multiplier)
+        weight = np.array([0.6*val/sum(int_weights)
+                           for val in int_weights] + [0.4])
+        # Store data necessary for function evaluation
+        self.coupling = coupling
+        self.extra_bounds = np.array(bounds)
+        self.mult_factor = np.array(mult_factor)
+        self.shift = np.array(shift)
+        self.weight = weight
+        self.permutation = perm
+        self.dimension = self._function.dimension
+        self.dimension_multiplier = dimension_multiplier
+        # Compute bounds and variable types
+        self.var_lower = np.array(
+            [self._function.var_lower[perm[i] % dim]
+             for i in range(dim*dimension_multiplier)])
+        self.var_upper = np.array(
+            [self._function.var_upper[perm[i] % dim]
+             for i in range(dim*dimension_multiplier)])
+        self.var_type = np.array(
+            [self._function.var_type[perm[i] % dim]
+             for i in range(dim*dimension_multiplier)])
+        self.optimum_point = np.array(
+            [self._function.optimum_point[perm[i] % dim]
+             for i in range(dim*dimension_multiplier)])
+        self.optimum_value = self._function.optimum_value
+
+    def get_dimension(self):
+        return self._function.dimension * self.dimension_multiplier
+
+    def get_var_lower(self):        
+        return self.var_lower
+
+    def get_var_upper(self):
+        return self.var_upper
+
+    def get_var_type(self):
+        return self.var_type
+
+    def evaluate(self, point):
+        assert(len(point)==self.dimension*self.dimension_multiplier)
+        # First evaluate each copy of the function on individual variables
+        value = 0.0
+        for i in range(self.dimension_multiplier):
+            subpoint = np.array([point[np.where(self.permutation == j)[0][0]]
+                                 for j in range(i*self.dimension,
+                                                (i+1)*self.dimension)])
+            value += self.weight[i]*self._function.evaluate(subpoint)
+        # Add the coupling term
+        subpoint = np.zeros(self.dimension)
+        for i in range(self.dimension):
+            subpoint[i] = np.sum(point[self.coupling[i]])
+        subpoint = (self._function.var_lower + self.shift +
+                    self.mult_factor * (subpoint - self.extra_bounds[:, 0]) /
+                    (self.extra_bounds[:, 1] - self.extra_bounds[:, 0]) *
+                    (self._function.var_upper - self._function.var_lower))
+        subpoint = np.clip(subpoint, a_min=self._function.var_lower,
+                           a_max=self._function.var_upper)
+        value += self.weight[-1] * self._function.evaluate(subpoint)
+        return value
+
+    def evaluate_noisy(self, point):
+        raise NotImplementedError('evaluate_noisy() not implemented')
+
+    def has_evaluate_noisy(self):
+        return False
 # -- end class

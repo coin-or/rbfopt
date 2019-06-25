@@ -26,7 +26,7 @@ import rbfopt
 from rbfopt import RbfoptSettings
 from rbfopt import RbfoptAlgorithm
 from rbfopt import RbfoptBlackBox
-from rbfopt.rbfopt_test_functions import TestBlackBox, TestNoisyBlackBox
+from rbfopt.rbfopt_test_functions import TestBlackBox, TestNoisyBlackBox, TestEnlargedBlackBox
 
 def register_options(parser):
     """Add options to the command line parser.
@@ -114,6 +114,10 @@ if (__name__ == "__main__"):
     parser.add_argument('function', action = 'store', 
                         metavar = 'function_name',
                         help = 'test function to optimize')
+    parser.add_argument('--dimension_multiplier', action = 'store',
+                        type = int, dest = 'dimension_multiplier',
+                        default = 1, help = 'Multiply dimension of test ' +
+                        'function by this factor. Default 1')
     parser.add_argument('--noisy_objfun_rel_error', action = 'store',
                         type = float, dest = 'noisy_objfun_rel_error',
                         default = 0.0, help = 'The maximum relative ' +
@@ -130,16 +134,18 @@ if (__name__ == "__main__"):
     noisy = (True if (args.noisy_objfun_rel_error > 0 or
                       args.noisy_objfun_abs_error > 0) 
              else False)
-
-    if (noisy):
-        bb = TestNoisyBlackBox(args.function, args.noisy_objfun_rel_error,
-                               args.noisy_objfun_abs_error)
+    enlarged = True if args.dimension_multiplier > 1 else False
+    if (enlarged):
+        bb = TestEnlargedBlackBox(args.function, args.dimension_multiplier)
     else:
         bb = TestBlackBox(args.function)
-
+    if (noisy):
+        bb = TestNoisyBlackBox(bb, args.noisy_objfun_rel_error,
+                               args.noisy_objfun_abs_error)
     # Obtain parameters in dictionary format for easier unpacking
     dict_args = vars(args)
     del dict_args['function']
+    del dict_args['dimension_multiplier']
     del dict_args['noisy_objfun_rel_error']
     del dict_args['noisy_objfun_abs_error']
     dict_args['target_objval'] = bb._function.optimum_value
