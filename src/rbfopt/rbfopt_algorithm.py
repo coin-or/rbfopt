@@ -18,7 +18,10 @@ import sys
 import math
 import time
 import os
-import pickle
+try:
+    import dill as pickle
+except:
+    import pickle
 import copy
 import collections
 import numpy as np
