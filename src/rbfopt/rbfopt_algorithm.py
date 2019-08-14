@@ -924,9 +924,10 @@ class RbfoptAlgorithm:
                 
                 except np.linalg.LinAlgError:
                     # Record statistics on failed model
-                    if (self.current_step >= (self.local_search_step - 1)):
+                    if (self.current_step >= (self.local_search_step - 1) and
+                        self.best_local_rbf_list):
                         self.best_local_rbf_list[-1] = 'failed'
-                    else:
+                    elif (self.best_global_rbf_list):
                         self.best_global_rbf_list[-1] = 'failed'
                     # Error in the solution of the linear system. We must
                     # switch to a restoration phase.
