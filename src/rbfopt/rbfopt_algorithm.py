@@ -1964,7 +1964,7 @@ class RbfoptAlgorithm:
         Parameters
         ----------
         model_impr : float
-            Improvement in quadratic model value.
+            Improvement in linear model value.
 
         real_impr : float
             Improvement in the real function value.

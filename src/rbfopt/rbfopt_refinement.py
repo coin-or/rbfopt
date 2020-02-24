@@ -126,7 +126,7 @@ def get_linear_model(settings, n, k, node_pos, node_val, model_set):
     # Determine the coefficients of the linear system.
     lstsq_mat = np.hstack((node_pos[model_set], np.ones((model_size, 1))))
     rank_deficient = False
-    # Solve least squares system and recover quadratic form
+    # Solve least squares system and recover linear form
     try:
         x, res, rank, s = np.linalg.lstsq(lstsq_mat, node_val[model_set],
                                           rcond=-1)
