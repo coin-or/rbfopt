@@ -668,6 +668,68 @@ def get_min_distance_and_index(point, other_points):
 
 # -- end function
 
+def get_max_distance(point, other_points):
+    """Compute maximum distance from a set of points.
+
+    Compute the maximum Euclidean distance between a given point and a
+    list of points.
+
+    Parameters
+    ----------
+    point : 1D numpy.ndarray[float]
+        The point we compute the distances from.
+
+    other_points : 2D numpy.ndarray[float]
+        The list of points we want to compute the distances to.
+
+    Returns
+    -------
+    float
+        Maximum distance between point and the other_points.
+    """
+    assert(isinstance(point, np.ndarray))
+    assert(isinstance(other_points, np.ndarray))
+    assert(point.size)
+    assert(other_points.size)
+
+    # Create distance matrix
+    dist = ss.distance.cdist(np.atleast_2d(point), other_points)
+    return np.amax(dist, 1)
+# -- end function
+
+
+def get_max_distance_and_index(point, other_points):
+    """Compute the distance and index of the point with maximum distance.
+
+    Compute the distance value and the index of the point in a matrix
+    that achieves maximum Euclidean distance to a given point.
+
+    Parameters
+    ----------
+    point : 1D numpy.ndarray[float]
+        The point we compute the distances from.
+
+    other_points : 2D numpy.ndarray[float]
+        The list of points we want to compute the distances to.
+
+    Returns
+    -------
+    (float, int)
+        The distance value and the index of the point in other_points
+        that achieved maximum distance from point.
+
+    """
+    assert (isinstance(point, np.ndarray))
+    assert (isinstance(other_points, np.ndarray))
+    assert(point.size)
+    assert(other_points.size)
+
+    dist = ss.distance.cdist(np.atleast_2d(point), other_points)
+    index = np.argmax(dist, 1)[0]
+    return (dist[0, index], index)
+
+# -- end function
+
 
 def bulk_get_min_distance(points, other_points):
     """Get the minimum distances between two sets of points.

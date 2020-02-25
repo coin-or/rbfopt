@@ -229,16 +229,16 @@ class RbfoptAlgorithm:
         Indices and values of fixed variables. The indices are with
         respect to the vector of all variables.
 
-    tr_model_set : 1D numpy.ndarray[int]
+    ref_model_set : 1D numpy.ndarray[int]
         Indices of nodes (in node_pos) that are used to build the
-        linear model for the trust region refinement phase.
+        linear model for the refinement phase.
 
-    tr_radius : float
-        Radius of the trust region.
+    ref_radius : float
+        Radius of the refinement region.
     
-    tr_iterate_index : int
+    ref_iterate_index : int
         Index of the node (in node_pos) that is the current iterate
-        for the trust region refinement method.
+        for the refinement method.
 
     """
     def __init__(self, settings, black_box, init_node_pos=None,
@@ -401,10 +401,10 @@ class RbfoptAlgorithm:
         self.fmin_last_refine = self.fmin
         self.iter_last_refine = 0
         
-        # Trust region information
-        self.tr_model_set = np.array([])
-        self.tr_radius = float('inf')
-        self.tr_iterate_index = None
+        # Refinement region information
+        self.ref_model_set = np.array([])
+        self.ref_radius = float('inf')
+        self.ref_iterate_index = None
 
         # Set default output stream
         self.output_stream = sys.stdout
@@ -937,16 +937,16 @@ class RbfoptAlgorithm:
                 if (self.num_cons_refinement == 0):
                     # For the first refinement step iteration, some data
                     # has to be computed                    
-                    self.tr_model_set, self.tr_radius = ref.init_trust_region(
+                    self.ref_model_set, self.ref_radius = ref.init_refinement(
                         l_settings, n, k, self.node_pos, 
                         self.node_pos[self.fmin_index])
-                    self.tr_iterate_index = self.fmin_index
+                    self.ref_iterate_index = self.fmin_index
 
-                # Compute linear model for trust region method
+                # Compute linear model for refinement
                 try:
                     h, b, rank_deficient = ref.get_linear_model(
                         l_settings, n, k, self.node_pos, 
-                        scaled_node_val, self.tr_model_set)
+                        scaled_node_val, self.ref_model_set)
                 except np.linalg.LinAlgError:
                     # Error in the solution of the linear system. We
                     # go back to the usual search.
@@ -1002,10 +1002,10 @@ class RbfoptAlgorithm:
                     
             elif (self.current_step == self.refinement_step):
                 # Refinement
-                next_p, model_impr, tr_to_replace = refinement_step(
+                next_p, model_impr, ref_to_replace = refinement_step(
                     l_settings, n, k, l_lower, l_upper, integer_vars, 
                     self.node_pos, tfv[:4], h, b, rank_deficient,
-                    self.tr_model_set, self.tr_iterate_index, self.tr_radius)
+                    self.ref_model_set, self.ref_iterate_index, self.ref_radius)
                 iteration_id = 'RefinementStep'
 
             else:
@@ -1081,10 +1081,10 @@ class RbfoptAlgorithm:
                 self.update_log(iteration_id, self.node_is_noisy[-1], 
                                 next_val, gap)
                 if (self.current_step == self.refinement_step):
-                    real_impr = (scaled_node_val[self.tr_iterate_index] - 
+                    real_impr = (scaled_node_val[self.ref_iterate_index] - 
                                  rescale_function(next_val))
                     self.refinement_update(model_impr, real_impr,
-                                           tr_to_replace)
+                                           ref_to_replace, rank_deficient)
                     self.iter_last_refine = self.itercount
                 elif ((self.current_step == self.local_search_step or
                        (self.current_step == self.local_search_step - 1 and
@@ -1253,10 +1253,11 @@ class RbfoptAlgorithm:
                     # Perform refinement updates if necessary
                     if (iid == 'RefinementStep'):
                         real_impr = (ref_rescale_function(
-                            node_val[self.tr_iterate_index]) - 
+                            node_val[self.ref_iterate_index]) - 
                                      ref_rescale_function(next_val))
-                        self.refinement_update_parallel(model_impr, real_impr,
-                                                        tr_to_replace)
+                        self.refinement_update_parallel(
+                            model_impr, real_impr, ref_to_replace,
+                            rank_deficient)
                         refinement_itercount += 1
                         refinement_in_progress = False
                     # Remove from list of temporary points
@@ -1304,7 +1305,7 @@ class RbfoptAlgorithm:
                     else:
                         iteration_id = 'LocalStep'
                 elif (iteration_id == 'RefinementStep'):
-                    next_p, model_impr, tr_to_replace = res.get()
+                    next_p, model_impr, ref_to_replace = res.get()
                 else:
                     next_p = res.get()
                 # Verify that we have an actual point available
@@ -1575,25 +1576,25 @@ class RbfoptAlgorithm:
                   refinement_itercount <= self.itercount / 
                   l_settings.refinement_frequency):
                 if (self.num_cons_refinement == 0 or
-                    (self.fmin <= node_val[self.tr_iterate_index] -
+                    (self.fmin <= node_val[self.ref_iterate_index] -
                      l_settings.eps_impr * 
-                     max(1.0, abs(node_val[self.tr_iterate_index])))):
+                     max(1.0, abs(node_val[self.ref_iterate_index])))):
                     # For the first refinement step iteration, some data
                     # has to be computed
-                    self.tr_model_set, self.tr_radius = ref.init_trust_region(
+                    self.ref_model_set, self.ref_radius = ref.init_refinement(
                         l_settings, n, k, node_pos, node_pos[self.fmin_index])
-                    self.tr_iterate_index = self.fmin_index
+                    self.ref_iterate_index = self.fmin_index
                 try:
-                    # Compute linear model for trust region method
+                    # Compute linear model for refinement
                     h, b, rank_deficient = ref.get_linear_model(
                         l_settings, n, k, node_pos, 
-                        scaled_node_val, self.tr_model_set)
+                        scaled_node_val, self.ref_model_set)
                     new_res = pool.apply_async(
                         refinement_step,
                         (l_settings, n, k, l_lower, l_upper, integer_vars, 
                          node_pos, tfv[:4], h, b, rank_deficient,
-                         self.tr_model_set, self.tr_iterate_index,
-                         self.tr_radius))
+                         self.ref_model_set, self.ref_iterate_index,
+                         self.ref_radius))
                     iteration_id = 'RefinementStep'
                     ref_rescale_function = rescale_function
                     res_search.append([new_res, curr_is_noisy, iteration_id])
@@ -1953,10 +1954,11 @@ class RbfoptAlgorithm:
                  self.l_settings.thresh_unlimited_refinement_stalled))
     # -- end function
 
-    def refinement_update(self, model_impr, real_impr, to_replace):
+    def refinement_update(self, model_impr, real_impr, to_replace,
+                          rank_deficient):
         """Perform updates to refinement step and decide if continue.
 
-        Update the radius of the trust region and the iterate for the
+        Update the radius of the refinement region and the iterate for the
         refinement step. Also, decide if the next step should be
         another refinement step, or if we should go back to global
         search.
@@ -1970,18 +1972,28 @@ class RbfoptAlgorithm:
             Improvement in the real function value.
 
         to_replace : int
-            Index in tr_model_set of the point to replace.
+            Index in ref_model_set of the point to replace.
+
+        rank_deficient : bool
+            True if the points used to build the linear model do not
+            span the space.
 
         """
         self.num_cons_refinement += 1
-        # Update trust region information
-        self.tr_radius, tr_move = ref.update_trust_region_radius(
-            self.l_settings, self.tr_radius, model_impr, real_impr)
-        if (tr_move or
-            self.tr_model_set[to_replace] == self.tr_iterate_index):
+        # Update refinement information
+        self.ref_radius, ref_move = ref.update_refinement_radius(
+            self.l_settings, self.ref_radius, model_impr, real_impr)
+        if (ref_move or
+            self.ref_model_set[to_replace] == self.ref_iterate_index):
             # Accept new iterate
-            self.tr_iterate_index = len(self.node_pos) - 1
-        if (self.tr_radius < self.l_settings.tr_min_radius or
+            self.ref_iterate_index = len(self.node_pos) - 1
+            # Decide to remove the farthest point from the point we
+            # are going to move to, rather than whatever the earlier
+            # decision was
+            dist, to_replace = ru.get_max_distance_and_index(
+                self.node_pos[self.ref_iterate_index],
+                self.node_pos[self.ref_model_set])
+        if (self.ref_radius < self.l_settings.ref_min_radius or
             (self.num_cons_refinement >= 
              self.l_settings.max_consecutive_refinement and
              not self.unlimited_refinement_active())):
@@ -1989,10 +2001,15 @@ class RbfoptAlgorithm:
             self.num_cons_refinement = 0
             self.current_step = self.first_step
             self.cyclecount += 1
-        else:
-            # Continue refinement. Update set of points
-            # used to build model.
-            self.tr_model_set[to_replace] = len(self.node_pos) - 1
+        elif (rank_deficient or
+              ru.distance(self.node_pos[-1],
+                          self.node_pos[self.ref_iterate_index]) <=
+              ru.distance(self.node_pos[self.ref_model_set[to_replace]],
+                          self.node_pos[self.ref_iterate_index])):
+            # Continue refinement. Update set of points used to build
+            # model, since the new point is closer to the center than
+            # the point to be replaced, or helps span the space.
+            self.ref_model_set[to_replace] = len(self.node_pos) - 1
         if (self.num_cons_refinement < 
             self.l_settings.max_consecutive_refinement):
             # Update value at last refinement, unless we stopped
@@ -2000,10 +2017,11 @@ class RbfoptAlgorithm:
             self.fmin_last_refine = self.fmin
     # -- end function 
 
-    def refinement_update_parallel(self, model_impr, real_impr, to_replace):
+    def refinement_update_parallel(self, model_impr, real_impr, to_replace,
+                                   rank_deficient):
         """Perform updates to refinement step and decide if continue.
 
-        Update the radius of the trust region and the iterate for the
+        Update the radius of the refinement region and the iterate for the
         refinement step. This is the version that should be used for
         parallel computation, because the update phase is different.
 
@@ -2016,24 +2034,39 @@ class RbfoptAlgorithm:
             Improvement in the real function value.
 
         to_replace : int
-            Index in the tr_model_set of the point to replace.
+            Index in the ref_model_set of the point to replace.
+
+        rank_deficient : bool
+            True if the points used to build the linear model do not
+            span the space.
 
         """
         self.num_cons_refinement += 1
-        # Update trust region information
-        self.tr_radius, tr_move = ref.update_trust_region_radius(
-            self.l_settings, self.tr_radius, model_impr, real_impr)
-        if (tr_move or
-            self.tr_model_set[to_replace] == self.tr_iterate_index):
+        # Update refinement region information
+        self.ref_radius, ref_move = ref.update_refinement_radius(
+            self.l_settings, self.ref_radius, model_impr, real_impr)
+        if (ref_move or
+            self.ref_model_set[to_replace] == self.ref_iterate_index):
             # Accept new iterate
-            self.tr_iterate_index = len(self.node_pos) - 1
-        if (self.tr_radius < self.l_settings.tr_min_radius):
+            self.ref_iterate_index = len(self.node_pos) - 1
+            # Decide to remove the farthest point from the point we
+            # are going to move to, rather than whatever the earlier
+            # decision was
+            dist, to_replace = ru.get_max_distance_and_index(
+                self.node_pos[self.ref_iterate_index],
+                self.node_pos[self.ref_model_set])
+        if (self.ref_radius < self.l_settings.ref_min_radius):
             # Do no continue refinement
             self.num_cons_refinement = 0
-        else:
-            # Continue refinement. Update set of points
-            # used to build model.
-            self.tr_model_set[to_replace] = len(self.node_pos) - 1
+        elif (rank_deficient or
+              ru.distance(self.node_pos[-1],
+                          self.node_pos[self.ref_iterate_index]) <=
+              ru.distance(self.node_pos[self.ref_model_set[to_replace]],
+                          self.node_pos[self.ref_iterate_index])):
+            # Continue refinement. Update set of points used to build
+            # model, since the new point is closer to the center than
+            # the point to be replaced, or helps span the space.
+            self.ref_model_set[to_replace] = len(self.node_pos) - 1
         if (self.num_cons_refinement < 
             self.l_settings.max_consecutive_refinement):
             # Update value at last refinement, unless we stopped
@@ -2340,7 +2373,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
 
 def refinement_step(settings, n, k, var_lower, var_upper, integer_vars, 
                     node_pos, tfv, h, b, rank_deficient, model_set,
-                    start_point_index, tr_radius):
+                    start_point_index, ref_radius):
     """Perform a refinement step.
 
     Perform a refinement step to locally improve the solution.
@@ -2386,8 +2419,8 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
     start_point_index : int
         Index in node_pos of the starting point for the descent.
 
-    tr_radius : float
-        Radius of the trust region.
+    ref_radius : float
+        Radius of the refinement region.
 
     Returns
     -------
@@ -2404,26 +2437,27 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(var_upper)==n)
     assert(start_point_index < k)
     assert(len(h)==n)
-    assert(tr_radius>=0)
+    assert(ref_radius>=0)
     assert(isinstance(settings, RbfoptSettings))
     scaled_node_val, scaled_fmin, scaled_fmax, scaled_err_bounds = tfv
     found_model_impr = False
     if (rank_deficient):
         point, found_model_impr, to_replace = ref.get_model_improving_point(
             settings, n, k, var_lower, var_upper, node_pos, model_set,
-            start_point_index, tr_radius, integer_vars)
+            start_point_index, ref_radius, integer_vars)
         model_impr = np.dot(h, point) + b
     if (not rank_deficient or not found_model_impr):
         start_point = node_pos[start_point_index]
         point, model_impr, grad_norm =  ref.get_candidate_point(
-            settings, n, k, var_lower, var_upper, h, start_point, tr_radius)
-        to_replace = np.argmax(scaled_node_val[model_set])
+            settings, n, k, var_lower, var_upper, h, start_point, ref_radius)
+        dist, to_replace = ru.get_max_distance_and_index(
+            start_point, node_pos[model_set])
         if (len(integer_vars)):
             # Get a rounding of the point
             point, model_impr_adj = ref.get_integer_candidate(
-                settings, n, k, h, start_point, tr_radius, point, integer_vars)
+                settings, n, k, h, start_point, ref_radius, point, integer_vars)
             model_impr += model_impr_adj
-        if (grad_norm <= settings.tr_min_grad_norm):
+        if (grad_norm <= settings.ref_min_grad_norm):
             return None, model_impr, to_replace
     return point, model_impr, to_replace
 # -- end function

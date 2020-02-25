@@ -262,37 +262,37 @@ class RbfoptSettings:
         acceptable ratio between other search steps and refinement 
         steps. Default 3.
 
-    tr_num_integer_candidates : int
+    ref_num_integer_candidates : int
         Number of integer candidates per dimension of the problem that
         are considered when rounding the (fractional) point computed
         during the refinement step. Default 10.
 
-    tr_acceptable_decrease_shrink : float
-        Maximum ratio between real decrease and trust region model
-        decrease for which the radius of the trust region gets
+    ref_acceptable_decrease_shrink : float
+        Maximum ratio between real decrease and refinement model
+        decrease for which the radius of the local search gets
         shrunk. Default 0.2.
 
-    tr_acceptable_decrease_enlarge : float
-        Minimum ratio between real decrease and trust region model
-        decrease for which the radius of the trust region gets
+    ref_acceptable_decrease_enlarge : float
+        Minimum ratio between real decrease and refinement model
+        decrease for which the radius of the local search gets
         enlarged. Default 0.6.
 
-    tr_acceptable_decrease_move : float
-        Minimum ratio between real decrease and trust region model
+    ref_acceptable_decrease_move : float
+        Minimum ratio between real decrease and refinement model
         decrease for which the new candidate point is accepted as the
         new iterate. Default 0.1.
 
-    tr_min_radius : float
-        Minimum radius of the trust region for the refinement
+    ref_min_radius : float
+        Minimum radius of the local search for the refinement
         step. Default 1.0e-3.
 
-    tr_init_radius_multiplier : float
+    ref_init_radius_multiplier : float
         Exponent (with base 2) of the multiplier used to determine the
-        minimum initial radius of the trust region for the refinement
+        minimum initial radius of the local serach for the refinement
         step. Default 2.0.
 
-    tr_min_grad_norm : float
-        Minimum norm of the gradient for the trust region method in
+    ref_min_grad_norm : float
+        Minimum norm of the gradient for the local search method in
         the refinement step, before we assume that we converged to a
         stationary point. Default 1.0e-2.
 
@@ -414,13 +414,13 @@ class RbfoptSettings:
                  thresh_unlimited_refinement=0.9,
                  thresh_unlimited_refinement_stalled=0.9,
                  refinement_frequency=3,
-                 tr_num_integer_candidates=10,
-                 tr_acceptable_decrease_shrink=0.2,
-                 tr_acceptable_decrease_enlarge=0.6,
-                 tr_acceptable_decrease_move=0.1,
-                 tr_min_radius=1.0e-3,
-                 tr_init_radius_multiplier=2.0,
-                 tr_min_grad_norm=1.0e-2,
+                 ref_num_integer_candidates=10,
+                 ref_acceptable_decrease_shrink=0.2,
+                 ref_acceptable_decrease_enlarge=0.6,
+                 ref_acceptable_decrease_move=0.1,
+                 ref_min_radius=1.0e-3,
+                 ref_init_radius_multiplier=2.0,
+                 ref_min_grad_norm=1.0e-2,
                  print_solver_output=False,
                  save_state_interval=100000,
                  save_state_file='rbfopt_algorithm_state.dat',
@@ -477,13 +477,13 @@ class RbfoptSettings:
         self.thresh_unlimited_refinement = thresh_unlimited_refinement
         self.thresh_unlimited_refinement_stalled = thresh_unlimited_refinement_stalled
         self.refinement_frequency = refinement_frequency
-        self.tr_num_integer_candidates = tr_num_integer_candidates
-        self.tr_acceptable_decrease_shrink = tr_acceptable_decrease_shrink
-        self.tr_acceptable_decrease_enlarge = tr_acceptable_decrease_enlarge
-        self.tr_acceptable_decrease_move = tr_acceptable_decrease_move
-        self.tr_min_radius = tr_min_radius
-        self.tr_init_radius_multiplier = tr_init_radius_multiplier
-        self.tr_min_grad_norm = tr_min_grad_norm
+        self.ref_num_integer_candidates = ref_num_integer_candidates
+        self.ref_acceptable_decrease_shrink = ref_acceptable_decrease_shrink
+        self.ref_acceptable_decrease_enlarge = ref_acceptable_decrease_enlarge
+        self.ref_acceptable_decrease_move = ref_acceptable_decrease_move
+        self.ref_min_radius = ref_min_radius
+        self.ref_init_radius_multiplier = ref_init_radius_multiplier
+        self.ref_min_grad_norm = ref_min_grad_norm
         self.print_solver_output = print_solver_output
         self.save_state_interval = save_state_interval
         self.save_state_file = save_state_file

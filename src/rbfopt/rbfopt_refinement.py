@@ -1,8 +1,8 @@
-"""Routines for trust-region based local search.
+"""Routines for a local search to refine the solution.
 
 This module contains all functions that are necessary to implement a
-trust-region based local search to refine the solution quality. The
-local search exploits a linear model of the objective function.
+local search to refine the solution quality. The local search exploits
+a linear model of the objective function.
 
 Licensed under Revised BSD license, see LICENSE.
 (C) Copyright International Business Machines Corporation 2017.
@@ -21,12 +21,12 @@ import rbfopt.rbfopt_utils as ru
 from rbfopt.rbfopt_settings import RbfoptSettings
 
 
-def init_trust_region(settings, n, k, node_pos, center):
-    """Initialize the trust region.
+def init_refinement(settings, n, k, node_pos, center):
+    """Initialize the local search model.
 
     Determine which nodes should be used to create a linear model of
     the objective function, and determine the initial radius of the
-    trust region.
+    search.
 
     Parameters
     ----------
@@ -43,13 +43,13 @@ def init_trust_region(settings, n, k, node_pos, center):
         List of coordinates of the nodes.
 
     center : 1D numpy.ndarray[float]
-        Node that acts as a center for the quadratic model.
+        Node that acts as a center for the linear model.
 
     Returns
     -------
     (1D numpy.ndarray[int], float)
         Indices in node_pos of points to build the model, and initial
-        radius of the trust region.
+        radius of the local search.
 
     Raises
     ------
@@ -70,10 +70,10 @@ def init_trust_region(settings, n, k, node_pos, center):
     num_to_keep = min(n + 1, k)
     # Build array of nodes to keep
     model_set = dist_order[np.arange(num_to_keep)]
-    tr_radius = max(np.percentile(dist[0, model_set[1:]], 25),
-                    settings.tr_min_radius * 
-                    2**settings.tr_init_radius_multiplier)
-    return (model_set, tr_radius)
+    ref_radius = max(np.percentile(dist[0, model_set[1:]], 25),
+                    settings.ref_min_radius * 
+                    2**settings.ref_init_radius_multiplier)
+    return (model_set, ref_radius)
 # -- end function
 
 def get_linear_model(settings, n, k, node_pos, node_val, model_set):
@@ -133,7 +133,7 @@ def get_linear_model(settings, n, k, node_pos, node_val, model_set):
         if (rank < model_size):
             rank_deficient = True
     except np.linalg.LinAlgError as e:
-        print('Exception raised trying to compute quadratic model',
+        print('Exception raised trying to compute linear model',
               file=sys.stderr)
         print(e, file=sys.stderr)
         raise e
@@ -143,12 +143,12 @@ def get_linear_model(settings, n, k, node_pos, node_val, model_set):
 # -- end function
 
 def get_candidate_point(settings, n, k, var_lower, var_upper, h,
-                        start_point, tr_radius):
-    """Compute the next candidate point of the trust region method.
+                        start_point, ref_radius):
+    """Compute the next candidate point of the refinement.
 
     Starting from a given point, compute a descent direction and move
     in that direction to find the point with lowest value of the
-    linear model, within the radius of the trust region.
+    linear model, within the radius of the local search.
 
     Parameters
     ----------
@@ -168,13 +168,13 @@ def get_candidate_point(settings, n, k, var_lower, var_upper, h,
         Vector of variable upper bounds.
 
     h : 1D numpy.ndarray[float]
-        Linear coefficients of the quadratic model.
+        Linear coefficients of the linear model.
 
     start_point : 1D numpy.ndarray[float]
         Starting point for the descent.
 
-    tr_radius : float
-        Radius of the trust region.
+    ref_radius : float
+        Radius of the local search.
 
     Returns
     -------
@@ -192,14 +192,14 @@ def get_candidate_point(settings, n, k, var_lower, var_upper, h,
     assert(len(var_upper)==n)
     assert(len(start_point)==n)
     assert(len(h)==n)
-    assert(tr_radius>=0)
+    assert(ref_radius>=0)
     assert(isinstance(settings, RbfoptSettings))
     grad_norm = np.sqrt(np.dot(h, h))
     # If the gradient is essentially zero, there is nothing to improve
     if (grad_norm <= settings.eps_zero):
         return (start_point, 0.0, grad_norm)
     # Determine maximum (smallest) t for line search before we exceed bounds
-    max_t = tr_radius/np.sqrt(np.dot(h, h))
+    max_t = ref_radius/np.sqrt(np.dot(h, h))
     loc = (h > 0) * (start_point >= var_lower + settings.min_dist)
     if (np.any(loc)):
         to_var_lower = (start_point[loc] - var_lower[loc]) / h[loc]
@@ -212,12 +212,12 @@ def get_candidate_point(settings, n, k, var_lower, var_upper, h,
     return (candidate, np.dot(h, start_point - candidate), grad_norm)
 # -- end function
 
-def get_integer_candidate(settings, n, k, h, start_point, tr_radius, 
+def get_integer_candidate(settings, n, k, h, start_point, ref_radius, 
                           candidate, integer_vars):
     """Get integer candidate point from a fractional point.
 
     Look for integer points around the given fractional point, trying
-    to find one with a good value of the quadratic model.
+    to find one with a good value of the linear model.
 
     Parameters
     ----------
@@ -236,8 +236,8 @@ def get_integer_candidate(settings, n, k, h, start_point, tr_radius,
     start_point : 1D numpy.ndarray[float]
         Starting point for the descent.
 
-    tr_radius : float
-        Radius of the trust region.
+    ref_radius : float
+        Radius of the local search.
 
     candidate : 1D numpy.ndarray[float]
         Fractional point to being the search.
@@ -264,14 +264,14 @@ def get_integer_candidate(settings, n, k, h, start_point, tr_radius,
     curr_point[integer_vars] = np.where(h[integer_vars] >= 0, ceil, floor)
     best_value = np.dot(h, curr_point)
     best_point = np.copy(curr_point)
-    for i in range(n * settings.tr_num_integer_candidates):
+    for i in range(n * settings.ref_num_integer_candidates):
         # We round each integer variable up or down depending on its
         # fractional value and a uniform random number
         curr_point[integer_vars] = np.where(
             np.random.uniform(size=len(integer_vars)) < 
             candidate[integer_vars] - floor, ceil, floor)
         curr_value = np.dot(h, curr_point) 
-        if (ru.distance(curr_point, start_point) <= tr_radius and 
+        if (ru.distance(curr_point, start_point) <= ref_radius and 
             curr_value < best_value):
             best_value = curr_value
             best_point = np.copy(curr_point)
@@ -280,11 +280,11 @@ def get_integer_candidate(settings, n, k, h, start_point, tr_radius,
 
 def get_model_improving_point(settings, n, k, var_lower, var_upper,
                               node_pos, model_set, start_point_index,
-                              tr_radius, integer_vars):
-    """Compute a point to improve the model used in the trust region.
+                              ref_radius, integer_vars):
+    """Compute a point to improve the model used in refinement.
 
     Determine a point that improves the geometry of the set of points
-    used to build the trust region model. This point may not have a
+    used to build the local search model. This point may not have a
     good objective function value, but it ensures that the model is
     well behaved.
 
@@ -314,8 +314,8 @@ def get_model_improving_point(settings, n, k, var_lower, var_upper,
     start_point_index : int
         Index in node_pos of the starting point for the descent.
 
-    tr_radius : float
-        Radius of the trust region.
+    ref_radius : float
+        Radius of the local search.
 
     integer_vars : 1D numpy.ndarray[int]
         Indices of the integer variables.
@@ -336,7 +336,7 @@ def get_model_improving_point(settings, n, k, var_lower, var_upper,
     assert(len(node_pos)==k)
     assert(isinstance(model_set, np.ndarray))
     assert(start_point_index < k)
-    assert(tr_radius>=0)
+    assert(ref_radius>=0)
     assert(isinstance(settings, RbfoptSettings))
     # Remove the start point from the model set if necessary
     red_model_set = np.array([i for i in model_set if i != start_point_index])
@@ -358,7 +358,7 @@ def get_model_improving_point(settings, n, k, var_lower, var_upper,
     to_replace = P[i]
     while (i < model_size and not success):
         # Determine candidate direction
-        d = Q[:, i].T*tr_radius
+        d = Q[:, i].T*ref_radius
         d = np.clip(node_pos[start_point_index] + d, var_lower,
                     var_upper) - node_pos[start_point_index]
         if (len(integer_vars)):
@@ -381,22 +381,22 @@ def get_model_improving_point(settings, n, k, var_lower, var_upper,
     return (node_pos[start_point_index] + d, success, to_replace)
 # -- end function
 
-def update_trust_region_radius(settings, tr_radius, model_obj_diff,
-                               real_obj_diff):
-    """Update the radius of the trust region.
+def update_refinement_radius(settings, ref_radius, model_obj_diff,
+                             real_obj_diff):
+    """Update the radius fo refinement.
 
-    Compute the updated trust region radius based on the true
-    objective function difference between the old point and the new
-    point, and that of the quadratic model. Also, determine if the new
-    iterate should be accepted.
+    Compute the updated refinement radius based on the true objective
+    function difference between the old point and the new point, and
+    that of the linear model. Also, determine if the new iterate
+    should be accepted.
 
     Parameters
     ----------
     settings : :class:`rbfopt_settings.RbfoptSettings`.
         Global and algorithmic settings.
 
-    tr_radius : float
-        Current radius of the trust region.
+    ref_radius : float
+        Current radius of the refinement region.
 
     model_obj_diff : float
         Difference in objective function value of the new point and
@@ -409,18 +409,18 @@ def update_trust_region_radius(settings, tr_radius, model_obj_diff,
     Returns
     -------
     (float, bool)
-        Updated radius of the trust region, and whether the point
-        should be accepted.
+        Updated radius of refinement, and whether the point should be
+        accepted.
 
     """
-    assert(tr_radius >= 0)
+    assert(ref_radius >= 0)
     assert(isinstance(settings, RbfoptSettings))
-    init_radius = tr_radius
+    init_radius = ref_radius
     decrease = (real_obj_diff / model_obj_diff 
                 if abs(model_obj_diff) > settings.eps_zero else 0)
-    if (decrease <= settings.tr_acceptable_decrease_shrink):
-        tr_radius *= 0.5
-    elif (decrease >= settings.tr_acceptable_decrease_enlarge):
-        tr_radius *= 2
-    return (tr_radius, decrease >= settings.tr_acceptable_decrease_move)
+    if (decrease <= settings.ref_acceptable_decrease_shrink):
+        ref_radius *= 0.5
+    elif (decrease >= settings.ref_acceptable_decrease_enlarge):
+        ref_radius *= 2
+    return (ref_radius, decrease >= settings.ref_acceptable_decrease_move)
 # -- end function
