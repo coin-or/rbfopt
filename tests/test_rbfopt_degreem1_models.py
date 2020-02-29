@@ -58,10 +58,20 @@ class TestGaussianModels(unittest.TestCase):
         pyomo.ConcreteModel object.
         """
         model = dm1.create_min_rbf_model(self.settings, self.n, self.k,
-                                        self.var_lower, self.var_upper,
-                                        self.integer_vars, self.node_pos,
-                                        self.rbf_lambda, self.rbf_h)
+                                         self.var_lower, self.var_upper,
+                                         self.integer_vars, None,
+                                         self.node_pos,
+                                         self.rbf_lambda, self.rbf_h)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+        model = dm1.create_min_rbf_model(
+            self.settings, 10, 20, np.array([0] * 10),np.array([1] * 10),
+            np.array([i for i in range(10)]),
+            (np.array([0]), np.array([]),
+             [(0, 0, np.array([i for i in range(10)]))]),
+            np.random.randint(0, 2, size=(20, 10)),
+            np.random.uniform(size=20), np.array([]))
+        self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+
 
     def test_create_max_one_over_mu_model(self):
         """Test the create_max_one_over_mu_model function.
@@ -70,9 +80,9 @@ class TestGaussianModels(unittest.TestCase):
         pyomo.ConcreteModel object.
         """
         model = dm1.create_max_one_over_mu_model(self.settings, self.n, self.k,
-                                                self.var_lower, self.var_upper,
-                                                self.integer_vars, 
-                                                self.node_pos, self.Amat)
+                                                 self.var_lower, self.var_upper,
+                                                 self.integer_vars, None,
+                                                 self.node_pos, self.Amat)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_max_h_k_model(self):
@@ -82,10 +92,10 @@ class TestGaussianModels(unittest.TestCase):
         pyomo.ConcreteModel object.
         """
         model = dm1.create_max_h_k_model(self.settings, self.n, self.k,
-                                        self.var_lower, self.var_upper,
-                                        self.integer_vars, self.node_pos,
-                                        self.rbf_lambda, self.rbf_h,
-                                        self.Amat, -1)
+                                         self.var_lower, self.var_upper,
+                                         self.integer_vars, None,
+                                         self.node_pos, self.rbf_lambda,
+                                         self.rbf_h, self.Amat, -1)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_min_bump_model(self):
@@ -108,9 +118,11 @@ class TestGaussianModels(unittest.TestCase):
         This test simply checks whether the function returns a valid
         pyomo.ConcreteModel object.
         """
-        model = dm1.create_maximin_dist_model(self.settings, self.n, self.k,
-                                             self.var_lower, self.var_upper, 
-                                             self.integer_vars, self.node_pos)
+        model = dm1.create_maximin_dist_model(self.settings, self.n,
+                                              self.k, self.var_lower,
+                                              self.var_upper,
+                                              self.integer_vars,
+                                              None,self.node_pos)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_min_msrsm_model(self):
@@ -119,13 +131,15 @@ class TestGaussianModels(unittest.TestCase):
         This test simply checks whether the function returns a valid
         pyomo.ConcreteModel object.
         """
-        model = dm1.create_min_msrsm_model(self.settings, self.n, self.k,
-                                          self.var_lower, self.var_upper,
-                                          self.integer_vars, self.node_pos,
-                                          self.rbf_lambda, self.rbf_h, 
-                                          0.5, 0.0, 1.0,
-                                          min(self.node_val),
-                                          max(self.node_val))
+        model = dm1.create_min_msrsm_model(self.settings, self.n,
+                                           self.k, self.var_lower,
+                                           self.var_upper,
+                                           self.integer_vars,
+                                           None, self.node_pos,
+                                           self.rbf_lambda, self.rbf_h,
+                                           0.5, 0.0, 1.0,
+                                           min(self.node_val),
+                                           max(self.node_val))
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
 # -- end class

@@ -213,7 +213,7 @@ def get_candidate_point(settings, n, k, var_lower, var_upper, h,
 # -- end function
 
 def get_integer_candidate(settings, n, k, h, start_point, ref_radius, 
-                          candidate, integer_vars):
+                          candidate, integer_vars, categorical_info):
     """Get integer candidate point from a fractional point.
 
     Look for integer points around the given fractional point, trying
@@ -245,6 +245,14 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
     integer_vars : 1D numpy.ndarray[int]
         Indices of the integer variables.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     Returns
     -------
     (1D numpy.ndarray[float], float)
@@ -257,11 +265,21 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
     assert(len(h) == n)
     assert(isinstance(integer_vars, np.ndarray))
     assert(isinstance(settings, RbfoptSettings))
+    # If there are categorical variables, they have to be dealt with
+    # separately. Exclude them from the set of integer vars.
+    if (categorical_info is not None and categorical_info[2]):
+        categorical, not_categorical, expansion = categorical_info
+        integer_vars = np.array(
+            [i for i in integer_vars if i < len(not_categorical)],
+            dtype=np.int_)    
     # Compute the rounding down and up
     floor = np.floor(candidate[integer_vars])
     ceil = np.ceil(candidate[integer_vars])
     curr_point = np.copy(candidate)
     curr_point[integer_vars] = np.where(h[integer_vars] >= 0, ceil, floor)
+    if (categorical_info is not None and categorical_info[2]):
+        # Round in-place
+        round_categorical(curr_point, categorical, not_categorical, expansion)
     best_value = np.dot(h, curr_point)
     best_point = np.copy(curr_point)
     for i in range(n * settings.ref_num_integer_candidates):
@@ -270,6 +288,11 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
         curr_point[integer_vars] = np.where(
             np.random.uniform(size=len(integer_vars)) < 
             candidate[integer_vars] - floor, ceil, floor)
+        if (categorical_info is not None and categorical_info[2]):
+            curr_point[:len(not_categorical)] = candidate[:len(not_categorical)]
+            # Round in-place
+            round_categorical(curr_point, categorical, not_categorical,
+                              expansion)
         curr_value = np.dot(h, curr_point) 
         if (ru.distance(curr_point, start_point) <= ref_radius and 
             curr_value < best_value):
@@ -278,9 +301,46 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
     return (best_point, np.dot(h, candidate) - best_value)
 # -- end function
 
+def round_categorical(point, categorical, not_categorical,
+                      categorical_expansion):
+    """Round categorical variables of a fractional point.
+    
+    Ensure categorical variables of fractional point are correctly
+    rounded. Rounding is done in-place.
+
+    Parameters
+    ----------
+    
+    points : 1D numpy.ndarray[float]
+        Point we want to round.
+
+    categorical : 1D numpy.ndarray[int]
+        Array of indices of categorical variables in original space.
+
+    not_categorical : 1D numpy.ndarray[int]
+        Array of indices of not categorical variables in original space.
+
+    categorical_expansion : List[(int, float, 1D numpy.ndarray[int])]
+        Expansion of original categorical variables into binaries.
+
+    """
+    assert(isinstance(point, np.ndarray))
+    assert(isinstance(categorical, np.ndarray))
+    assert(isinstance(not_categorical, np.ndarray))
+    assert(categorical_expansion)
+    # Ensure only one is picked for categorical variables
+    for index, var_lower, expansion in categorical_expansion:
+        sum_prob = np.sum(point[expansion])
+        chosen = np.random.choice(expansion,
+                                  p=point[expansion]/sum_prob)
+        point[expansion] = np.zeros(len(expansion))
+        point[chosen] = 1
+# -- end function
+
+
 def get_model_improving_point(settings, n, k, var_lower, var_upper,
                               node_pos, model_set, start_point_index,
-                              ref_radius, integer_vars):
+                              ref_radius, integer_vars, categorical_info):
     """Compute a point to improve the model used in refinement.
 
     Determine a point that improves the geometry of the set of points
@@ -319,6 +379,14 @@ def get_model_improving_point(settings, n, k, var_lower, var_upper,
 
     integer_vars : 1D numpy.ndarray[int]
         Indices of the integer variables.
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
 
     Returns
     -------
@@ -361,6 +429,10 @@ def get_model_improving_point(settings, n, k, var_lower, var_upper,
         d = Q[:, i].T*ref_radius
         d = np.clip(node_pos[start_point_index] + d, var_lower,
                     var_upper) - node_pos[start_point_index]
+        if (categorical_info is not None and categorical_info[2]):
+            candidate = node_pos[start_point_index] + d
+            round_categorical(candidate, *categorical_info)
+            d = candidate - node_pos[start_point_index]
         if (len(integer_vars)):
             # Zero out small directions, and increase to one nonzero
             # integer directions

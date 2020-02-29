@@ -127,7 +127,7 @@ class TestUtils(unittest.TestCase):
             settings = RbfoptSettings(init_strategy=method,
                                       init_sample_fraction=1.0)
             points = ru.initialize_nodes(settings, var_lower, var_upper,
-                                         integer_vars)
+                                         integer_vars, None)
             msg=('Number of points returned by {:s}'.format(method) +
                    ' is insufficient')
             self.assertGreaterEqual(len(points), 4, msg=msg)
@@ -151,7 +151,7 @@ class TestUtils(unittest.TestCase):
                                       init_include_midpoint=True,
                                       init_sample_fraction=1.0)
             points = ru.initialize_nodes(settings, var_lower, var_upper,
-                                         integer_vars)
+                                         integer_vars, None)
             msg=('Number of points returned by {:s}'.format(method) +
                    ' is insufficient')
             self.assertGreaterEqual(len(points), 4, msg=msg)
@@ -199,6 +199,75 @@ class TestUtils(unittest.TestCase):
                              msg='Failed when integer_vars is everything')
         self.assertListEqual(var_upper.tolist(), [3.0, 3.0, -1.0, 5.0],
                              msg='Failed when integer_vars is everything')
+    # -- end function
+
+    def test_expand_categorical_variables(self):
+        """Verify that expansion is correct and does not fail at limit."""
+        points = np.array([[1, 0, 2], [1, 3, 1], [3, 2, 0]])
+        categorical = np.array([1])
+        not_categorical = np.array([0, 2])
+        categorical_expansion = [(1, 0, np.array([2, 3, 4, 5]))]
+        expanded = ru.expand_categorical_vars(
+            points, categorical, not_categorical, categorical_expansion)
+        self.assertTrue(
+            np.array_equal(expanded, np.array([[ 1,  2,  1,  0,  0,  0],
+                                               [ 1,  1,  0,  0,  0,  1],
+                                               [ 3,  0,  0,  0,  1,  0]])))
+        categorical = np.array([0, 2])
+        not_categorical = np.array([1])
+        categorical_expansion = [(0, 0, np.array([1, 2, 3, 4])),
+                                 (2, 0, np.array([5, 6, 7]))]
+        expanded = ru.expand_categorical_vars(
+            points, categorical, not_categorical, categorical_expansion)
+        self.assertTrue(
+            np.array_equal(expanded, np.array([[0, 0, 1, 0, 0, 0, 0, 1],
+                                               [3, 0, 1, 0, 0, 0, 1, 0],
+                                               [2, 0, 0, 0, 1, 1, 0, 0]])))
+        categorical = np.array([0, 2])
+        not_categorical = np.array([1])
+        categorical_expansion = [(0, 0, np.array([1, 2, 3, 4])),
+                                 (2, 0, np.array([5, 6, 7]))]
+        expanded = ru.expand_categorical_vars(
+            np.array([[1, 0, 2]]), categorical, not_categorical,
+            categorical_expansion)
+        self.assertTrue(
+            np.array_equal(expanded, np.array([[0, 0, 1, 0, 0, 0, 0, 1]])))
+    # -- end function
+
+    def test_compress_categorical_variables(self):
+        """Verify that compression is correct and does not fail at limit."""
+        points = np.array([[ 1,  2,  1,  0,  0,  0],
+                           [ 1,  1,  0,  0,  0,  1],
+                           [ 3,  0,  0,  0,  1,  0]])
+        categorical = np.array([1])
+        not_categorical = np.array([0, 2])
+        categorical_expansion = [(1, 0, np.array([2, 3, 4, 5]))]
+        expanded = ru.compress_categorical_vars(
+            points, categorical, not_categorical, categorical_expansion)
+        self.assertTrue(
+            np.array_equal(expanded,
+                           np.array([[1, 0, 2], [1, 3, 1], [3, 2, 0]])))
+        points = np.array([[0, 0, 1, 0, 0, 0, 0, 1],
+                           [3, 0, 1, 0, 0, 0, 1, 0],
+                           [2, 0, 0, 0, 1, 1, 0, 0]])
+        categorical = np.array([0, 2])
+        not_categorical = np.array([1])
+        categorical_expansion = [(0, 0, np.array([1, 2, 3, 4])),
+                                 (2, 0, np.array([5, 6, 7]))]
+        expanded = ru.compress_categorical_vars(
+            points, categorical, not_categorical, categorical_expansion)
+        self.assertTrue(
+            np.array_equal(expanded,
+                           np.array([[1, 0, 2], [1, 3, 1], [3, 2, 0]])))
+        points = np.array([[0, 0, 1, 0, 0, 0, 0, 1]])
+        categorical = np.array([0, 2])
+        not_categorical = np.array([1])
+        categorical_expansion = [(0, 0, np.array([1, 2, 3, 4])),
+                                 (2, 0, np.array([5, 6, 7]))]
+        expanded = ru.compress_categorical_vars(
+            points, categorical, not_categorical, categorical_expansion)
+        self.assertTrue(
+            np.array_equal(expanded, np.array([[1, 0, 2]])))
     # -- end function
 
     def test_norm(self):
@@ -280,7 +349,8 @@ class TestUtils(unittest.TestCase):
             for rbf_type in self.rbf_types:
                 settings.rbf = rbf_type
                 mat = ru.get_rbf_matrix(settings, dim, num_points, node_pos)
-                self.assertIsInstance(mat, np.matrix)
+                self.assertIsInstance(mat, np.ndarray)
+                self.assertEqual(len(mat.shape), 2)
                 self.assertAlmostEqual(np.max(mat - mat.transpose()), 0.0,
                                        msg='RBF matrix is not symmetric')
                 size = num_points

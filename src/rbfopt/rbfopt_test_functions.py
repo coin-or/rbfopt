@@ -1877,6 +1877,39 @@ class schoen_10_2_int:
 # -- end class
 
 
+class branin_cat:
+    """
+    Branin function of the Dixon-Szego test set, with categorical vars.
+    """
+    
+    @staticmethod
+    def evaluate(x):
+        assert(len(x)==3)
+        if (x[2] == 0):
+            val = math.cos(x[0])
+        elif (x[2] == 1):
+            val = math.sin(x[0])
+        elif (x[2] == 2):
+            val = math.cos(x[0])**2
+        elif (x[2] == 3):
+            val = math.sin(x[0])**2
+        value = ((x[1] - (5.1/(4*math.pi*math.pi))*x[0]*x[0] + 
+                  5/math.pi*x[0] - 6)**2 + 10*(1-1/(8*math.pi)) *
+                 val +10)
+        return(value)
+
+    dimension = 3
+    var_lower = np.array([-5, 0, 0])
+    var_upper = np.array([10, 15, 3])
+    optimum_point = np.array([9.42477796, 2.47499998, 0])
+    additional_optima = np.array([ [-3.14159265, 12.27500000, 0],
+                                   [3.14159265, 2.27500000, 0] ])
+    optimum_value = 0.397887357729739
+    var_type = np.array(['R', 'R', 'C'])
+
+# -- end class
+
+
 
 class TestBlackBox(RbfoptBlackBox):
     """A black-box constructed from a known test function.

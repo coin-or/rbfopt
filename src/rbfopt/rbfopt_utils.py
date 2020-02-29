@@ -419,7 +419,8 @@ def get_lhd_corr_points(var_lower, var_upper, sample_size, num_trials=50):
 # -- end function
 
 
-def initialize_nodes(settings, var_lower, var_upper, integer_vars):
+def initialize_nodes(settings, var_lower, var_upper, integer_vars,
+                     categorical_info):
     """Compute the initial sample points.
 
     Compute an initial list of nodes using the initialization strategy
@@ -441,6 +442,14 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
         variables. If empty, all variables are assumed to be
         continuous.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     Returns
     -------
     2D numpy.ndarray[float]
@@ -460,9 +469,20 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
     assert(isinstance(var_upper, np.ndarray))
     assert(isinstance(integer_vars, np.ndarray))
     assert(len(var_lower) == len(var_upper))
+    assert(categorical_info is None or len(categorical_info)==3)
 
     sample_size = int(max(2, round((len(var_lower) + 1) *
                                    settings.init_sample_fraction)))
+
+    if (categorical_info is not None and categorical_info[2] and
+        settings.init_strategy in ['lhd_maximin', 'lhd_corr']):
+        # Map bounds and integer variables
+        var_lower = compress_categorical_bounds(var_lower,
+                                                *categorical_info)
+        var_upper = compress_categorical_bounds(var_upper,
+                                                *categorical_info)
+        integer_vars = np.array([i for i in integer_vars if i < len(var_lower)])
+
     if (settings.init_include_midpoint):
         midpoint = (var_lower + var_upper)/2
         midpoint[integer_vars] = np.around(midpoint[integer_vars])
@@ -497,6 +517,12 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars):
 
     if (itercount == settings.max_random_init):
         raise RuntimeError('Exceeded number of random initializations')
+
+    if (categorical_info is not None and categorical_info[2] and
+        settings.init_strategy in ['lhd_maximin', 'lhd_corr']):
+        # There are categorical variables. Unpack nodes in the new
+        # representation.
+        return expand_categorical_vars(nodes, *categorical_info)
 
     return nodes
 
@@ -555,8 +581,143 @@ def round_integer_bounds(var_lower, var_upper, integer_vars):
 
 # -- end function
 
+def expand_categorical_vars(points, categorical, not_categorical,
+                            categorical_expansion):
+    """Expand points in original space to extended space.
+    
+    Expands points with integer encoding of categorical variables to
+    points with unary encoding of categorical variables.
+
+    Parameters
+    ----------
+    
+    points : 2D numpy.ndarray[float]
+        Matrix of points we want to expand.
+
+    categorical : 1D numpy.ndarray[int]
+        Array of indices of categorical variables in original space.
+
+    not_categorical : 1D numpy.ndarray[int]
+        Array of indices of not categorical variables in original space.
+
+    categorical_expansion : List[(int, float, 1D numpy.ndarray[int])]
+        Expansion of original categorical variables into binaries.
+
+    Returns
+    -------
+    2D numpy.ndarray[float]
+        Matrix containing points in unary encoding.
+    """
+    assert(isinstance(points, np.ndarray))
+    assert(points.ndim==2)
+    assert(isinstance(categorical, np.ndarray))
+    assert(isinstance(not_categorical, np.ndarray))
+    assert(len(categorical_expansion)==len(categorical))
+    assert(points.shape[1]==(len(categorical)+len(not_categorical)))
+    num_rows = points.shape[0]
+    if (len(not_categorical)):
+        expanded = points[:, not_categorical]
+    else:
+        expanded = np.zeros(shape=(num_rows,0))
+    for index, var_lower, expansion in categorical_expansion:
+        to_append = np.zeros(shape=(num_rows, len(expansion)))
+        for j in range(len(expansion)):
+            to_append[np.where(points[:, index] == (var_lower + j))[0], j] = 1
+        expanded = np.hstack((expanded, to_append))
+    return expanded
+# -- end function
+
+def compress_categorical_vars(points, categorical, not_categorical,
+                              categorical_expansion):
+    """Compress points in extended space to original space.
+    
+    Compress points with unary encoding of categorical variables to
+    points with integer encoding of categorical variables.
+
+    Parameters
+    ----------
+    
+    points : 2D numpy.ndarray[float]
+        Matrix of points we want to compress.
+
+    categorical : 1D numpy.ndarray[int]
+        Array of indices of categorical variables in original space.
+
+    not_categorical : 1D numpy.ndarray[int]
+        Array of indices of not categorical variables in original space.
+
+    categorical_expansion : List[(int, float, 1D numpy.ndarray[int])]
+        Expansion of original categorical variables into binaries.
+
+    Returns
+    -------
+    2D numpy.ndarray[float]
+        Matrix containing points in integer encoding.
+    """
+    assert(isinstance(points, np.ndarray))
+    assert(points.ndim==2)
+    assert(isinstance(categorical, np.ndarray))
+    assert(isinstance(not_categorical, np.ndarray))
+    assert(len(categorical_expansion)==len(categorical))
+    num_rows = points.shape[0]
+    compressed = np.zeros(
+        shape=(num_rows, len(categorical)+len(not_categorical)))
+    compressed[:, not_categorical] = points[:, :len(not_categorical)]
+    for index, var_lower, expansion in categorical_expansion:
+        for j in range(len(expansion)):
+            compressed[np.where(
+                points[:, expansion[j]] == 1)[0], index] = var_lower + j
+    return compressed
+# -- end function
+
+def compress_categorical_bounds(bounds, categorical, not_categorical,
+                                categorical_expansion):
+    """Compress bounds vector in extended space to original space.
+    
+    Compress bounds for points with unary encoding of categorical
+    variables to bounds for points with integer encoding of
+    categorical variables.
+
+    Parameters
+    ----------
+    
+    bounds : 1D numpy.ndarray[float]
+        Array of bounds we want to compress.
+
+    categorical : 1D numpy.ndarray[int]
+        Array of indices of categorical variables in original space.
+
+    not_categorical : 1D numpy.ndarray[int]
+        Array of indices of not categorical variables in original space.
+
+    categorical_expansion : List[(int, float, 1D numpy.ndarray[int])]
+        Expansion of original categorical variables into binaries.
+
+    Returns
+    -------
+    1D numpy.ndarray[float]
+        Bounds for points in integer encoding.
+
+    """
+    assert(isinstance(bounds, np.ndarray))
+    assert(isinstance(categorical, np.ndarray))
+    assert(isinstance(not_categorical, np.ndarray))
+    assert(len(categorical_expansion)==len(categorical))
+    compressed = np.zeros(len(categorical)+len(not_categorical))
+    if (len(not_categorical)):
+        compressed[not_categorical] = bounds[:len(not_categorical)]
+    for index, var_lower, expansion in categorical_expansion:
+        # If the bounds are zero in expanded space, then we are
+        # working on the lower bounds
+        if (bounds[expansion[0]] == 0):
+            compressed[index] = var_lower
+        else:
+            compressed[index] = var_lower + len(expansion)
+    return compressed
+# -- end function
 
 def norm(p):
+
     """Compute the L2-norm of a vector
 
     Compute the L2 (Euclidean) norm.
@@ -791,7 +952,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
 
     Returns
     -------
-    numpy.matrix
+    numpy.ndarray
         The matrix A = [Phi P; P^T 0].
 
     Raises
@@ -830,7 +991,7 @@ def get_rbf_matrix(settings, n, k, node_pos):
                        np.hstack((PTr, np.zeros((p, p))))))
     else:
         A = Phi
-    Amat = np.matrix(A)
+    Amat = np.array(A)
 
     # Zero out tiny elements
     Amat[np.abs(Amat) < settings.eps_zero] = 0
@@ -849,12 +1010,12 @@ def get_matrix_inverse(settings, Amat):
     ----------
     settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
-    Amat : numpy.matrix
+    Amat : numpy.ndarray
         The matrix to invert.
 
     Returns
     -------
-    numpy.matrix
+    numpy.ndarray
         The matrix Amat^{-1}.
 
     Raises
@@ -863,10 +1024,10 @@ def get_matrix_inverse(settings, Amat):
         If the matrix cannot be inverted for numerical reasons.
     """
     assert(isinstance(settings, RbfoptSettings))
-    assert(isinstance(Amat, np.matrix))
+    assert(isinstance(Amat, np.ndarray))
 
     try:
-        Amatinv = Amat.getI()
+        Amatinv = np.linalg.inv(Amat)
     except np.linalg.LinAlgError as e:
         if (settings.debug):
             print('Exception raised trying to invert the RBF matrix',
@@ -902,7 +1063,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
     k : int
         Number of interpolation nodes.
 
-    Amat : numpy.matrix
+    Amat : 2D numpy.ndarray[float]
         Matrix [Phi P; P^T 0] defining the linear system. Must be a
         square matrix of appropriate size.
 
@@ -917,7 +1078,7 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
     """
     assert(len(np.atleast_1d(node_val)) == k)
     assert(isinstance(settings, RbfoptSettings))
-    assert(isinstance(Amat, np.matrix))
+    assert(isinstance(Amat, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
     p = get_size_P_matrix(settings, n)
     assert(Amat.shape == (k+p, k+p))
@@ -953,7 +1114,7 @@ def get_rbf_coefficients_underdet(settings, n, k, Amat, node_val):
     k : int
         Number of interpolation nodes.
 
-    Amat : numpy.matrix
+    Amat : 2D numpy.ndarray[float]
         Matrix [Phi P; P^T 0] defining the linear system. Must be a
         square matrix of appropriate size.
 
@@ -969,7 +1130,7 @@ def get_rbf_coefficients_underdet(settings, n, k, Amat, node_val):
     """
     assert(len(np.atleast_1d(node_val)) == k)
     assert(isinstance(settings, RbfoptSettings))
-    assert(isinstance(Amat, np.matrix))
+    assert(isinstance(Amat, np.ndarray))
     assert(isinstance(node_val, np.ndarray))
     p = get_size_P_matrix(settings, n)
     assert(Amat.shape == (k+p, k+p))

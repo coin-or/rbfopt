@@ -30,7 +30,7 @@ from rbfopt.rbfopt_settings import RbfoptSettings
 
 
 def pure_global_search(settings, n, k, var_lower, var_upper,
-                       integer_vars, node_pos, mat):
+                       integer_vars, categorical_info, node_pos, mat):
     """Pure global search that disregards objective function.
 
     If using Gutmann's RBF method, Construct a PyOmo model to maximize
@@ -63,13 +63,21 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         variables. If empty list, all variables are assumed to be
         continuous.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
-    mat : numpy.matrix or None
+    mat : 2D numpy.ndarray[float] or None
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a square numpy.matrix of appropriate dimension if
+        be a square 2D numpy.ndarray[float] of appropriate dimension if
         given. Can be None when using the MSRSM algorithm.
 
     Returns
@@ -99,7 +107,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
     assert((mat is None and settings.algorithm == 'MSRSM')
-           or (isinstance(mat, np.matrix) and mat.shape == (k + p, k + p)))
+           or (isinstance(mat, np.ndarray) and mat.shape == (k + p, k + p)))
 
     # Instantiate model
     if (ru.get_degree_polynomial(settings) == 1):
@@ -120,8 +128,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         else:
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
-        point = ga_optimize(settings, n, var_lower, var_upper,
-                            integer_vars, fitness.evaluate)
+        point = ga_optimize(settings, n, var_lower, var_upper, integer_vars,
+                            categorical_info, fitness.evaluate)
     elif (settings.global_search_method == 'sampling'):
         # Sample random points, and rank according to fitness
         if (settings.algorithm == 'Gutmann'):
@@ -133,7 +141,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
                              ' not supported')
         num_samples = n * settings.num_samples_aux_problems
         samples = generate_sample_points(settings, n, var_lower, var_upper,
-                                         integer_vars, num_samples)
+                                         integer_vars, categorical_info,
+                                         num_samples)
         scores = fitness.evaluate(samples)
         point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
@@ -141,12 +150,13 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         if (settings.algorithm == 'Gutmann'):
             instance = model.create_max_one_over_mu_model(
                 settings, n, k, var_lower, var_upper,
-                integer_vars, node_pos, mat)
+                integer_vars, categorical_info, node_pos, mat)
             # Initialize variables for local search
             initialize_instance_variables(settings, instance)
         elif (settings.algorithm == 'MSRSM'):
             instance = model.create_maximin_dist_model(
-                settings, n, k, var_lower, var_upper, integer_vars, node_pos)
+                settings, n, k, var_lower, var_upper, integer_vars,
+                categorical_info, node_pos)
             # Initialize variables for local search
             initialize_instance_variables(settings, instance)
         else:
@@ -184,7 +194,8 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
 
 
 def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
-                 node_pos, rbf_lambda, rbf_h, best_node_pos):
+                 categorical_info, node_pos, rbf_lambda, rbf_h,
+                 best_node_pos):
     """Compute the minimum of the RBF interpolant.
 
     Compute the minimum of the RBF interpolant with a PyOmo model.
@@ -211,6 +222,14 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
 
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
@@ -266,9 +285,9 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
     else:
         raise ValueError('RBF type ' + settings.rbf + ' not supported')
 
-    instance = model.create_min_rbf_model(settings, n, k, var_lower,
-                                          var_upper, integer_vars,
-                                          node_pos, rbf_lambda, rbf_h)
+    instance = model.create_min_rbf_model(
+        settings, n, k, var_lower, var_upper, integer_vars,
+        categorical_info, node_pos, rbf_lambda, rbf_h)
     # Initialize variables for local search
     initialize_instance_variables(settings, instance,
                                   start_point=best_node_pos)
@@ -301,8 +320,8 @@ def minimize_rbf(settings, n, k, var_lower, var_upper, integer_vars,
 
 
 def global_search(settings, n, k, var_lower, var_upper, integer_vars,
-                  node_pos, rbf_lambda, rbf_h, mat, target_val,
-                  dist_weight, fmin, fmax):
+                  categorical_info, node_pos, rbf_lambda, rbf_h, mat,
+                  target_val, dist_weight, fmin, fmax):
     """Global search that tries to balance exploration/exploitation.
 
     If using Gutmann's RBF method, compute the maximum of the h_k
@@ -333,6 +352,14 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         variables. If empty list, all variables are assumed to be
         continuous.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
@@ -344,10 +371,10 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
-    mat : numpy.matrix or None
+    mat : 2D numpy.ndarray[float] or None
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a square numpy.matrix of appropriate dimension, or None if
+        be a square 2D numpy.ndarray[float] of appropriate dimension, or None if
         using the MSRSM algorithm.
 
     target_val : float
@@ -397,7 +424,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
     assert((mat is None and settings.algorithm == 'MSRSM' )
-           or (isinstance(mat, np.matrix) and mat.shape == (k + p, k + p)))
+           or (isinstance(mat, np.ndarray) and mat.shape == (k + p, k + p)))
     assert(len(rbf_h) == p)
 
     # Instantiate model
@@ -421,8 +448,8 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         else:
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
-        point = ga_optimize(settings, n, var_lower, var_upper,
-                            integer_vars, fitness.evaluate)
+        point = ga_optimize(settings, n, var_lower, var_upper, integer_vars,
+                            categorical_info, fitness.evaluate)
     elif (settings.global_search_method == 'sampling'):
         # Sample random points, and rank according to fitness
         if (settings.algorithm == 'Gutmann'):
@@ -435,18 +462,18 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
             raise ValueError('Algorithm ' + settings.algorithm + 
                              ' not supported')
         num_samples = n * settings.num_samples_aux_problems
-        samples = generate_sample_points(settings, n, var_lower, var_upper,
-                                         integer_vars, num_samples)
+        samples = generate_sample_points(
+            settings, n, var_lower, var_upper, integer_vars,
+            categorical_info, num_samples)
         scores = fitness.evaluate(samples)
         point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
         # Optimize using Pyomo
         if (settings.algorithm == 'Gutmann'):
-            instance = model.create_max_h_k_model(settings, n, k,
-                                                  var_lower, var_upper,
-                                                  integer_vars, node_pos,
-                                                  rbf_lambda, rbf_h, mat,
-                                                  target_val)
+            instance = model.create_max_h_k_model(
+                settings, n, k, var_lower, var_upper, integer_vars,
+                categorical_info, node_pos, rbf_lambda, rbf_h, mat,
+                target_val)
             initialize_instance_variables(settings, instance)
         elif (settings.algorithm == 'MSRSM'):
             # Compute minimum and maximum distances between
@@ -457,12 +484,10 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
             dist_mat = ss.distance.cdist(node_pos, node_pos)
             dist_min = np.min(dist_mat[np.triu_indices(k, 1)])
             dist_max = np.max(dist_mat[np.triu_indices(k, 1)])
-            instance = model.create_min_msrsm_model(settings, n, k,
-                                                    var_lower, var_upper,
-                                                    integer_vars, node_pos,
-                                                    rbf_lambda, rbf_h,
-                                                    dist_weight, dist_min,
-                                                    dist_max, fmin, fmax)
+            instance = model.create_min_msrsm_model(
+                settings, n, k, var_lower, var_upper, integer_vars,
+                categorical_info, node_pos, rbf_lambda, rbf_h,
+                dist_weight, dist_min, dist_max, fmin, fmax)
             initialize_instance_variables(settings, instance)
             initialize_msrsm_aux_variables(settings, instance)
         else:
@@ -523,9 +548,6 @@ def initialize_instance_variables(settings, instance, start_point=None):
     """
     assert(isinstance(settings, RbfoptSettings))
 
-    # Obtain radial basis function
-    rbf = ru.get_rbf_function(settings)
-
     # Initialize variables for local search
     if (start_point is not None):
         assert(len(instance.N) == len(start_point))
@@ -583,10 +605,10 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    Phimat : numpy.matrix
+    Phimat : 2D numpy.ndarray[float]
         Matrix Phi, i.e. top left part of the standard RBF matrix.
 
-    Pmat : numpy.matrix
+    Pmat : 2D numpy.ndarray[float]
         Matrix P, i.e. top right part of the standard RBF matrix.
 
     node_val : 1D numpy.ndarray[float]
@@ -625,8 +647,8 @@ def get_noisy_rbf_coefficients(settings, n, k, Phimat, Pmat, node_val,
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(node_err_bounds, np.ndarray))
     assert(len(node_val) == k)
-    assert(isinstance(Phimat, np.matrix))
-    assert(isinstance(Pmat, np.matrix))
+    assert(isinstance(Phimat, np.ndarray))
+    assert(isinstance(Pmat, np.ndarray))
     assert(len(node_val) == len(node_err_bounds))
     assert(init_rbf_lambda is None or (isinstance(init_rbf_lambda, 
                                                   np.ndarray) and
@@ -713,7 +735,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val, node_err_bounds,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    Amat : numpy.matrix
+    Amat : 2D numpy.ndarray[float]
         The matrix A = [Phi P; P^T 0] of equation (3) in the paper by
         Costa and Nannicini.
 
@@ -738,7 +760,7 @@ def get_min_bump_node(settings, n, k, Amat, node_val, node_err_bounds,
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(node_err_bounds, np.ndarray))
     assert(len(node_val) == k)
-    assert(isinstance(Amat, np.matrix))
+    assert(isinstance(Amat, np.ndarray))
     assert(len(node_val) == len(node_err_bounds))
 
     # Extract the matrices Phi and P from
@@ -913,8 +935,8 @@ def set_nlp_solver_options(solver):
 # -- end function
 
 
-def generate_sample_points(settings, n, var_lower, var_upper,
-                           integer_vars, num_samples):
+def generate_sample_points(settings, n, var_lower, var_upper, integer_vars,
+                           categorical_info, num_samples):
     """Generate sample points uniformly at random.
 
     Generate a given number of points uniformly at random in the
@@ -941,6 +963,14 @@ def generate_sample_points(settings, n, var_lower, var_upper,
         variables. If empty list, all variables are assumed to be
         continuous.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     num_samples : int
         Number of samples to generate
 
@@ -957,6 +987,15 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     assert(len(var_upper) == n)
     assert(isinstance(settings, RbfoptSettings))
 
+    if (categorical_info is not None and categorical_info[2]):
+        # Map bounds and integer variables
+        var_lower = ru.compress_categorical_bounds(var_lower,
+                                                   *categorical_info)
+        var_upper = ru.compress_categorical_bounds(var_upper,
+                                                   *categorical_info)
+        n = len(var_lower)
+        integer_vars = np.array([i for i in integer_vars if i < n])
+        
     # Generate samples
     samples = (np.random.rand(num_samples, n) * (var_upper - var_lower) + 
                var_lower)
@@ -965,11 +1004,16 @@ def generate_sample_points(settings, n, var_lower, var_upper,
     if (len(integer_vars)):
         samples[:, integer_vars] = np.around(samples[:, integer_vars])
 
+    if (categorical_info is not None and categorical_info[2]):
+        # Uncompress
+        return ru.expand_categorical_vars(samples, *categorical_info)
+        
     return samples
 
 # -- end function
 
-def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
+def ga_optimize(settings, n, var_lower, var_upper, integer_vars,
+                categorical_info, objfun):
     """Compute and optimize a fitness function.
 
     Use a simple genetic algorithm to quickly find a good solution for
@@ -994,6 +1038,14 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
 
     objfun : Callable[2D numpy.ndarray[float]]
         The objective function. This must be a callable function that
@@ -1025,15 +1077,32 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
     num_surviving = population_size//4
     num_new = population_size - 2*num_surviving - 1
 
-    # Generate boolean vector of integer variables for convenience
-    is_integer = np.zeros(n, dtype=bool)
-    if (len(integer_vars)):
-        is_integer[integer_vars] = True
+    if (categorical_info is not None and categorical_info[2]):
+        # We will have to work in both the extended and compressed
+        # space. Map bounds and integer variables
+        categorical, not_categorical, expansion = categorical_info
+        var_lower_comp = ru.compress_categorical_bounds(var_lower,
+                                                        *categorical_info)
+        var_upper_comp = ru.compress_categorical_bounds(var_upper,
+                                                        *categorical_info)
+        n_comp = len(categorical) + len(not_categorical)
+        is_integer = np.zeros(len(var_lower_comp), dtype=bool)
+        for index in integer_vars:
+            if (index < len(not_categorical)):
+                is_integer[index] = True
+        for index, lower, unary_expansion in expansion:
+            is_integer[index] = True
+
+    else:
+        # Generate boolean vector of integer variables for convenience
+        is_integer = np.zeros(n, dtype=bool)
+        if (len(integer_vars)):
+            is_integer[integer_vars] = True
 
     # Compute initial population
-    population = generate_sample_points(settings, n, var_lower,
-                                        var_upper, integer_vars,
-                                        population_size)
+    population = generate_sample_points(
+        settings, n, var_lower, var_upper, integer_vars,
+        categorical_info, population_size)
     for gen in range(settings.ga_num_generations):
         # Mutation rate and maximum perturbed coordinates for this
         # generation of individuals
@@ -1048,23 +1117,49 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars, objfun):
         # Crossover: select how mating is done, then create offspring
         father = np.random.permutation(best_individuals)
         mother = np.random.permutation(best_individuals)
-        offspring = ga_mate(father, mother)
+        if (categorical_info is not None and categorical_info[2]):
+            father = ru.compress_categorical_vars(father, *categorical_info)
+            mother = ru.compress_categorical_vars(mother, *categorical_info)
+            offspring = ru.expand_categorical_vars(ga_mate(father, mother),
+                                                   *categorical_info)
+        else:
+            offspring = ga_mate(father, mother)
         # New individuals
-        new_individuals = generate_sample_points(settings, n, var_lower,
-                                                 var_upper, integer_vars,
-                                                 num_new)
-        # Make a copy of best individual, and mutate it
-        best_mutated = best_individuals[0, :].copy()
-        ga_mutate(n, var_lower, var_upper, is_integer,
-                  best_mutated, max_size_pert)
-        # Mutate surviving (except best) if necessary
-        for point in best_individuals[1:]:
-            if (np.random.uniform() < curr_mutation_rate):
-                ga_mutate(n, var_lower, var_upper, is_integer,
-                          point, max_size_pert)
+        new_individuals = generate_sample_points(
+            settings, n, var_lower, var_upper, integer_vars,
+            categorical_info, num_new)
+        if (categorical_info is not None and categorical_info[2]):
+            # If there are categorical variables, we work in
+            # compressed space, then expand again
+            best_individuals = ru.compress_categorical_vars(
+                best_individuals, *categorical_info)
+            # Make a copy of best individual, and mutate it
+            best_mutated = best_individuals[0, :].copy()
+            ga_mutate(n_comp, var_lower_comp, var_upper_comp, is_integer,
+                      best_mutated, max_size_pert)
+            best_mutated = ru.expand_categorical_vars(
+                np.atleast_2d(best_mutated), *categorical_info)
+            # Mutate surviving (except best) if necessary
+            for point in best_individuals[1:]:
+                if (np.random.uniform() < curr_mutation_rate):
+                    ga_mutate(n_comp, var_lower_comp, var_upper_comp,
+                              is_integer, point, max_size_pert)
+            best_individuals = ru.expand_categorical_vars(
+                best_individuals, *categorical_info)
+        else:
+            # We can work in original space.
+            # Make a copy of best individual, and mutate it
+            best_mutated = best_individuals[0, :].copy()
+            ga_mutate(n, var_lower, var_upper, is_integer,
+                      best_mutated, max_size_pert)
+            # Mutate surviving (except best) if necessary
+            for point in best_individuals[1:]:
+                if (np.random.uniform() < curr_mutation_rate):
+                    ga_mutate(n, var_lower, var_upper, is_integer,
+                              point, max_size_pert)
         # Generate new population
-        population = np.vstack((best_individuals, offspring, new_individuals,
-                                best_mutated))
+        population = np.vstack((best_individuals, offspring,
+                                new_individuals, best_mutated))
     # dump.close()
     # Determine ranking of last generation.
     # Compute fitness score to determine remaining individuals
@@ -1102,7 +1197,6 @@ def ga_mate(father, mother):
     # Take elements from father or mother, depending on coin toss
     return np.where(np.random.uniform(size=father.shape) < 0.5,
                     father, mother)
-
 # -- end function
 
 
@@ -1347,9 +1441,9 @@ class GutmannHkObj:
         dist_weight is equal to 1, in which case RBF values are not
         used.
 
-    Amatinv : numpy.matrix
+    Amatinv : 2D numpy.ndarray[float]
         The matrix necessary for the computation. This is the inverse
-        of the matrix [Phi P; P^T 0]. Must be a square numpy.matrix of
+        of the matrix [Phi P; P^T 0]. Must be a square 2D numpy.ndarray[float] of
         appropriate dimension.
 
     target_val : float
@@ -1369,7 +1463,7 @@ class GutmannHkObj:
         assert(isinstance(settings, RbfoptSettings))
         # Determine the size of the P matrix
         p = ru.get_size_P_matrix(settings, n)
-        assert(isinstance(Amatinv, np.matrix) and
+        assert(isinstance(Amatinv, np.ndarray) and
                Amatinv.shape == (k + p, k + p))
         assert(len(rbf_h) == p)
 
@@ -1465,10 +1559,10 @@ class GutmannMukObj:
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes (one for each row).
 
-    Amatinv : numpy.matrix or None
+    Amatinv : 2D numpy.ndarray[float] or None
         The matrix necessary for the computation. This is the inverse
-        of the matrix [Phi P; P^T 0]. Must be a square numpy.matrix of
-        appropriate dimension.
+        of the matrix [Phi P; P^T 0]. Must be a square 2D numpy.ndarray[float]
+        of appropriate dimension.
 
     """
     def __init__(self, settings, n, k, node_pos, Amatinv):
@@ -1479,7 +1573,7 @@ class GutmannMukObj:
         assert(isinstance(settings, RbfoptSettings))
         # Determine the size of the P matrix
         p = ru.get_size_P_matrix(settings, n)
-        assert(isinstance(Amatinv, np.matrix) and
+        assert(isinstance(Amatinv, np.ndarray) and
                Amatinv.shape == (k + p, k + p))
 
         self.settings = settings

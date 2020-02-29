@@ -22,8 +22,8 @@ from rbfopt.rbfopt_settings import RbfoptSettings
 
 _DISTANCE_SHIFT = 1.0e-12
 
-def create_min_rbf_model(settings, n, k, var_lower, var_upper, 
-                         integer_vars, node_pos, rbf_lambda, rbf_h):
+def create_min_rbf_model(settings, n, k, var_lower, var_upper, integer_vars,
+                         categorical_info, node_pos, rbf_lambda, rbf_h):
     """Create the concrete model to minimize the RBF.
 
     Create the concrete model to minimize the RBF.
@@ -48,6 +48,14 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
 
     integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
 
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
@@ -132,12 +140,17 @@ def create_min_rbf_model(settings, n, k, var_lower, var_upper,
     if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
+    # Add categorical variables if necessary
+    if (categorical_info is not None and categorical_info[2]):
+        add_categorical_constraints(model, *categorical_info)
+
     return model
 # -- end function
 
 
 def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper, 
-                                 integer_vars, node_pos, mat):
+                                 integer_vars, categorical_info, node_pos,
+                                 mat):
     """Create the concrete model to maximize 1/\mu.
 
     Create the concrete model to maximize :math: `1/\mu`, also known
@@ -167,13 +180,21 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes (one on each row).
 
-    mat: numpy.matrix
+    mat: 2D numpy.ndarray[float]
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a numpy.matrix of dimension ((k+1) x (k+1))
+        be a 2D numpy.ndarray[float] of dimension ((k+1) x (k+1))
 
     Returns
     -------
@@ -187,7 +208,7 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     assert(len(var_lower) == n)
     assert(len(var_upper) == n)
     assert(len(node_pos) == k)
-    assert(isinstance(mat, np.matrix))
+    assert(isinstance(mat, np.ndarray))
     assert(mat.shape == (k+1,k+1))
     assert(isinstance(settings, RbfoptSettings))
     assert(ru.get_degree_polynomial(settings) == 0)
@@ -258,12 +279,17 @@ def create_max_one_over_mu_model(settings, n, k, var_lower, var_upper,
     if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
+    # Add categorical variables if necessary
+    if (categorical_info is not None and categorical_info[2]):
+        add_categorical_constraints(model, *categorical_info)
+
     return model
 # -- end function
 
 
 def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
-                         node_pos, rbf_lambda, rbf_h, mat, target_val):
+                         categorical_info, node_pos, rbf_lambda, rbf_h,
+                         mat, target_val):
     """Create the abstract model to maximize h_k.
 
     Create the abstract model to maximize h_k, also known as the
@@ -290,6 +316,14 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes (one on each row).
 
@@ -301,10 +335,10 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
         The h coefficients of the RBF interpolant, corresponding to
         the polynomial. List of dimension n+1.
 
-    mat: numpy.matrix
+    mat: 2D numpy.ndarray[float]
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a numpy.matrix of dimension ((k+1) x (k+1))
+        be a 2D numpy.ndarray[float] of dimension ((k+1) x (k+1))
 
     target_val : float
         Value f* that we want to find in the unknown objective
@@ -326,7 +360,7 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(rbf_lambda) == k)
     assert(len(rbf_h) == 1)
     assert(len(node_pos) == k)
-    assert(isinstance(mat, np.matrix))
+    assert(isinstance(mat, np.ndarray))
     assert(mat.shape == (k+1, k+1))
     assert(isinstance(settings, RbfoptSettings))
     assert(ru.get_degree_polynomial(settings) == 0)
@@ -408,6 +442,10 @@ def create_max_h_k_model(settings, n, k, var_lower, var_upper, integer_vars,
     if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
+    # Add categorical variables if necessary
+    if (categorical_info is not None and categorical_info[2]):
+        add_categorical_constraints(model, *categorical_info)
+
     return model
 
 # -- end function
@@ -432,10 +470,10 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     k : int
         Number of nodes, i.e. interpolation points.
 
-    Phimat : numpy.matrix
+    Phimat : 2D numpy.ndarray[float]
         Matrix Phi, i.e. top left part of the standard RBF matrix.
 
-    Pmat : numpy.matrix
+    Pmat : 2D numpy.ndarray[float]
         Matrix P, i.e. top right part of the standard RBF matrix.
 
     node_val : 1D numpy.ndarray[float]
@@ -455,8 +493,8 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     assert(isinstance(node_val, np.ndarray))
     assert(isinstance(node_err_bounds, np.ndarray))
     assert(len(node_val) == k)
-    assert(isinstance(Phimat, np.matrix))
-    assert(isinstance(Pmat, np.matrix))
+    assert(isinstance(Phimat, np.ndarray))
+    assert(isinstance(Pmat, np.ndarray))
     assert(Phimat.shape == (k, k))
     assert(Pmat.shape == (k, 1))
     assert(len(node_val) == len(node_err_bounds))
@@ -514,7 +552,8 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
     model.OBJ = Objective(rule=_min_bump_obj_expression, sense=minimize)
 
     # Constraints. See definitions below.
-    model.IntrConstraint = Constraint(model.K, rule=_intr_constraint_rule)
+    model.IntrConstraint1 = Constraint(model.K, rule=_intr_constraint_rule_pt1)
+    model.IntrConstraint2 = Constraint(model.K, rule=_intr_constraint_rule_pt2)
     model.UnisConstraint = Constraint(model.P, rule=_unis_constraint_rule)    
 
     return model
@@ -523,7 +562,7 @@ def create_min_bump_model(settings, n, k, Phimat, Pmat, node_val,
 
 
 def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
-                              integer_vars, node_pos):
+                              integer_vars, categorical_info, node_pos):
     """Create the concrete model to maximize the minimum distance.
 
     Create the concrete model to maximize the minimum distance to the
@@ -549,6 +588,14 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
 
     integer_vars : 1D numpy.ndarray[int]
         List of indices of integer variables.
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
 
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
@@ -610,14 +657,19 @@ def create_maximin_dist_model(settings, n, k, var_lower, var_upper,
     if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
+    # Add categorical variables if necessary
+    if (categorical_info is not None and categorical_info[2]):
+        add_categorical_constraints(model, *categorical_info)
+
     return model
 
 # -- end function
 
 
 def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
-                           integer_vars, node_pos, rbf_lambda, rbf_h, 
-                           dist_weight, dist_min, dist_max, fmin, fmax):
+                           integer_vars, categorical_info, node_pos,
+                           rbf_lambda, rbf_h, dist_weight, dist_min,
+                           dist_max, fmin, fmax):
     """Create the concrete model to optimize the MSRSM objective.
 
     Create the concreate model to minimize a weighted combination of
@@ -648,6 +700,14 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
 
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes (one on each row).
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
 
     rbf_lambda : 1D numpy.ndarray[float]
         The lambda coefficients of the RBF interpolant, corresponding
@@ -778,6 +838,10 @@ def create_min_msrsm_model(settings, n, k, var_lower, var_upper,
     if (len(integer_vars)):
         add_integrality_constraints(model, integer_vars)
 
+    # Add categorical variables if necessary
+    if (categorical_info is not None and categorical_info[2]):
+        add_categorical_constraints(model, *categorical_info)
+
     return model
 
 # -- end function
@@ -822,14 +886,61 @@ def add_integrality_constraints(model, integer_vars):
 
 # -- end function
 
+def add_categorical_constraints(model, categorical, not_categorical,
+                                categorical_expansion):
+    """Add categorical constraints to the model.
+
+    Add constraints enforcing the assignment constraints for
+    categorical variables.
+
+    Parameters
+    ----------
+
+    model : pyomo.ConcreteModel
+        The model to which we want to add integrality constraints.
+
+    categorical : 1D numpy.ndarray[int]
+        Array of indices of categorical variables in original space.
+
+    not_categorical : 1D numpy.ndarray[int]
+        Array of indices of not categorical variables in original space.
+
+    categorical_expansion : List[(int, float, 1D numpy.ndarray[int])]
+        Expansion of original categorical variables into binaries.
+
+    """
+    assert(isinstance(categorical, np.ndarray))
+    assert(isinstance(not_categorical, np.ndarray))
+    assert(len(categorical_expansion)==len(categorical))
+
+    nc = len(categorical_expansion)
+    
+    # Number of categorical variables
+    model.nc = Param(initialize=nc)
+    model.NC = RangeSet(0, model.nc-1)
+
+    # Parameter: list of indices of categorical variables
+    cat_var_param = {}
+    for i in range(nc):
+        for j in categorical_expansion[i][2]:
+            cat_var_param[i, j] = 1
+    model.cat_vars = Param(model.NC, model.N, initialize=cat_var_param,
+                           default=0.0)
+
+    # Constraints: the unary representation of categorical variables
+    # adds up to exactly one
+    model.CatConstraint = Constraint(model.NC, rule=_cat_constraint_rule)
+
+# -- end function
+
 
 # Function to return bounds
 def _x_bounds(model, i):
     return (model.var_lower[i], model.var_upper[i])
 
 # Constraints: definition of the interpolation conditions with
-# slack. Expression: f^L <= Phi lambda + P h <= f^U
-def _intr_constraint_rule(model, i):
+# slack. Expression: f^L <= Phi lambda + P h
+def _intr_constraint_rule_pt1(model, i):
     if (model.node_val_lower[i] >= model.node_val_upper[i]):
         return (sum(model.Phi[i, j]*model.rbf_lambda[j] for j in model.K) +
                 sum(model.Pm[i, j]*model.rbf_h[j] for j in model.P) ==
@@ -837,6 +948,13 @@ def _intr_constraint_rule(model, i):
     else:
         return (model.node_val_lower[i] <=
                 sum(model.Phi[i, j]*model.rbf_lambda[j] for j in model.K) +
+                sum(model.Pm[i, j]*model.rbf_h[j] for j in model.P))
+
+    # Constraints: definition of the interpolation conditions with
+# slack. Expression: Phi lambda + P h <= f^U
+def _intr_constraint_rule_pt2(model, i):
+    if (not model.node_val_lower[i] >= model.node_val_upper[i]):
+        return (sum(model.Phi[i, j]*model.rbf_lambda[j] for j in model.K) +
                 sum(model.Pm[i, j]*model.rbf_h[j] for j in model.P)
                 <= model.node_val_upper[i])
 
@@ -985,3 +1103,7 @@ def _y_bounds(model, i):
 # variables.
 def _int_constraint_rule(model, i):
     return (model.x[model.integer_vars[i]] == model.y[i])
+
+# Constraints: assignment of categorical variables.
+def _cat_constraint_rule(model, i):
+    return sum(model.cat_vars[i, j]*model.x[j] for j in model.N) == 1

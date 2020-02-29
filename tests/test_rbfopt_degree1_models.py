@@ -65,9 +65,18 @@ class TestCubicModels(unittest.TestCase):
         """
         model = d1.create_min_rbf_model(self.settings, self.n, self.k,
                                         self.var_lower, self.var_upper,
-                                        self.integer_vars, self.node_pos,
+                                        self.integer_vars, None, self.node_pos,
                                         self.rbf_lambda, self.rbf_h)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+        model = d1.create_min_rbf_model(
+            self.settings, 10, 20, np.array([0] * 10),np.array([1] * 10),
+            np.array([i for i in range(10)]),
+            (np.array([0]), np.array([]),
+             [(0, 0, np.array([i for i in range(10)]))]),
+            np.random.randint(0, 2, size=(20, 10)),
+            np.random.uniform(size=20), np.random.uniform(size=11))
+        self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+
 
     def test_create_max_one_over_mu_model(self):
         """Test the create_max_one_over_mu_model function.
@@ -77,7 +86,7 @@ class TestCubicModels(unittest.TestCase):
         """
         model = d1.create_max_one_over_mu_model(self.settings, self.n, self.k,
                                                 self.var_lower, self.var_upper,
-                                                self.integer_vars, 
+                                                self.integer_vars, None,
                                                 self.node_pos, self.Amat)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
@@ -89,9 +98,9 @@ class TestCubicModels(unittest.TestCase):
         """
         model = d1.create_max_h_k_model(self.settings, self.n, self.k,
                                         self.var_lower, self.var_upper,
-                                        self.integer_vars, self.node_pos,
-                                        self.rbf_lambda, self.rbf_h,
-                                        self.Amat, -1)
+                                        self.integer_vars, None,
+                                        self.node_pos, self.rbf_lambda,
+                                        self.rbf_h, self.Amat, -1)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_min_bump_model(self):
@@ -116,7 +125,8 @@ class TestCubicModels(unittest.TestCase):
         """
         model = d1.create_maximin_dist_model(self.settings, self.n, self.k,
                                              self.var_lower, self.var_upper, 
-                                             self.integer_vars, self.node_pos)
+                                             self.integer_vars, None,
+                                             self.node_pos)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_min_msrsm_model(self):
@@ -127,9 +137,9 @@ class TestCubicModels(unittest.TestCase):
         """
         model = d1.create_min_msrsm_model(self.settings, self.n, self.k,
                                           self.var_lower, self.var_upper,
-                                          self.integer_vars, self.node_pos,
-                                          self.rbf_lambda, self.rbf_h, 
-                                          0.5, 0.0, 1.0,
+                                          self.integer_vars, None,
+                                          self.node_pos, self.rbf_lambda,
+                                          self.rbf_h, 0.5, 0.0, 1.0,
                                           min(self.node_val),
                                           max(self.node_val))
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
@@ -181,9 +191,18 @@ class TestThinPlateSplineModels(unittest.TestCase):
         """
         model = d1.create_min_rbf_model(self.settings, self.n, self.k,
                                         self.var_lower, self.var_upper,
-                                        self.integer_vars, self.node_pos,
+                                        self.integer_vars, None, self.node_pos,
                                         self.rbf_lambda, self.rbf_h)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+        model = d1.create_min_rbf_model(
+            self.settings, 10, 20, np.array([0] * 10),np.array([1] * 10),
+            np.array([i for i in range(10)]),
+            (np.array([0]), np.array([]),
+             [(0, 0, np.array([i for i in range(10)]))]),
+            np.random.randint(0, 2, size=(20, 10)),
+            np.random.uniform(size=20), np.random.uniform(size=11))
+        self.assertIsInstance(model, pyomo.environ.ConcreteModel)
+
 
     def test_create_max_one_over_mu_model(self):
         """Test the create_max_one_over_mu_model function.
@@ -193,7 +212,7 @@ class TestThinPlateSplineModels(unittest.TestCase):
         """
         model = d1.create_max_one_over_mu_model(self.settings, self.n, self.k,
                                                 self.var_lower, self.var_upper,
-                                                self.integer_vars,
+                                                self.integer_vars, None,
                                                 self.node_pos, self.Amat)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
@@ -205,7 +224,7 @@ class TestThinPlateSplineModels(unittest.TestCase):
         """
         model = d1.create_max_h_k_model(self.settings, self.n, self.k,
                                         self.var_lower, self.var_upper,
-                                        self.integer_vars, self.node_pos,
+                                        self.integer_vars, None, self.node_pos,
                                         self.rbf_lambda, self.rbf_h,
                                         self.Amat, -1)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
@@ -232,7 +251,8 @@ class TestThinPlateSplineModels(unittest.TestCase):
         """
         model = d1.create_maximin_dist_model(self.settings, self.n, self.k,
                                              self.var_lower, self.var_upper, 
-                                             self.integer_vars, self.node_pos)
+                                             self.integer_vars, None,
+                                             self.node_pos)
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)
 
     def test_create_min_msrsm_model(self):
@@ -243,9 +263,9 @@ class TestThinPlateSplineModels(unittest.TestCase):
         """
         model = d1.create_min_msrsm_model(self.settings, self.n, self.k,
                                           self.var_lower, self.var_upper,
-                                          self.integer_vars, self.node_pos,
-                                          self.rbf_lambda, self.rbf_h, 
-                                          0.5, 0.0, 1.0,
+                                          self.integer_vars, None,
+                                          self.node_pos, self.rbf_lambda,
+                                          self.rbf_h, 0.5, 0.0, 1.0,
                                           min(self.node_val),
                                           max(self.node_val))
         self.assertIsInstance(model, pyomo.environ.ConcreteModel)

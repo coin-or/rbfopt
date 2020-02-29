@@ -268,7 +268,7 @@ class RbfoptAlgorithm:
         var_lower = np.array(var_lower, dtype=np.float_)
         var_upper = np.array(var_upper, dtype=np.float_)
         integer_vars = np.array([i for i in range(dimension)
-                                 if var_type[i].upper() == 'I'],
+                                 if var_type[i].upper() != 'R'],
                                 dtype=np.int_)
         # Check for fixed variables
         fixed_vars = np.isclose(var_lower, var_upper, 0,
@@ -282,12 +282,41 @@ class RbfoptAlgorithm:
                                         assume_unique=True)
             var_lower = var_lower[unfixed_vars]
             var_upper = var_upper[unfixed_vars]
+            var_type = var_type[unfixed_vars]
             temp_array = np.array([False] * dimension)
             temp_array[integer_vars] = True
             integer_vars = np.where(temp_array[unfixed_vars] == True)[0]
             dimension -= len(fixed_vars)
+        
+        # Expand categorical variable representation
+        categorical = np.where(np.char.upper(var_type) == 'C')[0]
+        not_categorical = np.where(np.char.upper(var_type) != 'C')[0]
+        categorical_info = list()
+        if (categorical):
+            # Adjust var_lower, var_upper and integer_vars
+            current_vars = len(not_categorical)
+            for i in categorical:
+                categorical_info.append((i, var_lower[i], np.array(
+                    [current_vars + k
+                     for k in range(int(var_upper[i] - var_lower[i] + 1))],
+                    dtype=np.int_)))
+                current_vars += int(var_upper[i] - var_lower[i] + 1)
+            dimension = current_vars
+            var_lower = np.array([var_lower[i] for i in not_categorical] +
+                                 [0] * (current_vars - len(not_categorical)),
+                                 dtype=np.int_)
+            var_upper = np.array([var_upper[i] for i in not_categorical] +
+                                 [1] * (current_vars - len(not_categorical)),
+                                 dtype=np.int_)
+            integer_vars = np.array(
+                [i for i in range(len(not_categorical))
+                 if var_type[not_categorical[i]].upper() == 'I'] +
+                [i for i in range(len(not_categorical), current_vars)],
+                dtype=np.int_)
         self.var_lower, self.var_upper = var_lower, var_upper
         self.integer_vars = integer_vars
+        self.categorical_info = (categorical, not_categorical,
+                                 categorical_info)
 
         assert(len(var_lower) == dimension)
         assert(len(var_upper) == dimension)
@@ -746,7 +775,8 @@ class RbfoptAlgorithm:
             # There is nothing to do in this case
             self.update_log('All variables fixed, nothing to do!')
             self.add_node(self.var_lower, self.var_lower, 
-                          objfun([self.bb, self.var_lower, self.fixed_vars]))
+                          objfun([self.bb, self.var_lower,
+                                  self.categorical_info, self.fixed_vars]))
             self.evalcount += 1
         elif (self.l_settings.num_cpus == 1):
             self.optimize_serial(pause_after_iters)
@@ -763,7 +793,15 @@ class RbfoptAlgorithm:
 
         # Print summary and return
         self.print_summary_line(self.all_node_is_noisy[i], gap)
-        return (self.all_node_val[i], self.all_node_pos[i],
+        if (self.categorical_info[2]):
+            # Map back to original space
+            best_point = ru.compress_categorical_vars(
+                np.atleast_2d(self.all_node_pos[i]),
+                *self.categorical_info)[0]
+        else:
+            best_point = self.all_node_pos[i]
+            
+        return (self.all_node_val[i], best_point,
                 self.itercount, self.evalcount, self.noisy_evalcount)
 
     def optimize_serial(self, pause_after_iters=sys.maxsize):
@@ -966,6 +1004,7 @@ class RbfoptAlgorithm:
                 # Infstep: explore the parameter space
                 next_p = pure_global_step(l_settings, n, k, l_lower,
                                           l_upper, integer_vars,
+                                          self.categorical_info,
                                           self.node_pos, Amatinv)
                 iteration_id = 'InfStep'
 
@@ -984,8 +1023,8 @@ class RbfoptAlgorithm:
                 # Local search
                 (adj, next_p, ind) = local_step(
                     l_settings, n, k, l_lower, l_upper, integer_vars,
-                    self.node_pos, rbf_l, rbf_h, tfv[:4], 
-                    Amat, Amatinv, self.fmin_index, 
+                    self.categorical_info, self.node_pos, rbf_l, rbf_h,
+                    tfv[:4], Amat, Amatinv, self.fmin_index, 
                     self.two_phase_optimization, self.eval_mode, 
                     self.node_is_noisy)
 
@@ -1004,16 +1043,17 @@ class RbfoptAlgorithm:
                 # Refinement
                 next_p, model_impr, ref_to_replace = refinement_step(
                     l_settings, n, k, l_lower, l_upper, integer_vars, 
-                    self.node_pos, tfv[:4], h, b, rank_deficient,
-                    self.ref_model_set, self.ref_iterate_index, self.ref_radius)
+                    self.categorical_info, self.node_pos, tfv[:4], h, b,
+                    rank_deficient, self.ref_model_set,
+                    self.ref_iterate_index, self.ref_radius)
                 iteration_id = 'RefinementStep'
 
             else:
                 # Global search
-                next_p = global_step(l_settings, n, k, l_lower, l_upper,
-                                     integer_vars, self.node_pos, rbf_l, 
-                                     rbf_h, tfv[:4], Amatinv,
-                                     self.fmin_index, self.current_step)
+                next_p = global_step(
+                    l_settings, n, k, l_lower, l_upper, integer_vars,
+                    self.categorical_info, self.node_pos, rbf_l, rbf_h,
+                    tfv[:4], Amatinv, self.fmin_index, self.current_step)
                 iteration_id = 'GlobalStep'
             # -- end if
                                                      
@@ -1044,7 +1084,8 @@ class RbfoptAlgorithm:
                             not self.all_node_is_noisy[i]):
                             next_val = self.all_node_val[i]
                     if (next_val is None):
-                        next_val = objfun([self.bb, next_p_orig, 
+                        next_val = objfun([self.bb, next_p_orig,
+                                           self.categorical_info,
                                            self.fixed_vars])
                         self.evalcount += 1
                     curr_is_noisy = False
@@ -1058,13 +1099,15 @@ class RbfoptAlgorithm:
                             curr_is_noisy = self.all_node_is_noisy[i]
                     if (next_val is None):
                         next_val, err_l, err_u = objfun_noisy(
-                            [self.bb, next_p_orig, self.fixed_vars])
+                            [self.bb, next_p_orig, self.categorical_info,
+                             self.fixed_vars])
                         self.noisy_evalcount += 1
                         curr_is_noisy = True
                     if (curr_is_noisy and
                         self.require_accurate_evaluation(next_val + err_l)):
                         self.update_log(iteration_id, True, next_val, gap)
-                        next_val = objfun([self.bb, next_p_orig, 
+                        next_val = objfun([self.bb, next_p_orig,
+                                           self.categorical_info,
                                            self.fixed_vars])
                         self.evalcount += 1
                         curr_is_noisy = False
@@ -1222,7 +1265,8 @@ class RbfoptAlgorithm:
                     node_is_noisy = False
                     new_res = pool.apply_async(
                         objfun,  
-                        ([self.bb, next_p_orig, self.fixed_vars], ))
+                        ([self.bb, next_p_orig, self.categorical_info,
+                          self.fixed_vars], ))
                     self.evalcount += 1
                     res_eval.append([new_res, next_p, node_is_noisy, iid])
                     # Update temporary node values. First, remove old node.
@@ -1364,12 +1408,14 @@ class RbfoptAlgorithm:
                         if (node_is_noisy):
                             new_res = pool.apply_async(
                                 objfun_noisy, 
-                                ([self.bb, next_p_orig, self.fixed_vars], ))
+                                ([self.bb, next_p_orig, self.categorical_info,
+                                  self.fixed_vars], ))
                             self.noisy_evalcount += 1
                         else: 
                             new_res = pool.apply_async(
                                 objfun,  
-                                ([self.bb, next_p_orig, self.fixed_vars], ))
+                                ([self.bb, next_p_orig, self.categorical_info,
+                                  self.fixed_vars], ))
                             self.evalcount += 1
                         res_eval.append([new_res, next_p, node_is_noisy, 
                                          iteration_id])
@@ -1591,10 +1637,10 @@ class RbfoptAlgorithm:
                         scaled_node_val, self.ref_model_set)
                     new_res = pool.apply_async(
                         refinement_step,
-                        (l_settings, n, k, l_lower, l_upper, integer_vars, 
-                         node_pos, tfv[:4], h, b, rank_deficient,
-                         self.ref_model_set, self.ref_iterate_index,
-                         self.ref_radius))
+                        (l_settings, n, k, l_lower, l_upper, integer_vars,
+                         self.categorical_info, node_pos, tfv[:4], h, b,
+                         rank_deficient, self.ref_model_set,
+                         self.ref_iterate_index, self.ref_radius))
                     iteration_id = 'RefinementStep'
                     ref_rescale_function = rescale_function
                     res_search.append([new_res, curr_is_noisy, iteration_id])
@@ -1609,7 +1655,7 @@ class RbfoptAlgorithm:
                 new_res = pool.apply_async(
                     pure_global_step,
                     (l_settings, n, k, l_lower, l_upper, integer_vars, 
-                     node_pos, Amatinv))
+                     self.categorical_info, node_pos, Amatinv))
                 iteration_id = 'InfStep'
                 res_search.append([new_res, curr_is_noisy, iteration_id])
             
@@ -1618,9 +1664,10 @@ class RbfoptAlgorithm:
                 new_res = pool.apply_async(
                     local_step,
                     (l_settings, n, k, l_lower, l_upper, integer_vars, 
-                     node_pos, rbf_l, rbf_h, tfv[:4], Amat, Amatinv,
-                     self.fmin_index, self.two_phase_optimization,
-                     self.eval_mode, node_is_noisy))
+                     self.categorical_info, node_pos, rbf_l, rbf_h, tfv[:4],
+                     Amat, Amatinv, self.fmin_index,
+                     self.two_phase_optimization, self.eval_mode,
+                     node_is_noisy))
                 iteration_id = 'LocalStep'
                 res_search.append([new_res, curr_is_noisy, iteration_id])
             else:
@@ -1628,8 +1675,8 @@ class RbfoptAlgorithm:
                 new_res = pool.apply_async(
                     global_step,
                     (l_settings, n, k, l_lower, l_upper, integer_vars, 
-                     node_pos, rbf_l, rbf_h, tfv[:4], Amatinv, 
-                     self.fmin_index, self.current_step))
+                     self.categorical_info, node_pos, rbf_l, rbf_h, tfv[:4],
+                     Amatinv, self.fmin_index, self.current_step))
                 iteration_id = 'GlobalStep'
                 res_search.append([new_res, curr_is_noisy, iteration_id])
             # -- end if
@@ -1698,8 +1745,9 @@ class RbfoptAlgorithm:
         self.num_nodes_at_restart = len(self.all_node_pos)
         if (self.itercount > 0 or self.do_init_strategy):
             # Compute a new set of starting points
-            node_pos = ru.initialize_nodes(self.l_settings, self.var_lower, 
-                                           self.var_upper, self.integer_vars)
+            node_pos = ru.initialize_nodes(
+                self.l_settings, self.var_lower, self.var_upper,
+                self.integer_vars, self.categorical_info)
             # Check if some points were previously evaluated, i.e. before
             # the restart. If so, remove them from the list of nodes that
             # will be evaluated now.
@@ -1731,22 +1779,24 @@ class RbfoptAlgorithm:
                     self.l_settings.max_noisy_evaluations)):
                 if (pool is None):
                     node_val = np.array([objfun([self.bb, point,
+                                                 self.categorical_info,
                                                  self.fixed_vars])
                                          for point in node_pos])
                 else:
-                    map_arg = [[self.bb, point, self.fixed_vars] 
-                               for point in node_pos]
+                    map_arg = [[self.bb, point, self.categorical_info,
+                                self.fixed_vars] for point in node_pos]
                     node_val = np.array(pool.map(objfun, map_arg))
                 node_err_bounds = np.zeros((len(node_val), 2))
                 self.evalcount += len(node_val)
             else:
                 if (pool is None):
                     res = np.array([objfun_noisy([self.bb, point,
+                                                  self.categorical_info,
                                                   self.fixed_vars])
                                     for point in node_pos])
                 else:
-                    map_arg = [[self.bb, point, self.fixed_vars] 
-                               for point in node_pos]
+                    map_arg = [[self.bb, point, self.categorical_info,
+                                self.fixed_vars] for point in node_pos]
                     res = np.array(pool.map(objfun_noisy, map_arg))
                 node_val = res[:, 0]
                 node_err_bounds = res[:, 1:]
@@ -1790,11 +1840,12 @@ class RbfoptAlgorithm:
                 # Not enough values are provided, so we evaluate each node.
                 if (pool is None):
                     init_node_val = np.array([objfun([self.bb, point,
+                                                      self.categorical_info,
                                                       self.fixed_vars])
                                               for point in init_node_pos])
                 else:
-                    map_arg = [[self.bb, point, self.fixed_vars] 
-                               for point in init_node_pos]
+                    map_arg = [[self.bb, point, self.categorical_info,
+                                self.fixed_vars] for point in init_node_pos]
                     init_node_val = np.array(pool.map(objfun, map_arg))
                 self.evalcount += len(init_node_val)
             else:
@@ -1884,11 +1935,10 @@ class RbfoptAlgorithm:
                 temp_settings = RbfoptSettings(
                     rbf='linear', algorithm='MSRSM', 
                     global_search_method='genetic')
-                next_p = pure_global_step(temp_settings, 
-                                          self.n, len(self.node_pos),
-                                          self.l_lower, self.l_upper,
-                                          self.integer_vars,
-                                          self.node_pos, None)
+                next_p = pure_global_step(
+                    temp_settings, self.n, len(self.node_pos), self.l_lower,
+                    self.l_upper, self.integer_vars, self.categorical_info,
+                    self.node_pos, None)
             else:
                 # If that does not work (unlikely), generate a random point
                 next_p = (np.random.rand(self.n) * 
@@ -2135,14 +2185,14 @@ class RbfoptAlgorithm:
 # -- end class
 
 def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
-                     node_pos, mat):
+                     categorical_info, node_pos, mat):
     """Perform the pure global search step.
     
     Parameters
     ----------
-    mat : numpy.matrix
+    mat : 2D numpy.ndarray[float]
         The matrix necessary for the computation. This is the inverse
-        of the matrix [Phi P; P^T 0]. Must be a square numpy.matrix of
+        of the matrix [Phi P; P^T 0]. Must be a square 2D numpy.ndarray[float] of
         appropriate dimension.
 
     settings : :class:`rbfopt_settings.RbfoptSettings`
@@ -2165,13 +2215,21 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
         variables. If empty list, all variables are assumed to be
         continuous.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])])
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     node_pos : List[List[float]]
         List of coordinates of the nodes
 
-    mat : numpy.matrix
+    mat : 2D numpy.ndarray[float]
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a square numpy.matrix of appropriate dimension. Can be None
+        be a square 2D numpy.ndarray[float] of appropriate dimension. Can be None
         when using the MSRSM algorithm.
 
     Returns
@@ -2183,7 +2241,7 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(var_upper)==n)
     assert(len(node_pos)==k)
     assert((mat is None and settings.algorithm == 'MSRSM') or 
-           isinstance(mat, np.matrix))
+           isinstance(mat, np.ndarray))
     assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
@@ -2191,13 +2249,14 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(isinstance(node_pos, np.ndarray))
     # Infstep: explore the parameter space
     return aux.pure_global_search(settings, n, k, var_lower, var_upper, 
-                                  integer_vars, node_pos, mat)
+                                  integer_vars, categorical_info,
+                                  node_pos, mat)
 # -- end function
 
-def local_step(settings, n, k, var_lower, var_upper, integer_vars, 
-               node_pos, rbf_lambda, rbf_h, tfv, Amat, Amatinv,
-               fmin_index, two_phase_optimization, eval_mode,
-               node_is_noisy):
+def local_step(settings, n, k, var_lower, var_upper, integer_vars,
+               categorical_info, node_pos, rbf_lambda, rbf_h, tfv,
+               Amat, Amatinv, fmin_index, two_phase_optimization,
+               eval_mode, node_is_noisy):
     """Perform local search step, possibly adjusted.
     
     Perform a local search step. This typically accepts the
@@ -2225,10 +2284,19 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     var_upper : 1D numpy.ndarray[float]
         Vector of variable upper bounds.
 
-    integer_vars: 1D numpy.ndarray[int]
+    integer_vars : 1D numpy.ndarray[int]
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])])
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
 
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
@@ -2245,10 +2313,10 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
         Transformed function values: scaled node values, scaled
         minimum, scaled maximum, scaled node error bounds.
 
-    Amat : numpy.matrix
+    Amat : 2D numpy.ndarray[float]
         RBF matrix, i.e. [Phi P; P^T 0].
 
-    Amatinv : numpy.matrix or None
+    Amatinv : 2D numpy.ndarray[float] or None
         Inverse of the RBF matrix, i.e. [Phi P; P^T 0]^{-1}. Can be
         None if the algorithm is MSRSM.
 
@@ -2294,14 +2362,14 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(0 <= fmin_index < k)
     assert((eval_mode=='noisy') or (eval_mode=='accurate'))
     assert(isinstance(settings, RbfoptSettings))
-    assert(isinstance(Amat, np.matrix))
+    assert(isinstance(Amat, np.ndarray))
     assert((Amatinv is None and settings.algorithm == 'MSRSM') or 
-           isinstance(Amatinv, np.matrix) )
+           isinstance(Amatinv, np.ndarray) )
     scaled_node_val, scaled_fmin, scaled_fmax, scaled_err_bounds = tfv
     # Local search: compute the minimum of the RBF.
-    min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper,
-                               integer_vars, node_pos, rbf_lambda, rbf_h,
-                               node_pos[fmin_index])
+    min_rbf = aux.minimize_rbf(
+        settings, n, k, var_lower, var_upper, integer_vars,
+        categorical_info, node_pos, rbf_lambda, rbf_h, node_pos[fmin_index])
     if (min_rbf is not None):
         min_rbf_val = ru.evaluate_rbf(settings, min_rbf, n, k, 
                                       node_pos, rbf_lambda, rbf_h)
@@ -2331,11 +2399,10 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
                                 0.33 * (var_upper - var_lower),
                                 var_upper) 
         ru.round_integer_bounds(local_varl, local_varu, integer_vars)
-        next_p = aux.global_search(settings, n, k, local_varl,
-                                   local_varu, integer_vars,
-                                   node_pos, rbf_lambda, rbf_h,
-                                   Amatinv, target_val, dist_weight,
-                                   scaled_fmin, scaled_fmax)
+        next_p = aux.global_search(
+            settings, n, k, local_varl, local_varu, integer_vars,
+            categorical_info, node_pos, rbf_lambda, rbf_h, Amatinv,
+            target_val, dist_weight, scaled_fmin, scaled_fmax)
         adjusted = True
         
     # If previous points were evaluated in low quality and we are
@@ -2371,9 +2438,10 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     return (adjusted, next_p, None)
 # -- end function
 
-def refinement_step(settings, n, k, var_lower, var_upper, integer_vars, 
-                    node_pos, tfv, h, b, rank_deficient, model_set,
-                    start_point_index, ref_radius):
+def refinement_step(settings, n, k, var_lower, var_upper,
+                    integer_vars, categorical_info, node_pos, tfv, h,
+                    b, rank_deficient, model_set, start_point_index,
+                    ref_radius):
     """Perform a refinement step.
 
     Perform a refinement step to locally improve the solution.
@@ -2399,6 +2467,14 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
         A list containing the indices of the integrality constrained
         variables. If empty list, all variables are assumed to be
         continuous.
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])])
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
 
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
@@ -2444,7 +2520,7 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
     if (rank_deficient):
         point, found_model_impr, to_replace = ref.get_model_improving_point(
             settings, n, k, var_lower, var_upper, node_pos, model_set,
-            start_point_index, ref_radius, integer_vars)
+            start_point_index, ref_radius, integer_vars, categorical_info)
         model_impr = np.dot(h, point) + b
     if (not rank_deficient or not found_model_impr):
         start_point = node_pos[start_point_index]
@@ -2455,7 +2531,8 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
         if (len(integer_vars)):
             # Get a rounding of the point
             point, model_impr_adj = ref.get_integer_candidate(
-                settings, n, k, h, start_point, ref_radius, point, integer_vars)
+                settings, n, k, h, start_point, ref_radius, point,
+                integer_vars, categorical_info)
             model_impr += model_impr_adj
         if (grad_norm <= settings.ref_min_grad_norm):
             return None, model_impr, to_replace
@@ -2463,8 +2540,8 @@ def refinement_step(settings, n, k, var_lower, var_upper, integer_vars,
 # -- end function
 
 def global_step(settings, n, k, var_lower, var_upper, integer_vars,
-                node_pos, rbf_lambda, rbf_h, tfv, Amatinv,
-                fmin_index, current_step):
+                categorical_info, node_pos, rbf_lambda, rbf_h, tfv,
+                Amatinv, fmin_index, current_step):
     """Perform global search step.
     
     Perform a global search step, with a different methodology
@@ -2492,6 +2569,14 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         variables. If empty list, all variables are assumed to be
         continuous.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])])
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     node_pos : 2D numpy.ndarray[float]
         List of coordinates of the nodes.
 
@@ -2507,11 +2592,11 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         Transformed function values: scaled node values, scaled
         minimum, scaled maximum, and node error bounds.
 
-    Amatinv : numpy.matrix or None
+    Amatinv : 2D numpy.ndarray[float] or None
         The matrix necessary for the computation. This is the inverse
         of the matrix [Phi P; P^T 0], see paper as cited above. Must
-        be a square numpy.matrix of appropriate dimension. Can be None
-        if algorithm is MSRSM.
+        be a square 2D numpy.ndarray[float] of appropriate dimension. 
+        Can be None if algorithm is MSRSM.
 
     fmin_index : int
         Index of the minimum value among the nodes.
@@ -2538,7 +2623,7 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(node_pos)==k)
     assert(0 <= fmin_index < k)
     assert((Amatinv is None and settings.algorithm == 'MSRSM') or 
-           isinstance(Amatinv, np.matrix))
+           isinstance(Amatinv, np.ndarray))
     assert(isinstance(settings, RbfoptSettings))
     assert(0 <= current_step <= settings.num_global_searches)
 
@@ -2552,8 +2637,8 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         # If we use Gutmann's algorithm, we need the minimum of the
         # RBF interpolant to choose the target value.
         min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper, 
-                                   integer_vars, node_pos, rbf_lambda,
-                                   rbf_h, node_pos[fmin_index])
+                                   integer_vars, categorical_info, node_pos,
+                                   rbf_lambda, rbf_h, node_pos[fmin_index])
         if (min_rbf is not None):
             min_rbf_val = ru.evaluate_rbf(settings, min_rbf, n, k,
                                           node_pos, rbf_lambda, rbf_h)
@@ -2610,9 +2695,9 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
         local_varu = var_upper
 
     next_p = aux.global_search(settings, n, k, local_varl, local_varu,
-                               integer_vars, node_pos, rbf_lambda,
-                               rbf_h, Amatinv, target_val, dist_weight,
-                               scaled_fmin, scaled_fmax)
+                               integer_vars, categorical_info, node_pos,
+                               rbf_lambda, rbf_h, Amatinv, target_val,
+                               dist_weight, scaled_fmin, scaled_fmax)
     return next_p
 # -- end function
 
@@ -2626,12 +2711,15 @@ def objfun(data):
     Parameters
     ----------
     data : (rbfopt_black_box.RbfoptBlackBox, 1D numpy.ndarray[float], 
+            (1D numpy.ndarray[int], 1D numpy.ndarray[int], 
+             List[(float, float, 1D numpy.ndarray[int])]), 
             List[(int, float)])
 
-        A triple or list with three elements (black_box, point,
-        fixed_vars) containing an object derived from class
-        RbfoptBlackBox, that describes the problem, the point at which
-        we want to apply the evaluate() method, and a list of fixed
+        A quadruple or list with four elements (black_box, point,
+        categorical_info, fixed_vars) containing an object derived
+        from class RbfoptBlackBox, that describes the problem, the
+        point at which we want to apply the evaluate() method,
+        information on categorical variables, and a list of fixed
         variables given as pairs (index, value).
     
     Returns
@@ -2640,15 +2728,26 @@ def objfun(data):
         The value of the function evaluate() at the point.
 
     """
-    assert(len(data)==3)
+    assert(len(data)==4)
     assert(isinstance(data[0], RbfoptBlackBox))
-    if (data[2]):
-        point = data[1].tolist()
-        for (i, val) in data[2]:
-            point.insert(i, val)
-        point = np.array(point)
+    # Map categorical variables back to original
+    if (data[2][2]):
+        categorical, not_categorical, expansion = data[2]
+        point = np.zeros(len(categorical) + len(not_categorical))
+        point[not_categorical] = data[1][:len(not_categorical)]
+        for (i, vl, unary_encoding_vars) in expansion:
+            for (j, pos) in enumerate(unary_encoding_vars):
+                if (data[1][pos] == 1):                    
+                    point[i] = vl + j
+                    break
     else:
         point = data[1]
+    # Add fixed variables
+    if (data[3]):
+        point = point.tolist()
+        for (i, val) in data[3]:
+            point.insert(i, val)
+        point = np.array(point)
     return data[0].evaluate(point)
 # -- end function
 
@@ -2661,13 +2760,16 @@ def objfun_noisy(data):
 
     Parameters
     ----------
-    data : (rbfopt_black_box.RbfoptBlackBox, 1D numpy.array[float], 
+    data : (rbfopt_black_box.RbfoptBlackBox, 1D numpy.ndarray[float], 
+            (1D numpy.ndarray[int], 1D numpy.ndarray[int], 
+             List[(float, float, 1D numpy.ndarray[int])]), 
             List[(int, float)])
 
-        A triple or list with three elements (black_box, point,
-        fixed_vars) containing an object derived from class
-        RbfoptBlackBox, that describes the problem, the point at which
-        we want to apply the evaluate() method, and a list of fixed
+        A quadruple or list with four elements (black_box, point,
+        categorical_info, fixed_vars) containing an object derived
+        from class RbfoptBlackBox, that describes the problem, the
+        point at which we want to apply the evaluate() method,
+        information on categorical variables, and a list of fixed
         variables given as pairs (index, value).
 
     Returns
@@ -2677,14 +2779,25 @@ def objfun_noisy(data):
         the possible variation given as lower and upper variation.
 
     """
-    assert(len(data)==3)
+    assert(len(data)==4)
     assert(isinstance(data[0], RbfoptBlackBox))
-    if (data[2]):
-        point = data[1].tolist()
-        for (i, val) in data[2]:
-            point.insert(i, val)
-        point = np.array(point)
+    # Map categorical variables back to original
+    if (data[2][2]):
+        categorical, not_categorical, expansion = data[2]
+        point = np.zeros(len(categorical) + len(not_categorical))
+        point[not_categorical] = data[1][:len(not_categorical)]
+        for (i, vl, unary_encoding_vars) in expansion:
+            for (j, pos) in enumerate(unary_encoding_vars):
+                if (data[1][pos] == 1):                    
+                    point[i] = vl + j
+                    break
     else:
         point = data[1]
+    # Add fixed variables
+    if (data[3]):
+        point = point.tolist()
+        for (i, val) in data[3]:
+            point.insert(i, val)
+        point = np.array(point)
     return data[0].evaluate_noisy(point)
 # -- end function
