@@ -209,20 +209,26 @@ class TestUtils(unittest.TestCase):
         categorical_expansion = [(1, 0, np.array([2, 3, 4, 5]))]
         expanded = ru.expand_categorical_vars(
             points, categorical, not_categorical, categorical_expansion)
+        msg = 'Expansion with 1 categorical variables'
         self.assertTrue(
             np.array_equal(expanded, np.array([[ 1,  2,  1,  0,  0,  0],
                                                [ 1,  1,  0,  0,  0,  1],
-                                               [ 3,  0,  0,  0,  1,  0]])))
+                                               [ 3,  0,  0,  0,  1,  0]])),
+            msg=msg)
+        
         categorical = np.array([0, 2])
         not_categorical = np.array([1])
         categorical_expansion = [(0, 0, np.array([1, 2, 3, 4])),
                                  (2, 0, np.array([5, 6, 7]))]
         expanded = ru.expand_categorical_vars(
             points, categorical, not_categorical, categorical_expansion)
+        msg = 'Expansion with 2 categorical variables'
         self.assertTrue(
             np.array_equal(expanded, np.array([[0, 0, 1, 0, 0, 0, 0, 1],
                                                [3, 0, 1, 0, 0, 0, 1, 0],
-                                               [2, 0, 0, 0, 1, 1, 0, 0]])))
+                                               [2, 0, 0, 0, 1, 1, 0, 0]])),
+            msg=msg)
+        
         categorical = np.array([0, 2])
         not_categorical = np.array([1])
         categorical_expansion = [(0, 0, np.array([1, 2, 3, 4])),
@@ -230,8 +236,10 @@ class TestUtils(unittest.TestCase):
         expanded = ru.expand_categorical_vars(
             np.array([[1, 0, 2]]), categorical, not_categorical,
             categorical_expansion)
+        msg = 'Expansion with 2 categorical variables'
         self.assertTrue(
-            np.array_equal(expanded, np.array([[0, 0, 1, 0, 0, 0, 0, 1]])))
+            np.array_equal(expanded, np.array([[0, 0, 1, 0, 0, 0, 0, 1]])),
+            msg=msg)
     # -- end function
 
     def test_compress_categorical_variables(self):
@@ -242,11 +250,13 @@ class TestUtils(unittest.TestCase):
         categorical = np.array([1])
         not_categorical = np.array([0, 2])
         categorical_expansion = [(1, 0, np.array([2, 3, 4, 5]))]
-        expanded = ru.compress_categorical_vars(
+        compressed = ru.compress_categorical_vars(
             points, categorical, not_categorical, categorical_expansion)
+        msg = 'Compression of 1 variable'
         self.assertTrue(
-            np.array_equal(expanded,
-                           np.array([[1, 0, 2], [1, 3, 1], [3, 2, 0]])))
+            np.array_equal(compressed,
+                           np.array([[1, 0, 2], [1, 3, 1], [3, 2, 0]])),
+            msg=msg)
         points = np.array([[0, 0, 1, 0, 0, 0, 0, 1],
                            [3, 0, 1, 0, 0, 0, 1, 0],
                            [2, 0, 0, 0, 1, 1, 0, 0]])
@@ -254,21 +264,75 @@ class TestUtils(unittest.TestCase):
         not_categorical = np.array([1])
         categorical_expansion = [(0, 0, np.array([1, 2, 3, 4])),
                                  (2, 0, np.array([5, 6, 7]))]
-        expanded = ru.compress_categorical_vars(
+        compressed = ru.compress_categorical_vars(
             points, categorical, not_categorical, categorical_expansion)
+        msg = 'Compression of 2 variables'
         self.assertTrue(
-            np.array_equal(expanded,
-                           np.array([[1, 0, 2], [1, 3, 1], [3, 2, 0]])))
+            np.array_equal(compressed,
+                           np.array([[1, 0, 2], [1, 3, 1], [3, 2, 0]])),
+            msg=msg)
         points = np.array([[0, 0, 1, 0, 0, 0, 0, 1]])
         categorical = np.array([0, 2])
         not_categorical = np.array([1])
         categorical_expansion = [(0, 0, np.array([1, 2, 3, 4])),
                                  (2, 0, np.array([5, 6, 7]))]
-        expanded = ru.compress_categorical_vars(
+        msg = 'Compression of 2 variables'
+        compressed = ru.compress_categorical_vars(
             points, categorical, not_categorical, categorical_expansion)
         self.assertTrue(
-            np.array_equal(expanded, np.array([[1, 0, 2]])))
+            np.array_equal(compressed, np.array([[1, 0, 2]])),
+            msg=msg)
     # -- end function
+
+    def test_compress_categorical_bounds(self):
+        """Verify that compression is correct and does not fail at limit."""
+        var_lower = np.array([10, -10, 0, 0, 0, 0])
+        var_upper = np.array([20, 10, 1, 1, 1, 1])
+        categorical = np.array([1])
+        not_categorical = np.array([0, 2])
+        categorical_expansion = [(1, 2, np.array([2, 3, 4, 5]))]
+        compressed = ru.compress_categorical_bounds(
+            var_lower, categorical, not_categorical, categorical_expansion)
+        msg = 'Compression of bounds for 1 shifted variable'
+        self.assertTrue(
+            np.array_equal(compressed, np.array([10, 2, -10])), msg=msg)
+        compressed = ru.compress_categorical_bounds(
+            var_upper, categorical, not_categorical, categorical_expansion)
+        self.assertTrue(
+            np.array_equal(compressed, np.array([20, 5, 10])), msg=msg)
+
+        var_lower = np.array([10, -10, 0, 0, 0, 0])
+        var_upper = np.array([20, 10, 1, 1, 1, 1])
+        categorical = np.array([0, 1])
+        not_categorical = np.array([2, 3])
+        categorical_expansion = [(0, -2, np.array([2])),
+                                 (1, -1, np.array([3, 4, 5]))]
+        compressed = ru.compress_categorical_bounds(
+            var_lower, categorical, not_categorical, categorical_expansion)
+        msg = 'Compression of bounds for 2 vars, one fixed'
+        self.assertTrue(
+            np.array_equal(compressed, np.array([-2, -1, 10, -10])), msg=msg)
+        compressed = ru.compress_categorical_bounds(
+            var_upper, categorical, not_categorical, categorical_expansion)
+        self.assertTrue(
+            np.array_equal(compressed, np.array([-2, 1, 20, 10])), msg=msg)
+
+        var_lower = np.array([10, -10, 0])
+        var_upper = np.array([20, 10, 1])
+        categorical = np.array([])
+        not_categorical = np.array([0, 1, 2])
+        categorical_expansion = []
+        compressed = ru.compress_categorical_bounds(
+            var_lower, categorical, not_categorical, categorical_expansion)
+        msg = 'Compression of bounds for 0 vars'
+        self.assertTrue(
+            np.array_equal(compressed, np.array([10, -10, 0])), msg=msg)
+        compressed = ru.compress_categorical_bounds(
+            var_upper, categorical, not_categorical, categorical_expansion)
+        self.assertTrue(
+            np.array_equal(compressed, np.array([20, 10, 1])), msg=msg)
+    # -- end function
+
 
     def test_norm(self):
         """Verify that norm is 0 at 0 and correct for some other vectors."""

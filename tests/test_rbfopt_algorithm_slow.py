@@ -166,6 +166,34 @@ class TestGutmann(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg=msg)
     # -- end function
 
+    def test_gutmann_branin_cat_noisy_with_init(self):
+        """Check solution of noisy branin_cat with Gutmann, solver."""
+        bb = tf.TestNoisyBlackBox(tf.TestBlackBox('branin_cat'), 0.1, 0.01)
+        optimum = bb._function.optimum_value
+        for seed in self.rand_seeds:
+            print()
+            print('Solving branin_cat with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfoptSettings(algorithm='Gutmann',
+                                      global_search_method='solver',
+                                      target_objval=optimum,
+                                      eps_opt=self.eps_opt,
+                                      max_iterations=200,
+                                      max_evaluations=300,
+                                      rand_seed=seed)
+            init_node_pos = [[0, 0, 0], [-2, 2, 1], [5, 10, 2]]
+            init_node_val = [bb._function.evaluate(x) for x in init_node_pos]
+            alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos, 
+                                     init_node_val)
+            res = alg.optimize()
+            msg = ('Could not solve noisy branin with init and ' +
+                   'Gutmann\'s algorithm')
+            target = optimum + (abs(optimum)*self.eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
+            self.assertLessEqual(res[0], target, msg=msg)
+    # -- end function
+
 # -- end class
 
 class TestGutmannParallel(unittest.TestCase):
@@ -425,6 +453,32 @@ class TestMSRSM(unittest.TestCase):
             self.assertLessEqual(res[0], target, msg=msg)
     # -- end function
 
+    def test_msrsm_branin_cat_noisy_with_init(self):
+        """Check solution of noisy branin with MSRSM, sampling."""
+        bb = tf.TestNoisyBlackBox(tf.TestBlackBox('branin_cat'), 0.1, 0.01)
+        optimum = bb._function.optimum_value
+        for seed in self.rand_seeds:
+            print()
+            print('Solving branin_cat with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfoptSettings(algorithm='MSRSM',
+                                      global_search_method='sampling',
+                                      target_objval=optimum,
+                                      eps_opt=self.eps_opt,
+                                      max_iterations=200,
+                                      max_evaluations=300,
+                                      rand_seed=seed)
+            init_node_pos = [[0, 0, 0]]
+            alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos)
+            res = alg.optimize()
+            msg = ('Could not solve noisy branin with init and ' +
+                   'MSRSM algorithm')
+            target = optimum + (abs(optimum)*self.eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
+            self.assertLessEqual(res[0], target, msg=msg)
+    # -- end function
+
 # -- end class
 
 class TestMSRSMParallel(unittest.TestCase):
@@ -454,6 +508,34 @@ class TestMSRSMParallel(unittest.TestCase):
             alg = ra.RbfoptAlgorithm(settings, bb)
             res = alg.optimize()
             msg = 'Could not solve ex8_1_4 with MSRSM algorithm'
+            target = optimum + (abs(optimum)*self.eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else self.eps_opt)
+            self.assertLessEqual(res[0], target, msg=msg)
+    # -- end function
+
+
+    def test_msrsm_parallel_nvs09_cat(self):
+        """Check solution of nvs09_cat with the MSRSM algorithm, sampling."""
+        bb = tf.TestBlackBox('nvs09_cat')
+        optimum = bb._function.optimum_value
+        for seed in self.rand_seeds:
+            print()
+            print('Solving nvs09_cat with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfoptSettings(algorithm='MSRSM',
+                                      global_search_method='sampling',
+                                      rbf='linear',
+                                      rbf_shape_parameter=0.01,
+                                      target_objval=optimum,
+                                      eps_opt=self.eps_opt,
+                                      max_iterations=200,
+                                      max_evaluations=300,
+                                      num_cpus=2,
+                                      rand_seed=seed)
+            alg = ra.RbfoptAlgorithm(settings, bb)
+            res = alg.optimize()
+            msg = 'Could not solve nvs09_cat with MSRSM algorithm'
             target = optimum + (abs(optimum)*self.eps_opt if
                                 abs(optimum) > settings.eps_zero
                                 else self.eps_opt)

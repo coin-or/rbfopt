@@ -135,6 +135,8 @@ if (__name__ == "__main__"):
                       args.noisy_objfun_abs_error > 0) 
              else False)
     enlarged = True if args.dimension_multiplier > 1 else False
+    # Ensure seed is set before we initialize black box
+    np.random.seed(args.rand_seed)
     if (enlarged):
         bb = TestEnlargedBlackBox(args.function, args.dimension_multiplier)
     else:

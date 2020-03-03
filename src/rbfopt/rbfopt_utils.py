@@ -473,7 +473,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars,
 
     sample_size = int(max(2, round((len(var_lower) + 1) *
                                    settings.init_sample_fraction)))
-
+    
     if (categorical_info is not None and categorical_info[2] and
         settings.init_strategy in ['lhd_maximin', 'lhd_corr']):
         # Map bounds and integer variables
@@ -505,7 +505,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars,
 
         if (len(integer_vars)):
             nodes[:, integer_vars] = np.around(nodes[:, integer_vars])
-            
+
         if (settings.init_include_midpoint and
             get_min_distance(midpoint, nodes) > settings.min_dist):
             nodes = np.vstack((nodes, midpoint))
@@ -712,7 +712,7 @@ def compress_categorical_bounds(bounds, categorical, not_categorical,
         if (bounds[expansion[0]] == 0):
             compressed[index] = var_lower
         else:
-            compressed[index] = var_lower + len(expansion)
+            compressed[index] = var_lower + len(expansion) - 1
     return compressed
 # -- end function
 

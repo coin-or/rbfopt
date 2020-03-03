@@ -53,6 +53,36 @@ class TestGutmann(unittest.TestCase):
             msg = 'Time limit exceeded with Gutmann algorithm'
             self.assertLessEqual(tot_time, 5.0, msg=msg)
     # -- end function
+
+    def test_categorical_vars(self):
+        """Check solution of branin_cat with Gutmann.
+
+        Default parameters.
+
+        """
+        bb = tf.TestBlackBox('branin_cat')
+        optimum = bb._function.optimum_value
+        eps_opt = 0.4
+        for seed in self.rand_seeds:
+            print()
+            print('Solving branin_cat with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfoptSettings(algorithm='Gutmann',
+                                      target_objval=optimum,
+                                      eps_opt=eps_opt,
+                                      max_iterations=400,
+                                      max_evaluations=500,
+                                      do_infstep=True,
+                                      rand_seed=seed)
+            alg = ra.RbfoptAlgorithm(settings, bb)
+            res = alg.optimize()
+            msg = 'Could not solve branin_cat with Gutmann\'s algorithm'
+            target = optimum + (abs(optimum)*eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else eps_opt)
+            self.assertLessEqual(res[0], target, msg=msg)
+    # -- end function
+
 # -- end class
 
 class TestGutmannParallel(unittest.TestCase):
@@ -110,6 +140,36 @@ class TestMSRSM(unittest.TestCase):
             msg = 'Time limit exceeded with MSRSM algorithm'
             self.assertLessEqual(tot_time, 5.0, msg=msg)
     # -- end function
+
+    def test_categorical_vars(self):
+        """Check solution of branin_cat with MSRSM.
+
+        Default parameters.
+
+        """
+        bb = tf.TestBlackBox('branin_cat')
+        optimum = bb._function.optimum_value
+        eps_opt = 0.4
+        for seed in self.rand_seeds:
+            print()
+            print('Solving branin_cat with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfoptSettings(algorithm='MSRSM',
+                                      target_objval=optimum,
+                                      eps_opt=eps_opt,
+                                      max_iterations=400,
+                                      max_evaluations=500,
+                                      do_infstep=True,
+                                      rand_seed=seed)
+            alg = ra.RbfoptAlgorithm(settings, bb)
+            res = alg.optimize()
+            msg = 'Could not solve branin_cat with MSRSM algorithm'
+            target = optimum + (abs(optimum)*eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else eps_opt)
+            self.assertLessEqual(res[0], target, msg=msg)
+    # -- end function
+
 # -- end class
 
 class TestMSRSMParallel(unittest.TestCase):

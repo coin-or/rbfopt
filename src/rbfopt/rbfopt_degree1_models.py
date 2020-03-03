@@ -944,6 +944,8 @@ def _intr_constraint_rule_pt2(model, i):
         return (sum(model.Phi[i, j]*model.rbf_lambda[j] for j in model.K) +
                 sum(model.Pm[i, j]*model.rbf_h[j] for j in model.P)
                 <= model.node_val_upper[i])
+    else:
+        return Constraint.Skip
 
 # Constraints: definition of the unisolvence conditions. Expression:
 # P \lambda = 0

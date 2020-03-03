@@ -70,9 +70,9 @@ def init_refinement(settings, n, k, node_pos, center):
     num_to_keep = min(n + 1, k)
     # Build array of nodes to keep
     model_set = dist_order[np.arange(num_to_keep)]
-    ref_radius = max(np.percentile(dist[0, model_set[1:]], 25),
-                    settings.ref_min_radius * 
-                    2**settings.ref_init_radius_multiplier)
+    ref_radius = max(np.percentile(dist[0, model_set[1:]], 50),
+                     settings.ref_min_radius * 
+                     2**settings.ref_init_radius_multiplier)
     return (model_set, ref_radius)
 # -- end function
 
@@ -279,6 +279,7 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
     curr_point[integer_vars] = np.where(h[integer_vars] >= 0, ceil, floor)
     if (categorical_info is not None and categorical_info[2]):
         # Round in-place
+        #curr_point[len(not_categorical):] = start_point[len(not_categorical):]
         round_categorical(curr_point, categorical, not_categorical, expansion)
     best_value = np.dot(h, curr_point)
     best_point = np.copy(curr_point)
@@ -289,6 +290,7 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
             np.random.uniform(size=len(integer_vars)) < 
             candidate[integer_vars] - floor, ceil, floor)
         if (categorical_info is not None and categorical_info[2]):
+            #curr_point[len(not_categorical):] = start_point[len(not_categorical):]
             curr_point[:len(not_categorical)] = candidate[:len(not_categorical)]
             # Round in-place
             round_categorical(curr_point, categorical, not_categorical,
@@ -331,8 +333,13 @@ def round_categorical(point, categorical, not_categorical,
     # Ensure only one is picked for categorical variables
     for index, var_lower, expansion in categorical_expansion:
         sum_prob = np.sum(point[expansion])
-        chosen = np.random.choice(expansion,
-                                  p=point[expansion]/sum_prob)
+        if (sum_prob == 0):
+            # If there are no fractional values, pick a random value
+            chosen = np.random.choice(expansion)
+        else:
+            # Otherwise, use probabilities based on fractional values
+            chosen = np.random.choice(expansion,
+                                      p=point[expansion]/sum_prob)
         point[expansion] = np.zeros(len(expansion))
         point[chosen] = 1
 # -- end function

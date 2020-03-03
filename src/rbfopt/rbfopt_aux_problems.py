@@ -106,7 +106,7 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
-    assert((mat is None and settings.algorithm == 'MSRSM')
+    assert((mat is None and settings.algorithm.upper() == 'MSRSM')
            or (isinstance(mat, np.ndarray) and mat.shape == (k + p, k + p)))
 
     # Instantiate model
@@ -121,9 +121,9 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
 
     if (settings.global_search_method == 'genetic'):
         # Use a genetic algorithm to optimize
-        if (settings.algorithm == 'Gutmann'):
+        if (settings.algorithm.upper() == 'GUTMANN'):
             fitness = GutmannMukObj(settings, n, k, node_pos, mat)
-        elif (settings.algorithm == 'MSRSM'):
+        elif (settings.algorithm.upper() == 'MSRSM'):
             fitness = MaximinDistanceObj(settings, n, k, node_pos)
         else:
             raise ValueError('Algorithm ' + settings.algorithm + 
@@ -132,9 +132,9 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
                             categorical_info, fitness.evaluate)
     elif (settings.global_search_method == 'sampling'):
         # Sample random points, and rank according to fitness
-        if (settings.algorithm == 'Gutmann'):
+        if (settings.algorithm.upper() == 'GUTMANN'):
             fitness = GutmannMukObj(settings, n, k, node_pos, mat)
-        elif (settings.algorithm == 'MSRSM'):
+        elif (settings.algorithm.upper() == 'MSRSM'):
             fitness = MaximinDistanceObj(settings, n, k, node_pos)
         else:
             raise ValueError('Algorithm ' + settings.algorithm + 
@@ -147,13 +147,13 @@ def pure_global_search(settings, n, k, var_lower, var_upper,
         point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
         # Optimize using Pyomo
-        if (settings.algorithm == 'Gutmann'):
+        if (settings.algorithm.upper() == 'GUTMANN'):
             instance = model.create_max_one_over_mu_model(
                 settings, n, k, var_lower, var_upper,
                 integer_vars, categorical_info, node_pos, mat)
             # Initialize variables for local search
             initialize_instance_variables(settings, instance)
-        elif (settings.algorithm == 'MSRSM'):
+        elif (settings.algorithm.upper() == 'MSRSM'):
             instance = model.create_maximin_dist_model(
                 settings, n, k, var_lower, var_upper, integer_vars,
                 categorical_info, node_pos)
@@ -423,7 +423,7 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
 
     # Determine the size of the P matrix
     p = ru.get_size_P_matrix(settings, n)
-    assert((mat is None and settings.algorithm == 'MSRSM' )
+    assert((mat is None and settings.algorithm.upper() == 'MSRSM' )
            or (isinstance(mat, np.ndarray) and mat.shape == (k + p, k + p)))
     assert(len(rbf_h) == p)
 
@@ -439,10 +439,10 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
 
     if (settings.global_search_method == 'genetic'):
         # Use a genetic algorithm to optimize
-        if (settings.algorithm == 'Gutmann'):
+        if (settings.algorithm.upper() == 'GUTMANN'):
             fitness = GutmannHkObj(settings, n, k, node_pos, rbf_lambda,
                                    rbf_h, mat, target_val)
-        elif (settings.algorithm == 'MSRSM'):
+        elif (settings.algorithm.upper() == 'MSRSM'):
             fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda,
                                     rbf_h, dist_weight)
         else:
@@ -452,10 +452,10 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
                             categorical_info, fitness.evaluate)
     elif (settings.global_search_method == 'sampling'):
         # Sample random points, and rank according to fitness
-        if (settings.algorithm == 'Gutmann'):
+        if (settings.algorithm.upper() == 'GUTMANN'):
             fitness = GutmannHkObj(settings, n, k, node_pos, rbf_lambda,
                                    rbf_h, mat, target_val)
-        elif (settings.algorithm == 'MSRSM'):
+        elif (settings.algorithm.upper() == 'MSRSM'):
             fitness = MetricSRSMObj(settings, n, k, node_pos, rbf_lambda,
                                     rbf_h, dist_weight)
         else:
@@ -469,13 +469,13 @@ def global_search(settings, n, k, var_lower, var_upper, integer_vars,
         point = samples[scores.argmin()]
     elif (settings.global_search_method == 'solver'):
         # Optimize using Pyomo
-        if (settings.algorithm == 'Gutmann'):
+        if (settings.algorithm.upper() == 'GUTMANN'):
             instance = model.create_max_h_k_model(
                 settings, n, k, var_lower, var_upper, integer_vars,
                 categorical_info, node_pos, rbf_lambda, rbf_h, mat,
                 target_val)
             initialize_instance_variables(settings, instance)
-        elif (settings.algorithm == 'MSRSM'):
+        elif (settings.algorithm.upper() == 'MSRSM'):
             # Compute minimum and maximum distances between
             # points. This computation could be avoided if
             # RbfoptAlgorithm keeps track of them, but in the grand

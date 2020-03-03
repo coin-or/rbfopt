@@ -292,7 +292,7 @@ class RbfoptAlgorithm:
         categorical = np.where(np.char.upper(var_type) == 'C')[0]
         not_categorical = np.where(np.char.upper(var_type) != 'C')[0]
         categorical_info = list()
-        if (categorical):
+        if (len(categorical)):
             # Adjust var_lower, var_upper and integer_vars
             current_vars = len(not_categorical)
             for i in categorical:
@@ -390,7 +390,9 @@ class RbfoptAlgorithm:
         if (init_node_pos is None):
             self.init_node_pos = np.array([])
         else:
-            self.init_node_pos = np.array(init_node_pos)
+            self.init_node_pos = ru.expand_categorical_vars(
+                np.atleast_2d(np.array(init_node_pos)),
+                *self.categorical_info)
             for point in self.init_node_pos:
                 ru.round_integer_vars(point, self.integer_vars)
         if (init_node_val is None):
@@ -829,8 +831,9 @@ class RbfoptAlgorithm:
         # The dimension will not be changed so it is safe to localize
         n = self.n
 
-        if (l_settings.algorithm == 'MSRSM'):
-            Amatinv = None
+        # Initialize Amatinv because Gutmann's method may not be
+        # possible until we have enough samples
+        Amatinv = None
 
         # Save number of iterations at start
         itercount_at_start = self.itercount
@@ -883,6 +886,10 @@ class RbfoptAlgorithm:
                     l_settings.function_scaling = 'log'
                 else:
                     l_settings.function_scaling = 'off'
+
+            # If using Gutmann, ensure we have enough points
+            if (settings.algorithm.upper() == 'GUTMANN'):
+                l_settings.algorithm = 'MSRSM' if (k <= n) else 'Gutmann'
         
             # Rescale nodes if necessary
             tfv = ru.transform_function_values(l_settings, self.node_val,
@@ -939,7 +946,7 @@ class RbfoptAlgorithm:
                 try:
                     # Compute the matrices necessary for the algorithm
                     Amat = ru.get_rbf_matrix(l_settings, n, k, self.node_pos)
-                    if (l_settings.algorithm == 'Gutmann'):
+                    if (l_settings.algorithm.upper() == 'GUTMANN'):
                         Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
                     # Compute RBF interpolant at current stage
@@ -1215,8 +1222,9 @@ class RbfoptAlgorithm:
         temp_node_val = np.array([])
         temp_node_is_noisy = np.array([])
 
-        if (l_settings.algorithm == 'MSRSM'):
-            Amatinv = None
+        # Initialize Amatinv because Gutmann's method may not be
+        # possible until we have enough samples
+        Amatinv = None
         
         # Number of iterations spent in refinement. We used this
         # strange initialization statement to make sure that the
@@ -1505,6 +1513,10 @@ class RbfoptAlgorithm:
                     l_settings.function_scaling = 'log'
                 else:
                     l_settings.function_scaling = 'off'
+
+            # If using Gutmann, ensure we have enough points
+            if (settings.algorithm.upper() == 'GUTMANN'):
+                l_settings.algorithm = 'MSRSM' if (k <= n) else 'Gutmann'
         
             # Rescale nodes if necessary
             tfv = ru.transform_function_values(l_settings, node_val,
@@ -1558,7 +1570,7 @@ class RbfoptAlgorithm:
             try:
                 # Compute the matrices necessary for the algorithm
                 Amat = ru.get_rbf_matrix(l_settings, n, k, node_pos)
-                if (l_settings.algorithm == 'Gutmann'):
+                if (l_settings.algorithm.upper() == 'GUTMANN'):
                     Amatinv = ru.get_matrix_inverse(l_settings, Amat)
 
                 # Compute RBF interpolant at current stage
@@ -2240,7 +2252,7 @@ def pure_global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(var_lower)==n)
     assert(len(var_upper)==n)
     assert(len(node_pos)==k)
-    assert((mat is None and settings.algorithm == 'MSRSM') or 
+    assert((mat is None and settings.algorithm.upper() == 'MSRSM') or 
            isinstance(mat, np.ndarray))
     assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(var_lower, np.ndarray))
@@ -2363,7 +2375,7 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert((eval_mode=='noisy') or (eval_mode=='accurate'))
     assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(Amat, np.ndarray))
-    assert((Amatinv is None and settings.algorithm == 'MSRSM') or 
+    assert((Amatinv is None and settings.algorithm.upper() == 'MSRSM') or 
            isinstance(Amatinv, np.ndarray) )
     scaled_node_val, scaled_fmin, scaled_fmax, scaled_err_bounds = tfv
     # Local search: compute the minimum of the RBF.
@@ -2622,7 +2634,7 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     assert(len(rbf_lambda)==k)
     assert(len(node_pos)==k)
     assert(0 <= fmin_index < k)
-    assert((Amatinv is None and settings.algorithm == 'MSRSM') or 
+    assert((Amatinv is None and settings.algorithm.upper() == 'MSRSM') or 
            isinstance(Amatinv, np.ndarray))
     assert(isinstance(settings, RbfoptSettings))
     assert(0 <= current_step <= settings.num_global_searches)
@@ -2633,7 +2645,7 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
 
     # Global search: compromise between finding a good value of the
     # objective function, and improving the model.
-    if (settings.algorithm == 'Gutmann'):
+    if (settings.algorithm.upper() == 'GUTMANN'):
         # If we use Gutmann's algorithm, we need the minimum of the
         # RBF interpolant to choose the target value.
         min_rbf = aux.minimize_rbf(settings, n, k, var_lower, var_upper, 

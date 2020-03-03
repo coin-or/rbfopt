@@ -897,6 +897,8 @@ def _intr_constraint_rule_pt2(model, i):
     if (not model.node_val_lower[i] >= model.node_val_upper[i]):
         return (sum(model.Phi[i, j]*model.rbf_lambda[j] for j in model.K) <=
                 model.node_val_upper[i])
+    else:
+        return Constraint.Skip
         
 # Constraints: definition of the minimum distance constraint.
 # for i in K: mindistsq <= dist(x, x^i)^2
