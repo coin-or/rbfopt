@@ -1109,7 +1109,6 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars,
         curr_mutation_rate = (mutation_rate *
                               (settings.ga_num_generations - gen) /
                               settings.ga_num_generations)
-        max_size_pert = min(n, max(2, int(n * curr_mutation_rate)))
         # Compute fitness score to determine remaining individuals
         fitness_val = objfun(population)
         rank = np.argsort(fitness_val)
@@ -1128,9 +1127,13 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars,
         new_individuals = generate_sample_points(
             settings, n, var_lower, var_upper, integer_vars,
             categorical_info, num_new)
-        if (categorical_info is not None and categorical_info[2]):
+        if (categorical_info is not None and categorical_info[2]):            
             # If there are categorical variables, we work in
-            # compressed space, then expand again
+            # compressed space, then expand again.
+            # Compute perturbation.
+            max_size_pert = min(n_comp,
+                                max(2, int(n_comp * curr_mutation_rate)))
+            # Map to compressed space
             best_individuals = ru.compress_categorical_vars(
                 best_individuals, *categorical_info)
             # Make a copy of best individual, and mutate it
@@ -1147,7 +1150,8 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars,
             best_individuals = ru.expand_categorical_vars(
                 best_individuals, *categorical_info)
         else:
-            # We can work in original space.
+            # We can work in original space. Compute perturbation.
+            max_size_pert = min(n, max(2, int(n * curr_mutation_rate)))
             # Make a copy of best individual, and mutate it
             best_mutated = best_individuals[0, :].copy()
             ga_mutate(n, var_lower, var_upper, is_integer,

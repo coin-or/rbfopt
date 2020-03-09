@@ -109,23 +109,23 @@ if (__name__ == "__main__"):
         print('Error: this software requires Python 2.7 or later')
         exit()
     # Create command line parsers
-    parser = argparse.ArgumentParser(description = 'Test RBF method')
+    parser = argparse.ArgumentParser(description='Test RBF method')
     # Add the main test function option
-    parser.add_argument('function', action = 'store', 
-                        metavar = 'function_name',
-                        help = 'test function to optimize')
-    parser.add_argument('--dimension_multiplier', action = 'store',
-                        type = int, dest = 'dimension_multiplier',
-                        default = 1, help = 'Multiply dimension of test ' +
+    parser.add_argument('function', action='store', 
+                        metavar='function_name',
+                        help='test function to optimize')
+    parser.add_argument('--dimension_multiplier', action='store',
+                        type=int, dest='dimension_multiplier',
+                        default=1, help='Multiply dimension of test ' +
                         'function by this factor. Default 1')
-    parser.add_argument('--noisy_objfun_rel_error', action = 'store',
-                        type = float, dest = 'noisy_objfun_rel_error',
-                        default = 0.0, help = 'The maximum relative ' +
+    parser.add_argument('--noisy_objfun_rel_error', action='store',
+                        type=float, dest='noisy_objfun_rel_error',
+                        default=0.0, help='The maximum relative ' +
                         'error by which the noisy version of the ' +
                         'objective function is affected. Default 0.0.')
-    parser.add_argument('--noisy_objfun_abs_error', action = 'store',
-                        type = float, dest = 'noisy_objfun_abs_error',
-                        default = 0.0, help = 'The maximum absolute ' +
+    parser.add_argument('--noisy_objfun_abs_error', action='store',
+                        type=float, dest='noisy_objfun_abs_error',
+                        default=0.0, help='The maximum absolute ' +
                         'error by which the noisy version of the ' +
                         'objective function is affected. Default 0.0.')
     # Add additional options to parser and parse arguments

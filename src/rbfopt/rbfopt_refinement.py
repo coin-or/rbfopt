@@ -279,7 +279,6 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
     curr_point[integer_vars] = np.where(h[integer_vars] >= 0, ceil, floor)
     if (categorical_info is not None and categorical_info[2]):
         # Round in-place
-        #curr_point[len(not_categorical):] = start_point[len(not_categorical):]
         round_categorical(curr_point, categorical, not_categorical, expansion)
     best_value = np.dot(h, curr_point)
     best_point = np.copy(curr_point)
@@ -290,7 +289,6 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
             np.random.uniform(size=len(integer_vars)) < 
             candidate[integer_vars] - floor, ceil, floor)
         if (categorical_info is not None and categorical_info[2]):
-            #curr_point[len(not_categorical):] = start_point[len(not_categorical):]
             curr_point[:len(not_categorical)] = candidate[:len(not_categorical)]
             # Round in-place
             round_categorical(curr_point, categorical, not_categorical,

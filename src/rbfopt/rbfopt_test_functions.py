@@ -1929,17 +1929,17 @@ class hartman3_cat:
                       [2.2, 1.2, 3.1, 1.7],
                       [0.1, 2.1, 0.3, 3.7],
                       [1.8, 0.4, 3.1, 2.4]])
-        value = -math.fsum([ c[int(x[3]), i] *
-                             math.exp(-math.fsum([a[j][i]*(x[j] - p[j][i])**2
-                                                  for j in range(3)]))
-                             for i in range(4) ])
+        value = -math.fsum([c[int(x[3]), i] *
+                            math.exp(-math.fsum([a[j][i]*(x[j] - p[j][i])**2
+                                                 for j in range(3)]))
+                            for i in range(4) ])
         return(value)
 
     dimension = 4
     var_lower = np.array([0, 0, 0, 0])
     var_upper = np.array([1, 1, 1, 4])
-    optimum_point = np.array([0.1, 0.55592003, 0.85218259, 1])
-    optimum_value = -3.8626347486217725
+    optimum_point = np.array([0.155995, 0.536521, 0.843994, 3])
+    optimum_value = -4.822787424687719
     var_type = np.array(['R', 'R', 'R', 'C'])
 
 # -- end class
@@ -1970,19 +1970,58 @@ class hartman6_cat:
                       [0.1, 2.1, 0.3, 3.7],
                       [1.8, 0.4, 3.1, 2.4]])
 
-        value = -math.fsum([ c[int(x[0]), i] *
-                             math.exp(-math.fsum([a[j][i]*(x[j+1] - p[j][i])**2
-                                                  for j in range(6)]))
-                             for i in range(4) ])
+        value = -math.fsum([c[int(x[0]), i] *
+                            math.exp(-math.fsum([a[j][i]*(x[j+1] - p[j][i])**2
+                                                 for j in range(6)]))
+                            for i in range(4) ])
         return(value)
 
     dimension = 7
     var_lower = np.array([0, 0, 0, 0, 0, 0, 0])
     var_upper = np.array([4, 1, 1, 1, 1, 1, 1])
-    optimum_point = np.array([0, 0.20168952, 0.15001069, 0.47687398,
-                              0.27533243, 0.31165162, 0.65730054])
-    optimum_value = -3.32236801141551
-    var_type = np.array(['I'] + ['R'] * 6)
+    optimum_point = np.array([2, 0.177401, 0.153512, 0.516698,
+                              0.256499, 0.323092, 0.646352])
+    optimum_value = -3.96231691936822
+    var_type = np.array(['C'] + ['R'] * 6)
+
+# -- end class
+
+class ex8_1_1_cat:
+    """
+    ex8_1_1 function of the GlobalLib test set.
+    """
+    
+    @staticmethod
+    def evaluate(x):
+        assert(len(x)==4)
+
+        if (x[2] == 0):
+            fun1 = lambda x : np.sin(x)
+        elif (x[2] == 1):
+            fun1 = lambda x : np.cos(x)
+        elif (x[2] == 2):
+            fun1 = lambda x : (np.cos(x + np.pi/4))**2
+        elif (x[2] == 3):
+            fun1 = lambda x : (np.sin(x + np.pi/4))**2
+
+        if (x[3] == 0):
+            fun2 = lambda x : (np.sin(x + np.pi/4))**2        
+        elif (x[3] == 1):
+            fun2 = lambda x : np.sin(x)
+        elif (x[3] == 2):
+            fun2 = lambda x : (np.cos(x + np.pi/4))**2
+        elif (x[3] == 3):
+            fun2 = lambda x : np.cos(x)
+
+        value = fun1(x[0])*fun2(x[1]) - x[0]/(x[1]**2+1)
+        return(value)
+
+    dimension = 4
+    var_lower = np.array([-1, -1, 0, 0])
+    var_upper = np.array([2, 1, 3, 3])
+    optimum_point = np.array([2.0, 0.105783, 1, 3])
+    optimum_value = -2.416146834560116
+    var_type = np.array(['R'] * 2 + ['C', 'C'])
 
 # -- end class
 
@@ -2393,8 +2432,8 @@ class nvs07_cat:
     dimension = 4
     var_lower = np.array([0, 0, 0, 2])
     var_upper = np.array([200, 200, 200, 4])
-    optimum_point = np.array([4.0, 0.0, 0.0, 4])
-    optimum_value = 4.0
+    optimum_point = np.array([4.0, 0.0, 0.0, 2])
+    optimum_value = 2.0
     var_type = np.array(['I'] * 3 + ['C'])
 
 # -- end class
@@ -2414,7 +2453,7 @@ class nvs09_cat:
         elif (x[10] == 1):
             fun = np.abs
         elif (x[10] == 2):
-            fun = lambda x : 1/x
+            fun = lambda x : 1/(x-0.9)
         elif (x[10] == 3):
             fun = np.log
         elif (x[10] == 4):
@@ -2436,11 +2475,46 @@ class nvs09_cat:
     dimension = 11
     var_lower = np.array([3 for i in range(10)] + [0])
     var_upper = np.array([9 for i in range(10)] + [4])
-    optimum_point = np.array([9, 9, 9, 9, 9, 9, 9, 9, 9, 9, 3])
-    optimum_value = -43.134336918035
+    optimum_point = np.array([8, 8, 8, 8, 7, 8, 7, 8, 8, 8, 2])
+    optimum_value = -53.179649471788274
     var_type = np.array(['I'] * 10 + ['C'])
 
 # -- end class
+
+class st_miqp1_cat:
+    """
+    st_miqp1 function of the MINLPLib test set, with categorical variables.
+    """
+    
+    @staticmethod
+    def evaluate(x):
+        assert(len(x)==6)
+
+        value = (50*x[0]*x[0] + 42*x[0] + 50*x[1]*x[1] + 44*x[1] +
+                 50*x[2]*x[2] + 45*x[2] + 50*x[3]*x[3]
+                 + 47*x[3] + 50*x[4]*x[4] + 47.5*x[4])
+        c = [[20, 12, 11, 7, 4, 40],
+             [8, 23, 12, 10, 10, 35],
+             [12, 25, 30, 4, 22, 60],
+             [18, 3, 15, 33, 25, 45],
+             [27, 11, 9, 20, 13, 32],
+             [9, 31, 25, 9, 27, 42],
+             [14, 23, 18, 12, 33, 37]]
+        # There is one constraint:
+        # 20*x[0] + 12*x[1] + 11*x[2] + 7*x[3] + 4*x[4] - 40 >= 0
+        penalty = 100*max(0, -sum(c[int(x[0])][j]*x[j] for j in range(5)) +
+                          c[int(x[0])][-1])
+        return(value + penalty)
+
+    dimension = 6
+    var_lower = np.array([0, 0, 0, 0, 0, 0])
+    var_upper = np.array([5, 1, 1, 1, 1, 1])
+    optimum_point = np.array([1, 1.0, 1.0, 1.0, 0.0, 0.0])
+    optimum_value = 281.0
+    var_type = np.array(['C'] + ['I'] * 5)
+
+# -- end class
+
 
 class schaeffer_f7_12_1_int_cat:
     """
@@ -2768,8 +2842,10 @@ class TestEnlargedBlackBox(RbfoptBlackBox):
                            a_max=self._function.var_upper)
         for (i, vart) in enumerate(self._function.var_type):
             if (vart == 'C'):
-                locations = np.where(np.mod(self.permutation, self.dimension) == i)[0]
-                subpoint[i] = np.argmax(np.bincount(point[locations].astype(np.int_)))
+                locations = np.where(
+                    np.mod(self.permutation, self.dimension) == i)[0]
+                subpoint[i] = np.argmax(
+                    np.bincount(point[locations].astype(np.int_)))
             if (vart == 'I'):
                 subpoint[i] = np.round(subpoint[i])
         value += self.weight[-1] * self._function.evaluate(subpoint)

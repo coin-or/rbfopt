@@ -67,45 +67,45 @@ def register_options(parser):
             type_fun = ast.literal_eval
         else:
             type_fun = str
-        algset.add_argument('--' + param_name[i], action = 'store',
-                            dest = param_name[i],
-                            type = type_fun,
-                            help = param_help[i],
-                            default = getattr(default, param_name[i]))
+        algset.add_argument('--' + param_name[i], action='store',
+                            dest=param_name[i],
+                            type=type_fun,
+                            help=param_help[i],
+                            default=getattr(default, param_name[i]))
     intset = parser.add_argument_group('Execution settings')
-    intset.add_argument('black_box_file', action = 'store',
-                        metavar = 'FILE_NAME', type = str, 
-                        help = 'Name of python file containing black box ' +
+    intset.add_argument('black_box_file', action='store',
+                        metavar='FILE_NAME', type=str, 
+                        help='Name of python file containing black box ' +
                         'function and the description of its ' +
                         'characteristics. This file should implement a ' +
                         'BlackBox class derived from ' +
                         'rbfopt_black_box.BlackBox. ')
-    intset.add_argument('--load', '-l', action = 'store', dest = 'load_state',
-                        help = 'File to read state to resume optimization')
-    intset.add_argument('--log', '-o', action = 'store',
-                        metavar = 'LOG_FILE_NAME', dest = 'output_stream',
-                        help = 'Name of log file for output redirection')
-    intset.add_argument('--pause', '-p', action = 'store', dest = 'pause',
-                        default = sys.maxsize, type = int,
-                        help = 'Number of iterations after which ' +
+    intset.add_argument('--load', '-l', action='store', dest='load_state',
+                        help='File to read state to resume optimization')
+    intset.add_argument('--log', '-o', action='store',
+                        metavar='LOG_FILE_NAME', dest='output_stream',
+                        help='Name of log file for output redirection')
+    intset.add_argument('--pause', '-p', action='store', dest='pause',
+                        default=sys.maxsize, type=int,
+                        help='Number of iterations after which ' +
                         'the optimization process should be paused')
-    intset.add_argument('--points_from_file', '-f', action = 'store',
-                        metavar = 'POINTS_FILE_NAME', dest = 'points_file',
-                        type = str, default = None,
-                        help = 'Name of a file containing coordinates of ' +
+    intset.add_argument('--points_from_file', '-f', action='store',
+                        metavar='POINTS_FILE_NAME', dest='points_file',
+                        type=str, default=None,
+                        help='Name of a file containing coordinates of ' +
                         'points that have already been evaluated or must ' +
                         'be evaluated. The points must be given one per ' +
                         'line with each value separated by space. Each ' +
                         'row can optionally terminate with the objective ' +
                         'function value at the point (if such value is ' +
                         'not given, it will be evaluated by the algorithm).')
-    intset.add_argument('--print_solution', '-ps', action = 'store', 
-                        dest = 'print_solution',
-                        default = True, type = ast.literal_eval,
-                        help = 'Print solution at the end of the ' +
+    intset.add_argument('--print_solution', '-ps', action='store', 
+                        dest='print_solution',
+                        default=True, type=ast.literal_eval,
+                        help='Print solution at the end of the ' +
                         'optimization (or after a pause).')
-    intset.add_argument('--save', '-s', action = 'store', dest = 'dump_state',
-                        help = 'File to save state after optimization. ' +
+    intset.add_argument('--save', '-s', action='store', dest='dump_state',
+                        help='File to save state after optimization. ' +
                         'Note that this is different from the options ' +
                         'save_state_interval and save_state_file because ' +
                         'here the state is only saved at the end of ' +
@@ -138,8 +138,8 @@ def rbfopt_cl_interface(args, black_box):
         try:
             output_stream = open(args['output_stream'], 'w')
         except IOError as e:
-            print('Error while opening log file', file = sys.stderr)
-            print(e, file = sys.stderr)
+            print('Error while opening log file', file=sys.stderr)
+            print(e, file=sys.stderr)
 
     # Make a copy of parameters and adjust them, deleting keys
     # that are not recognized as valid by RbfoptSettings.
@@ -153,7 +153,7 @@ def rbfopt_cl_interface(args, black_box):
     del local_args['print_solution']
 
     settings = RbfoptSettings.from_dictionary(local_args)
-    settings.print(output_stream = output_stream)
+    settings.print(output_stream=output_stream)
     if (args['load_state'] is not None):
         alg = RbfoptAlgorithm.load_from_file(args['load_state'])
     elif (args['points_file'] is not None):
@@ -172,28 +172,28 @@ def rbfopt_cl_interface(args, black_box):
                 init_node_val = None
         except Exception as e:
             print('Exception raised reading file with initialization points',
-                  file = output_stream)
-            print(type(e), file = output_stream)
-            print(e, file = output_stream)
+                  file=output_stream)
+            print(type(e), file=output_stream)
+            print(e, file=output_stream)
             output_stream.close()
             exit()
-        alg = RbfoptAlgorithm(settings = settings, black_box = black_box,
-                              init_node_pos = init_node_pos,
-                              init_node_val = init_node_val)
+        alg = RbfoptAlgorithm(settings=settings, black_box=black_box,
+                              init_node_pos=init_node_pos,
+                              init_node_val=init_node_val)
     else:
-        alg = RbfoptAlgorithm(settings = settings, black_box = black_box)
+        alg = RbfoptAlgorithm(settings=settings, black_box=black_box)
     alg.set_output_stream(output_stream)
     result = alg.optimize(args['pause'])
     print('RbfoptAlgorithm.optimize() returned ' + 
           'function value {:.15f}'.format(result[0]),
-          file = output_stream)
+          file=output_stream)
     if (args['print_solution']):
         for (i, val) in enumerate(result[1]):
-            print('x{:<4d}: {:16.6f}'.format(i, val), file = output_stream)
+            print('x{:<4d}: {:16.6f}'.format(i, val), file=output_stream)
     if (args['dump_state'] is not None):
         alg.save_to_file(args['dump_state'])
         print('Dumped state to file {:s}'.format(args['dump_state']),
-              file = output_stream)
+              file=output_stream)
     output_stream.close()
 
 # -- end function
@@ -204,7 +204,7 @@ if (__name__ == "__main__"):
         exit()
     # Create command line parsers
     desc = ('Apply the RBF method to an object of class "BlackBox".')
-    parser = argparse.ArgumentParser(description = desc)
+    parser = argparse.ArgumentParser(description=desc)
     # Add options to parser and parse arguments
     register_options(parser)
     args = parser.parse_args()

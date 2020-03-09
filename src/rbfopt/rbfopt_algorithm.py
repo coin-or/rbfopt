@@ -565,18 +565,23 @@ class RbfoptAlgorithm:
             A shift that has to be applied to the index to find the
             corresponding node in self.all_node_pos. Typically, this
             is the size of self.all_node_pos at the latest restart.
-        """
+       """
         assert(0 <= index <= len(self.node_pos))
         assert(0 <= index + all_node_shift <= len(self.all_node_pos))
         self.node_pos = np.delete(np.atleast_2d(self.node_pos), index, axis=0)
         self.node_val = np.delete(self.node_val, index)
         self.node_is_noisy = np.delete(self.node_is_noisy, index)
+        self.node_err_bounds = np.delete(
+            np.atleast_2d(self.node_err_bounds), index, axis=0)
         self.all_node_pos = np.delete(np.atleast_2d(self.all_node_pos), 
                                       all_node_shift + index, axis=0)
         self.all_node_val = np.delete(self.all_node_val, 
                                       all_node_shift + index)
         self.all_node_is_noisy = np.delete(self.all_node_is_noisy, 
                                           all_node_shift + index)
+        self.all_node_err_bounds = np.delete(
+            np.atleast_2d(self.all_node_err_bounds),
+            all_node_shift + index, axis=0)
     # -- end function
 
     def add_node(self, point, orig_point, value):
