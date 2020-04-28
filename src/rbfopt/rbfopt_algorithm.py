@@ -836,10 +836,6 @@ class RbfoptAlgorithm:
         # The dimension will not be changed so it is safe to localize
         n = self.n
 
-        # Initialize Amatinv because Gutmann's method may not be
-        # possible until we have enough samples
-        Amatinv = None
-
         # Save number of iterations at start
         itercount_at_start = self.itercount
         # If this is the first iteration, initialize the algorithm
@@ -895,6 +891,9 @@ class RbfoptAlgorithm:
             # If using Gutmann, ensure we have enough points
             if (settings.algorithm.upper() == 'GUTMANN'):
                 l_settings.algorithm = 'MSRSM' if (k <= n) else 'Gutmann'
+                # Initialize Amatinv because Gutmann's method may not
+                # be possible until we have enough samples
+                Amatinv = None
         
             # Rescale nodes if necessary
             tfv = ru.transform_function_values(l_settings, self.node_val,
@@ -952,27 +951,30 @@ class RbfoptAlgorithm:
                     # Compute the matrices necessary for the algorithm
                     Amat = ru.get_rbf_matrix(l_settings, n, k, self.node_pos)
                     if (l_settings.algorithm.upper() == 'GUTMANN'):
-                        Amatinv = ru.get_matrix_inverse(l_settings, Amat)
+                        Amatinv = ru.get_matrix_inverse(
+                            l_settings, n, k, Amat, self.categorical_info)
 
                     # Compute RBF interpolant at current stage
-                    if (np.any(self.node_is_noisy)):
-                        # Get coefficients for the exact RBF
+                    if (k < n+1):
+                        # Underdetermined RBF
+                        rbf_l, rbf_h = ru.get_rbf_coefficients_underdet(
+                            l_settings, n, k, Amat, scaled_node_val,
+                            self.categorical_info)
+                    else:
+                        # Fully accurate RBF
                         rbf_l, rbf_h = ru.get_rbf_coefficients(
-                            l_settings, n, k, Amat, scaled_node_val)
+                            l_settings, n, k, Amat, scaled_node_val,
+                            self.categorical_info)
+                    if (np.any(self.node_is_noisy)):
                         # RBF with some noisy function evaluations
                         rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
                             l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
                             scaled_node_val, scaled_err_bounds, rbf_l, rbf_h)
-                    elif (k < n+1):
-                        # Underdetermined RBF
-                        rbf_l, rbf_h = ru.get_rbf_coefficients_underdet(
-                            l_settings, n, k, Amat, scaled_node_val)
-                    else:
-                        # Fully accurate RBF
-                        rbf_l, rbf_h = ru.get_rbf_coefficients(
-                            l_settings, n, k, Amat, scaled_node_val)
+
+                        
                 
                 except np.linalg.LinAlgError:
+                    print('Failed')
                     # Record statistics on failed model
                     if (self.current_step >= (self.local_search_step - 1) and
                         self.best_local_rbf_list):
@@ -1227,10 +1229,6 @@ class RbfoptAlgorithm:
         temp_node_val = np.array([])
         temp_node_is_noisy = np.array([])
 
-        # Initialize Amatinv because Gutmann's method may not be
-        # possible until we have enough samples
-        Amatinv = None
-        
         # Number of iterations spent in refinement. We used this
         # strange initialization statement to make sure that the
         # number is consistent (if not accurate) in case the algorithm
@@ -1522,6 +1520,10 @@ class RbfoptAlgorithm:
             # If using Gutmann, ensure we have enough points
             if (settings.algorithm.upper() == 'GUTMANN'):
                 l_settings.algorithm = 'MSRSM' if (k <= n) else 'Gutmann'
+                # Initialize Amatinv because Gutmann's method may not
+                # be possible until we have enough samples
+                Amatinv = None
+
         
             # Rescale nodes if necessary
             tfv = ru.transform_function_values(l_settings, node_val,
@@ -1576,25 +1578,25 @@ class RbfoptAlgorithm:
                 # Compute the matrices necessary for the algorithm
                 Amat = ru.get_rbf_matrix(l_settings, n, k, node_pos)
                 if (l_settings.algorithm.upper() == 'GUTMANN'):
-                    Amatinv = ru.get_matrix_inverse(l_settings, Amat)
+                    Amatinv = ru.get_matrix_inverse(
+                        l_settings, n, k, Amat, self.categorical_info)
 
                 # Compute RBF interpolant at current stage
-                if (np.any(self.node_is_noisy)):
-                    # Get coefficients for the exact RBF
+                if (k < n+1):
+                    # Underdetermined RBF
+                    rbf_l, rbf_h = ru.get_rbf_coefficients_underdet(
+                        l_settings, n, k, Amat, scaled_node_val,
+                        self.categorical_info)
+                else:
+                    # Fully accurate RBF
                     rbf_l, rbf_h = ru.get_rbf_coefficients(
-                        l_settings, n, k, Amat, scaled_node_val)
+                        l_settings, n, k, Amat, scaled_node_val,
+                        self.categorical_info)
+                if (np.any(self.node_is_noisy)):
                     # RBF with some noisy function evaluations
                     rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
                         l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
                         scaled_node_val, scaled_err_bounds, rbf_l, rbf_h)
-                elif (k < n+1):
-                    # Underdetermined RBF
-                    rbf_l, rbf_h = ru.get_rbf_coefficients_underdet(
-                        l_settings, n, k, Amat, scaled_node_val)
-                else:
-                    # Fully accurate RBF
-                    rbf_l, rbf_h = ru.get_rbf_coefficients(
-                        l_settings, n, k, Amat, scaled_node_val)
                 # Copy in case something goes wrong
                 rbf_coeff_settings = copy.deepcopy(l_settings)
                 
@@ -1970,7 +1972,9 @@ class RbfoptAlgorithm:
                 try:
                     Amat = ru.get_rbf_matrix(self.l_settings, self.n, 
                                              len(node_pos), node_pos)
-                    Amatinv = ru.get_matrix_inverse(self.l_settings, Amat)
+                    Amatinv = ru.get_matrix_inverse(
+                        self.l_settings, self.n, len(node_pos),
+                        Amat, self.categorical_info)
                     restoration_done = True
                 except np.linalg.LinAlgError:
                     cons_restoration += 1

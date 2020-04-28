@@ -106,11 +106,13 @@ class TestUtils(unittest.TestCase):
 
     def test_get_lhd_points(self):
         """Check that latin hypercube designs have the correct size."""
-        var_lower = np.array([-1, 0, 1])
-        var_upper = np.array([1, 2, 3])
-        corners = ru.get_lhd_maximin_points(var_lower, var_upper, 4)
+        var_lower = np.array([-1, 0, 1], dtype=np.float_)
+        var_upper = np.array([1, 2, 3], dtype=np.float_)
+        corners = ru.get_lhd_maximin_points(
+            var_lower, var_upper, np.array([0]), 4)
         self.assertEqual(len(corners), 4)
-        corners = ru.get_lhd_corr_points(var_lower, var_upper, 5)
+        corners = ru.get_lhd_corr_points(
+            var_lower, var_upper, np.array([]), 5)
         self.assertEqual(len(corners), 5)
     # -- end function
 
@@ -120,8 +122,8 @@ class TestUtils(unittest.TestCase):
         This method verifies that returned sets of points have at
         least n+1 points, and integer variables are integer.
         """
-        var_lower = np.array([-1, 0, 1])
-        var_upper = np.array([1, 2, 3])
+        var_lower = np.array([-1, 0, 1], dtype=np.float_)
+        var_upper = np.array([1, 2, 3], dtype=np.float_)
         integer_vars = np.array([1, 2])
         for method in RbfoptSettings._allowed_init_strategy:
             settings = RbfoptSettings(init_strategy=method,
@@ -142,8 +144,8 @@ class TestUtils(unittest.TestCase):
         This method verifies that returned sets of points have at
         least n+1 points, and integer variables are integer.
         """
-        var_lower = np.array([-1, 0, 1])
-        var_upper = np.array([1, 2, 3])
+        var_lower = np.array([-1, 0, 1], dtype=np.float_)
+        var_upper = np.array([1, 2, 3], dtype=np.float_)
         integer_vars = np.array([1, 2])
         midpoint = np.array([0, 1, 2])
         for method in RbfoptSettings._allowed_init_strategy:
@@ -437,7 +439,7 @@ class TestUtils(unittest.TestCase):
         settings = RbfoptSettings()
         for i in range(20):
             dim = np.random.randint(1, 20)
-            num_points = np.random.randint(10, 50)
+            num_points = np.random.randint(dim+1, 50)
             node_pos = np.random.uniform(-100, 100, size=(num_points,dim))
             node_val = np.random.uniform(0, 100, num_points)
             # Possible shapes of the matrix
@@ -449,8 +451,47 @@ class TestUtils(unittest.TestCase):
                 for i in range(num_points):
                     value = ru.evaluate_rbf(settings, node_pos[i], dim,
                                             num_points, node_pos, rbf_l, rbf_h)
-                    self.assertAlmostEqual(value, node_val[i], places=4,
+                    self.assertAlmostEqual(value, node_val[i], places=3,
                                            msg='Interpolation failed' +
+                                           'with rbf ' + rbf_type)
+    # -- end function
+
+    def test_rbf_interpolation_cat(self):
+        """Test interpolation conditions with categorical variables.
+
+        Verify that the RBF interpolates at points.
+        """
+        settings = RbfoptSettings()
+        for i in range(20):
+            dim = np.random.randint(5, 15)
+            cat_dim = 8
+            # We need enough points to ensure the system is not singular
+            num_points = np.random.randint(2*(dim+cat_dim), 60)
+            node_pos = np.hstack(
+                (np.random.uniform(-100, 100, size=(num_points,dim)),
+                 np.zeros(shape=(num_points,cat_dim))))
+            # Pick random categorical values
+            for j in range(num_points):                
+                node_pos[j, dim + np.random.choice(4)] = 1
+                node_pos[j, dim + 4 + np.random.choice(4)] = 1
+            categorical_info = (np.array([0, 1]),
+                                np.array([j+2 for j in range(dim)]),
+                                [(0, 0, np.array([dim + j for j in range(4)])),
+                                 (1, 0, np.array([dim+4+j for j in range(4)]))])
+            node_val = np.random.uniform(0, 100, num_points)
+            # Possible shapes of the matrix
+            for rbf_type in self.rbf_types:
+                settings.rbf = rbf_type
+                mat = ru.get_rbf_matrix(settings, dim+cat_dim, num_points,
+                                        node_pos)
+                rbf_l, rbf_h = ru.get_rbf_coefficients(
+                    settings, dim+cat_dim, num_points, mat, node_val,
+                    categorical_info)
+                for i in range(num_points):
+                    value = ru.evaluate_rbf(settings, node_pos[i], dim+cat_dim,
+                                            num_points, node_pos, rbf_l, rbf_h)
+                    self.assertAlmostEqual(value, node_val[i], places=4,
+                                           msg='Interpolation failed ' +
                                            'with rbf ' + rbf_type)
     # -- end function
 

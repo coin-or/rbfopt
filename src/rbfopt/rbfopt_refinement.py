@@ -269,9 +269,9 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
     # separately. Exclude them from the set of integer vars.
     if (categorical_info is not None and categorical_info[2]):
         categorical, not_categorical, expansion = categorical_info
-        integer_vars = np.array(
-            [i for i in integer_vars if i < len(not_categorical)],
-            dtype=np.int_)    
+        integer_vars = np.array([i for i in integer_vars
+                                 if i < len(not_categorical)],
+                                dtype=np.int_)
     # Compute the rounding down and up
     floor = np.floor(candidate[integer_vars])
     ceil = np.ceil(candidate[integer_vars])
@@ -289,7 +289,7 @@ def get_integer_candidate(settings, n, k, h, start_point, ref_radius,
             np.random.uniform(size=len(integer_vars)) < 
             candidate[integer_vars] - floor, ceil, floor)
         if (categorical_info is not None and categorical_info[2]):
-            curr_point[:len(not_categorical)] = candidate[:len(not_categorical)]
+            curr_point[len(not_categorical):] = candidate[len(not_categorical):]
             # Round in-place
             round_categorical(curr_point, categorical, not_categorical,
                               expansion)

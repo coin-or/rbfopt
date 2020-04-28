@@ -45,7 +45,8 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
     var_type : 1D numpy.ndarray[char]
         An array of length equal to dimension, specifying the type of
         each variable. Possible types are 'R' for real (continuous)
-        variables, and 'I' for integer (discrete) variables.
+        variables, 'I' for integer (discrete) variables, 'C' for
+        categorical (discrete, unordered) variables.
 
     integer_vars : 1D numpy.ndarray[int]
         A list of indices of the variables that must assume integer
@@ -64,6 +65,7 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
     See also
     --------
     :class:`rbfopt_black_box.BlackBox`
+
     """
 
     def __init__(self, exponent=2):
@@ -122,7 +124,8 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
         1D numpy.ndarray[char]
             An array of length equal to dimension, specifying the type
             of each variable. Possible types are 'R' for real
-            (continuous) variables, and 'I' for integer (discrete)
+            (continuous) variables, 'I' for integer (discrete)
+            variables, 'C' for categorical (discrete, unordered)
             variables.
         """
         return self.var_type

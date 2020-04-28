@@ -994,7 +994,8 @@ def generate_sample_points(settings, n, var_lower, var_upper, integer_vars,
         var_upper = ru.compress_categorical_bounds(var_upper,
                                                    *categorical_info)
         n = len(var_lower)
-        integer_vars = np.array([i for i in integer_vars if i < n])
+        integer_vars = ru.compress_categorical_integer_vars(
+            integer_vars, *categorical_info)
         
     # Generate samples
     samples = (np.random.rand(num_samples, n) * (var_upper - var_lower) + 
@@ -1536,7 +1537,8 @@ class GutmannHkObj:
         
         return -((sign * (np.sum(np.dot(u_pi_mat, np.array(self.Amatinv)) *
                                  u_pi_mat, axis=1) - shift)) / 
-                 (rbf_value - self.target_val)**2)
+                 np.maximum((rbf_value - self.target_val)**2,
+                            np.ones_like(rbf_value)*self.settings.eps_zero))
 
         # -- end function
 # -- end class GutmannHkObj

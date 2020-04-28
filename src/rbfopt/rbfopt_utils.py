@@ -23,6 +23,7 @@ import itertools
 import warnings
 import collections
 import logging
+import bisect
 import numpy as np
 import scipy.spatial as ss
 import scipy.linalg as la
@@ -313,7 +314,8 @@ def get_uniform_lhs(n, num_samples):
 # -- end function
 
 
-def get_lhd_maximin_points(var_lower, var_upper, sample_size, num_trials=50):
+def get_lhd_maximin_points(var_lower, var_upper, integer_vars,
+                           sample_size, num_trials=50):
     """Compute a latin hypercube design with maximin distance.
 
     Compute an array of points in the given box, where n is the
@@ -329,6 +331,11 @@ def get_lhd_maximin_points(var_lower, var_upper, sample_size, num_trials=50):
     var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
+    integer_vars : 1D numpy.ndarray[int]
+        A List containing the indices of the integrality constrained
+        variables. If empty, all variables are assumed to be
+        continuous.
+
     sample_size : int
         Number of points to sample.
 
@@ -343,6 +350,8 @@ def get_lhd_maximin_points(var_lower, var_upper, sample_size, num_trials=50):
     """
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
+    assert(np.issubdtype(var_lower.dtype, np.floating))
+    assert(np.issubdtype(var_upper.dtype, np.floating))
     assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
@@ -359,6 +368,10 @@ def get_lhd_maximin_points(var_lower, var_upper, sample_size, num_trials=50):
     dist_values = [np.amin(ss.distance.cdist(mat, mat)[indices])
                    for mat in lhs]
     lhd = lhs[dist_values.index(max(dist_values))]
+    if (len(integer_vars)):
+        # Expand bounds to ensure corner cases are equally selected
+        var_lower[integer_vars] -= 0.499
+        var_upper[integer_vars] += 0.499
     node_pos = lhd * (var_upper-var_lower) + var_lower
 
     return node_pos
@@ -366,7 +379,8 @@ def get_lhd_maximin_points(var_lower, var_upper, sample_size, num_trials=50):
 # -- end function
 
 
-def get_lhd_corr_points(var_lower, var_upper, sample_size, num_trials=50):
+def get_lhd_corr_points(var_lower, var_upper, integer_vars,
+                        sample_size, num_trials=50):
     """Compute a latin hypercube design with min correlation.
 
     Compute a list of points in the given box, where n is the
@@ -382,6 +396,11 @@ def get_lhd_corr_points(var_lower, var_upper, sample_size, num_trials=50):
     var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
 
+    integer_vars : 1D numpy.ndarray[int]
+        A List containing the indices of the integrality constrained
+        variables. If empty, all variables are assumed to be
+        continuous.
+
     sample_size : int
         Number of points to sample.
 
@@ -396,6 +415,8 @@ def get_lhd_corr_points(var_lower, var_upper, sample_size, num_trials=50):
     """
     assert(isinstance(var_lower, np.ndarray))
     assert(isinstance(var_upper, np.ndarray))
+    assert(np.issubdtype(var_lower.dtype, np.floating))
+    assert(np.issubdtype(var_upper.dtype, np.floating))
     assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
@@ -412,6 +433,10 @@ def get_lhd_corr_points(var_lower, var_upper, sample_size, num_trials=50):
     corr_values = [abs(np.amax(np.corrcoef(mat, rowvar = 0)[indices]))
                    for mat in lhs]
     lhd = lhs[corr_values.index(min(corr_values))]
+    if (len(integer_vars)):
+        # Expand bounds to ensure corner cases are equally selected
+        var_lower[integer_vars] -= 0.499
+        var_upper[integer_vars] += 0.499
     node_pos = lhd * (var_upper-var_lower) + var_lower
 
     return node_pos
@@ -481,7 +506,8 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars,
                                                 *categorical_info)
         var_upper = compress_categorical_bounds(var_upper,
                                                 *categorical_info)
-        integer_vars = np.array([i for i in integer_vars if i < len(var_lower)])
+        integer_vars = compress_categorical_integer_vars(integer_vars,
+                                                         *categorical_info)
 
     if (settings.init_include_midpoint):
         midpoint = (var_lower + var_upper)/2
@@ -499,9 +525,11 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars,
         elif (settings.init_strategy == 'rand_corners'):
             nodes = get_random_corners(var_lower, var_upper)
         elif (settings.init_strategy == 'lhd_maximin'):
-            nodes = get_lhd_maximin_points(var_lower, var_upper, sample_size)
+            nodes = get_lhd_maximin_points(var_lower, var_upper, integer_vars,
+                                           sample_size)
         elif (settings.init_strategy == 'lhd_corr'):
-            nodes = get_lhd_corr_points(var_lower, var_upper, sample_size)
+            nodes = get_lhd_corr_points(var_lower, var_upper, integer_vars,
+                                        sample_size)
 
         if (len(integer_vars)):
             nodes[:, integer_vars] = np.around(nodes[:, integer_vars])
@@ -510,19 +538,29 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars,
             get_min_distance(midpoint, nodes) > settings.min_dist):
             nodes = np.vstack((nodes, midpoint))
 
-        norms = la.norm(nodes, axis=1)
-        U, s, V = np.linalg.svd(nodes[norms > settings.eps_zero])
+        if (categorical_info is not None and categorical_info[2] and
+            settings.init_strategy in ['lhd_maximin', 'lhd_corr']):
+            # There are categorical variables. Unpack nodes in the new
+            # representation.
+            nodes = expand_categorical_vars(nodes, *categorical_info)
+            norms = la.norm(nodes, axis=1)
+            # Columns of categorical variables are going to be
+            # linearly dependent because categorical variables add up
+            # to 1. Therefore, exclude known linearly dependent
+            # columns from th e calculations.
+            columns = np.array([True] * nodes.shape[1])
+            for index, lower, expansion in categorical_info[2]:
+                columns[expansion[-1]] = False
+            U, s, V = np.linalg.svd(
+                nodes[norms > settings.eps_zero][:, columns])
+        else:
+            norms = la.norm(nodes, axis=1)
+            U, s, V = np.linalg.svd(nodes[norms > settings.eps_zero])
         if (min(s) > settings.eps_linear_dependence):
             dependent = False
 
     if (itercount == settings.max_random_init):
         raise RuntimeError('Exceeded number of random initializations')
-
-    if (categorical_info is not None and categorical_info[2] and
-        settings.init_strategy in ['lhd_maximin', 'lhd_corr']):
-        # There are categorical variables. Unpack nodes in the new
-        # representation.
-        return expand_categorical_vars(nodes, *categorical_info)
 
     return nodes
 
@@ -713,6 +751,54 @@ def compress_categorical_bounds(bounds, categorical, not_categorical,
             compressed[index] = var_lower
         else:
             compressed[index] = var_lower + len(expansion) - 1
+    return compressed
+# -- end function
+
+def compress_categorical_integer_vars(integer_vars, categorical,
+                                      not_categorical,
+                                      categorical_expansion):
+    """Compress integer vars vector in extended space to original space.
+    
+    Compress the vector of integer vars from unary encoding of
+    categorical variables to integer encoding of categorical
+    variables.
+
+    Parameters
+    ----------
+    
+    integer_vars : 1D numpy.ndarray[int]
+        Array of integer vars to compress.
+
+    categorical : 1D numpy.ndarray[int]
+        Array of indices of categorical variables in original space.
+
+    not_categorical : 1D numpy.ndarray[int]
+        Array of indices of not categorical variables in original space.
+
+    categorical_expansion : List[(int, float, 1D numpy.ndarray[int])]
+        Expansion of original categorical variables into binaries.
+
+    Returns
+    -------
+    1D numpy.ndarray[int]
+        Indices of integer variables in integer encoding.
+
+    """
+    assert(isinstance(integer_vars, np.ndarray))
+    assert(isinstance(categorical, np.ndarray))
+    assert(isinstance(not_categorical, np.ndarray))
+    assert(len(categorical_expansion)==len(categorical))
+    compressed = np.array(
+        [i for i in integer_vars if i < len(not_categorical)],
+        dtype=np.int_)
+    for index, var_lower, expansion in categorical_expansion:
+        # Insert index in the right place, after shifting all larger ones
+        compressed[compressed >= index] += 1
+        if (len(compressed) == 0 or index > compressed[-1]):
+            compressed = np.append(compressed, index)
+        else:
+            compressed = np.insert(
+                compressed, np.where(compressed > index)[0][0], index)
     return compressed
 # -- end function
 
@@ -1000,18 +1086,30 @@ def get_rbf_matrix(settings, n, k, node_pos):
 # -- end function
 
 
-def get_matrix_inverse(settings, Amat):
-    """Compute the inverse of a matrix.
+def get_matrix_inverse(settings, n, k, Amat, categorical_info=None):
+    """Compute the inverse of an RBF matrix.
 
-    Compute the inverse of a given matrix, zeroing out small
-    coefficients to improve sparsity.
+    Compute the inverse of a given RBF matrix, zeroing out small
+    coefficients to improve sparsity. If there are categorical
+    variables and this is the RBF matrix, the matrix may be singular
+    therefore we only invert the nonsingular part.
 
     Parameters
     ----------
     settings : :class:`rbfopt_settings.RbfoptSettings`
         Global and algorithmic settings.
+
     Amat : numpy.ndarray
         The matrix to invert.
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
 
     Returns
     -------
@@ -1022,12 +1120,31 @@ def get_matrix_inverse(settings, Amat):
     ------
     numpy.linalg.LinAlgError
         If the matrix cannot be inverted for numerical reasons.
+
     """
     assert(isinstance(settings, RbfoptSettings))
     assert(isinstance(Amat, np.ndarray))
+    p = get_size_P_matrix(settings, n)
+    assert(Amat.shape == (k+p, k+p))
 
     try:
+        if (p == n + 1 and categorical_info is not None and
+            categorical_info[2]):
+            # In this case we know some columns for categorical
+            # variables are linearly dependent. Eliminate them from
+            # the system.
+            columns = np.array([True] * Amat.shape[1])
+            for index, lower, expansion in categorical_info[2]:
+                columns[k + expansion[-1]] = False
+            Amat = Amat[:, columns][columns, :]
+
         Amatinv = np.linalg.inv(Amat)
+
+        if (p == n + 1 and categorical_info is not None and
+            categorical_info[2]):
+            new_Amatinv = np.zeros(shape=(len(columns),len(columns)))
+            new_Amatinv[np.outer(columns, columns)] = np.ravel(Amatinv)
+            Amatinv = new_Amatinv
     except np.linalg.LinAlgError as e:
         if (settings.debug):
             print('Exception raised trying to invert the RBF matrix',
@@ -1046,7 +1163,8 @@ def get_matrix_inverse(settings, Amat):
 # -- end function
 
 
-def get_rbf_coefficients(settings, n, k, Amat, node_val):
+def get_rbf_coefficients(settings, n, k, Amat, node_val,
+                         categorical_info=None):
     """Compute the coefficients of the RBF interpolant.
 
     Solve a linear system to compute the coefficients of the RBF
@@ -1070,6 +1188,14 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
     node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     Returns
     -------
     (1D numpy.ndarray[float], 1D numpy.ndarray[float])
@@ -1084,7 +1210,25 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
     assert(Amat.shape == (k+p, k+p))
     rhs = np.append(node_val, np.zeros(p))
     try:
+        if (p == n + 1 and categorical_info is not None and
+            categorical_info[2]):
+            # In this case we know some columns for categorical
+            # variables are linearly dependent. Eliminate them from
+            # the system.
+            columns = np.array([True] * Amat.shape[1])
+            for index, lower, expansion in categorical_info[2]:
+                columns[k + expansion[-1]] = False
+            Amat = Amat[:, columns][columns, :]
+            rhs = rhs[columns]
+            
+        # Get solution
         solution = np.linalg.solve(Amat, rhs)
+        # Postprocess
+        if (p == n + 1 and categorical_info is not None and
+            categorical_info[2]):
+            new_solution = np.zeros(len(columns))
+            new_solution[columns] = solution
+            solution = new_solution
     except np.linalg.LinAlgError as e:
         if (settings.debug):
             print('Exception raised in the solution of the RBF linear system',
@@ -1097,7 +1241,8 @@ def get_rbf_coefficients(settings, n, k, Amat, node_val):
 
 # -- end function
 
-def get_rbf_coefficients_underdet(settings, n, k, Amat, node_val):
+def get_rbf_coefficients_underdet(settings, n, k, Amat, node_val,
+                                  categorical_info=None):
     """Compute coefficients of RBF interpolant (underdetermined).
 
     Solve an underdetermined linear system to compute the coefficients
@@ -1121,6 +1266,14 @@ def get_rbf_coefficients_underdet(settings, n, k, Amat, node_val):
     node_val : 1D numpy.ndarray[float]
         List of values of the function at the nodes.
 
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
     Returns
     -------
     (1D numpy.ndarray[float], 1D numpy.ndarray[float])
@@ -1136,7 +1289,23 @@ def get_rbf_coefficients_underdet(settings, n, k, Amat, node_val):
     assert(Amat.shape == (k+p, k+p))
     rhs = np.append(node_val, np.zeros(p))
     try:
+        if (p == n + 1 and categorical_info is not None and
+            categorical_info[2]):
+            # In this case we know some columns for categorical
+            # variables are linearly dependent. Eliminate them from
+            # the system.
+            columns = np.array([True] * Amat.shape[1])
+            for index, lower, expansion in categorical_info[2]:
+                columns[k + expansion[-1]] = False
+            Amat = Amat[:, columns][columns, :]
+            rhs = rhs[columns]
         solution, res, rank, svd = np.linalg.lstsq(Amat, rhs, rcond=-1)
+        # Postprocess
+        if (p == n + 1 and categorical_info is not None and
+            categorical_info[2]):
+            new_solution = np.zeros(len(columns))
+            new_solution[columns] = solution
+            solution = new_solution
     except np.linalg.LinAlgError as e:
         if (settings.debug):
             print('Exception raised in the solution of the RBF linear system',

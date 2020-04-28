@@ -162,9 +162,9 @@ class TestRefinement(unittest.TestCase):
                                      msg='Point outside bounds')
                 self.assertGreaterEqual(var_upper[j], point[j],
                                      msg='Point outside bounds')
-            for j in self.integer_vars:
-                self.assertEqual(np.floor(point[j] + 0.5), int(point[j]),
-                                 msg='Point is not integer')                    
+            for j in integer_vars:
+                self.assertAlmostEqual(point[j]-int(round(point[j])), 0,
+                                       msg='Point is not integer')
     # -- end function
 
     def test_get_model_improving_point(self):

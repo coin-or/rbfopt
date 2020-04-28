@@ -68,8 +68,8 @@ class RbfoptBlackBox:
         1D numpy.ndarray[char]
             An array of length equal to dimension, specifying the type
             of each variable. Possible types are 'R' for real
-            (continuous) variables, and 'I' for integer (discrete)
-            variables.
+            (continuous) variables, 'I' for integer (discrete)
+            variables, 'C' for categorical (discrete, unordered).
         """
         pass
     # -- end function
