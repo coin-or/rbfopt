@@ -844,6 +844,9 @@ class RbfoptAlgorithm:
         # We need to update the gap
         gap = ru.compute_gap(l_settings, self.fbest +
                              self.all_node_err_bounds[self.fbest_index, 1])
+        
+        # Initialize Amatinv 
+        Amatinv = None
 
         # Main loop
         while (self.itercount - itercount_at_start < pause_after_iters and
@@ -1244,6 +1247,9 @@ class RbfoptAlgorithm:
         # We need to update the gap
         gap = ru.compute_gap(l_settings, self.fbest +
                              self.all_node_err_bounds[self.fbest_index, 1])
+
+        # Initialize Amatinv 
+        Amatinv = None
 
         # Main loop
         while (self.itercount - itercount_at_start < pause_after_iters and
