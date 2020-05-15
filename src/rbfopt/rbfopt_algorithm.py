@@ -973,11 +973,8 @@ class RbfoptAlgorithm:
                         rbf_l, rbf_h = aux.get_noisy_rbf_coefficients(
                             l_settings, n, k, Amat[:k, :k], Amat[:k, k:],
                             scaled_node_val, scaled_err_bounds, rbf_l, rbf_h)
-
-                        
-                
+                                        
                 except np.linalg.LinAlgError:
-                    print('Failed')
                     # Record statistics on failed model
                     if (self.current_step >= (self.local_search_step - 1) and
                         self.best_local_rbf_list):
