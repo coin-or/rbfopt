@@ -60,6 +60,7 @@ class RbfoptBlackBox:
         pass
     # -- end function
 
+    @abstractmethod
     def get_var_type(self):
         """Return the type of each variable.
         
