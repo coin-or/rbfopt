@@ -1073,6 +1073,11 @@ class RbfoptAlgorithm:
                     tfv[:4], Amatinv, self.fmin_index, self.current_step)
                 iteration_id = 'GlobalStep'
             # -- end if
+
+            # Due to small tolerances in the solver, it is possible
+            # that the point is slightly outside bounds. Clip it.
+            if (next_p is not None):
+                np.clip(next_p, l_lower, l_upper, out=next_p)
                                                      
             # If the optimization failed or the point is too close to
             # current nodes, discard it. Otherwise, add it to the list.
@@ -1369,6 +1374,10 @@ class RbfoptAlgorithm:
                     next_p, model_impr, ref_to_replace = res.get()
                 else:
                     next_p = res.get()
+                # Due to small tolerances in the solver, it is possible
+                # that the point is slightly outside bounds. Clip it.
+                if (next_p is not None):
+                    np.clip(next_p, l_lower, l_upper, out=next_p)
                 # Verify that we have an actual point available
                 if ((next_p is None) or 
                     (ru.get_min_distance(next_p, self.node_pos) <= 
