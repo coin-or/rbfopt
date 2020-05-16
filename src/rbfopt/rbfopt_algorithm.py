@@ -360,6 +360,10 @@ class RbfoptAlgorithm:
         self.discarded_iters = collections.deque(
             maxlen=l_settings.discarded_window_size*l_settings.num_cpus)
         self.do_init_strategy = do_init_strategy
+        # Should we solve underdetermined linear systems even when we
+        # have enough points?
+        self.solve_underdetermined = False
+
     
         # Initialize identifiers of the search steps
         self.inf_step = 0
@@ -958,7 +962,7 @@ class RbfoptAlgorithm:
                             l_settings, n, k, Amat, self.categorical_info)
 
                     # Compute RBF interpolant at current stage
-                    if (k < n+1):
+                    if (k < n+1 or self.solve_underdetermined):
                         # Underdetermined RBF
                         rbf_l, rbf_h = ru.get_rbf_coefficients_underdet(
                             l_settings, n, k, Amat, scaled_node_val,
@@ -1025,11 +1029,18 @@ class RbfoptAlgorithm:
             elif (self.current_step == self.restoration_step):
                 # Restoration
                 next_p = self.restoration_search()
-                if (next_p is None ):
-                    self.update_log('Restoration phase failed. Restart.')
-                    self.update_log('Restart')
-                    self.restart()
-                    continue
+                if (next_p is None):
+                    if (k >= n+1 and not self.solve_underdetermined):
+                        # Try underdetermined linear systems and continue
+                        self.update_log('Restoration phase failed.')
+                        self.update_log('Changing linear system solve.')
+                        self.advance_step_counter()
+                        self.solve_underdetermined = True
+                        continue
+                    else:
+                        self.update_log('Restoration phase failed. Restart.')
+                        self.restart()
+                        continue
                 k = len(self.node_pos)
                 iteration_id = 'Restoration'
             
@@ -1594,7 +1605,7 @@ class RbfoptAlgorithm:
                         l_settings, n, k, Amat, self.categorical_info)
 
                 # Compute RBF interpolant at current stage
-                if (k < n+1):
+                if (k < n+1 or self.solve_underdetermined):
                     # Underdetermined RBF
                     rbf_l, rbf_h = ru.get_rbf_coefficients_underdet(
                         l_settings, n, k, Amat, scaled_node_val,
@@ -1613,6 +1624,10 @@ class RbfoptAlgorithm:
                 rbf_coeff_settings = copy.deepcopy(l_settings)
                 
             except np.linalg.LinAlgError:
+                if (k >= n+1 and not self.solve_underdetermined):
+                    # Try underdetermined linear systems and continue
+                    self.solve_underdetermined = True
+                    continue
                 # Record statistics on failed model
                 if (self.current_step >= (self.local_search_step - 1)):
                     self.best_local_rbf_list[-1] = 'failed'
@@ -1918,6 +1933,7 @@ class RbfoptAlgorithm:
         self.num_stalled_iter = 0
         self.discarded_iters.clear()
         self.num_cons_refinement = 0
+        self.solve_underdetermined = False
         self.is_fmin_noisy = self.node_is_noisy[self.fmin_index]
         if (self.fmin < self.fbest):
             self.fbest = self.fmin
@@ -1934,9 +1950,6 @@ class RbfoptAlgorithm:
                                            np.vstack((self.node_pos[:i],
                                                       self.node_pos[(i+1):])))
             self.update_log('Initialization', self.node_is_noisy[i], val, gap)
-        #if (len(self.node_pos) < self.n + 1):
-        #    raise RuntimeError('Not enough initialization points; try ' +
-        #                       'again with do_init_strategy=True.')
     # -- end function
 
     def restoration_search(self):
@@ -1955,29 +1968,34 @@ class RbfoptAlgorithm:
         """
         restoration_done = False
         cons_restoration = 0
-        self.remove_node(len(self.node_pos) - 1, self.num_nodes_at_restart)
 
+        to_remove = len(self.node_pos) - 1
         while (not restoration_done and cons_restoration < 
-               self.l_settings.max_consecutive_restoration):
-            if (cons_restoration == 0):
-                # First, try to get the next point through something
-                # similar to a global search, using the MSRSM
-                # algorithm.
-                temp_settings = RbfoptSettings(
-                    rbf='linear', algorithm='MSRSM', 
-                    global_search_method='genetic')
-                next_p = pure_global_step(
-                    temp_settings, self.n, len(self.node_pos), self.l_lower,
-                    self.l_upper, self.integer_vars, self.categorical_info,
-                    self.node_pos, None)
+               self.l_settings.max_consecutive_restoration and
+               to_remove > self.l_settings.init_sample_fraction*(self.n+1)):
+            # Local working copy
+            if (to_remove == len(self.node_pos) - 1):
+                node_pos = self.node_pos[:to_remove, :]
+                node_val = self.node_val[:to_remove]
             else:
-                # If that does not work (unlikely), generate a random point
-                next_p = (np.random.rand(self.n) * 
-                          (self.var_upper - self.var_lower) + self.var_lower)
+                node_pos = np.vstack((self.node_pos[:to_remove, :],
+                                      self.node_pos[(to_remove+1):, :]))
+                node_val = np.concatenate((self.node_val[:to_remove],
+                                           self.node_val[(to_remove+1):]))
+            
+            # Try to get the next point through something similar to a
+            # global search, using the MSRSM algorithm.
+            temp_settings = RbfoptSettings(
+                rbf='linear', algorithm='MSRSM', 
+                global_search_method='genetic')
+            next_p = pure_global_step(
+                temp_settings, self.n, len(self.node_pos), self.l_lower,
+                self.l_upper, self.integer_vars, self.categorical_info,
+                self.node_pos, None)
 
-            node_pos = np.vstack((self.node_pos, next_p))
             ru.round_integer_vars(next_p, self.integer_vars)
-            if (ru.get_min_distance(next_p, self.node_pos) >
+            node_pos = np.vstack((node_pos, next_p))
+            if (ru.get_min_distance(next_p, node_pos) >
                 self.l_settings.min_dist):
                 # Try inverting the RBF matrix to see if
                 # nonsingularity is restored
@@ -1989,9 +2007,14 @@ class RbfoptAlgorithm:
                         Amat, self.categorical_info)
                     restoration_done = True
                 except np.linalg.LinAlgError:
+                    to_remove -= 1
                     cons_restoration += 1
             else:
+                to_remove -= 1
                 cons_restoration += 1
+
+        if restoration_done:
+            self.remove_node(to_remove, self.num_nodes_at_restart)        
         return (next_p if restoration_done else None)
     # -- end function
 

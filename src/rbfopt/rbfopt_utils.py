@@ -1308,7 +1308,8 @@ def get_rbf_coefficients_underdet(settings, n, k, Amat, node_val,
             solution = new_solution
     except np.linalg.LinAlgError as e:
         if (settings.debug):
-            print('Exception raised in the solution of the RBF linear system',
+            print('Exception raised in the solution of the ' +
+                  'underdetermined RBF linear system',
                   file=sys.stderr)
             print('Exception details:', file=sys.stderr)
             print(e, file=sys.stderr)
