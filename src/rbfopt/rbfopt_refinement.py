@@ -414,8 +414,12 @@ def get_model_improving_point(settings, n, k, var_lower, var_upper,
     # Remove the start point from the model set if necessary
     red_model_set = np.array([i for i in model_set if i != start_point_index])
     model_size = len(red_model_set)
-    # Tolerance for linearly dependent rows
-    # Determine the coefficients of the directions spanned by the model
+    if (model_size == 0):
+        # Unlikely, but after removing a point we may end up with not
+        # enough points
+        return (node_pos[start_point_index], False, start_point_index)
+    # Tolerance for linearly dependent rows Determine
+    # the coefficients of the directions spanned by the model
     A = node_pos[red_model_set] - node_pos[start_point_index]
     Q, R, P = la.qr(A.T, mode='full', pivoting=True)
     rank = min(A.shape) - np.abs(np.diag(R))[::-1].searchsorted(

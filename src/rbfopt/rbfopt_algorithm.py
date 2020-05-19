@@ -1654,6 +1654,7 @@ class RbfoptAlgorithm:
                     continue
                 # If we failed, we restart because in parallel mode
                 # many things can go wrong when deleting points
+                self.solve_underdetermined = False
                 self.update_log('Restoration phase failed. Restart.')
                 self.update_log('Restart')
                 self.restart(pool=pool)
@@ -1671,10 +1672,12 @@ class RbfoptAlgorithm:
                     (self.fmin <= node_val[self.ref_iterate_index] -
                      l_settings.eps_impr * 
                      max(1.0, abs(node_val[self.ref_iterate_index])))):
-                    # For the first refinement step iteration, some data
-                    # has to be computed
+                    # For the first refinement step iteration, some
+                    # data has to be computed; note that we use only
+                    # non-temporary points to initialize model
                     self.ref_model_set, self.ref_radius = ref.init_refinement(
-                        l_settings, n, k, node_pos, node_pos[self.fmin_index])
+                        l_settings, n, len(self.node_pos), self.node_pos,
+                        self.node_pos[self.fmin_index])
                     self.ref_iterate_index = self.fmin_index
                 try:
                     # Compute linear model for refinement
