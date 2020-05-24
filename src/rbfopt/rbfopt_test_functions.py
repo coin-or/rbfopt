@@ -1051,9 +1051,9 @@ class nvs02:
         penalty += 10*max(0, (0.0056858*x[1]*x[4] + 0.0006262*x[0]*x[3] - 
                               0.0022053*x[2]*x[4] + 85.334407) - 92)
         penalty += 10*max(0, -(0.0071317*x[1]*x[4] + 0.0029955*x[0]*x[1] +
-                               0.0021813*math.sqrt(x[2]) + 80.51249) + 90)
+                               0.0021813*np.sqrt(x[2]) + 80.51249) + 90)
         penalty += 10*max(0, (0.0071317*x[1]*x[4] + 0.0029955*x[0]*x[1] +
-                              0.0021813*math.sqrt(x[2]) + 80.51249) - 110)
+                              0.0021813*np.sqrt(x[2]) + 80.51249) - 110)
         penalty += 10*max(0, -(0.0047026*x[2]*x[4] + 0.0012547*x[0]*x[2] +
                                0.0019085*x[2]*x[3] + 9.300961) + 20) 
         penalty += 10*max(0, (0.0047026*x[2]*x[4] + 0.0012547*x[0]*x[2] +
@@ -2618,7 +2618,7 @@ class schaeffer_f7_12_2_int_cat:
         for i in range(len(x)-2):
             si = 2**i*np.sqrt((x[i]-cls.optimum_point[i])**2 +
                               (x[i+1]-cls.optimum_point[i+1])**2)
-            value += (normalizer * math.sqrt(si) * 
+            value += (normalizer * np.sqrt(si) * 
                       (fun(50*si**0.20) + 1))**2
         return value - 10
 

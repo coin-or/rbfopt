@@ -16,6 +16,7 @@ from __future__ import absolute_import
 
 import sys
 import os
+import importlib
 # We must set the threading options before numpy is loaded, otherwise
 # there might be issues when running several processes in parallel.
 os.environ['OMP_NUM_THREADS'] = '1'
@@ -79,7 +80,9 @@ def register_options(parser):
                         'function and the description of its ' +
                         'characteristics. This file should implement a ' +
                         'BlackBox class derived from ' +
-                        'rbfopt_black_box.BlackBox. ')
+                        'rbfopt_black_box.BlackBox, with name ' +
+                        'RbfoptBlackBox. Note: the directory containing ' +
+                        'it will be added to the Python path.')
     intset.add_argument('--load', '-l', action='store', dest='load_state',
                         help='File to read state to resume optimization')
     intset.add_argument('--log', '-o', action='store',
@@ -173,10 +176,9 @@ def rbfopt_cl_interface(args, black_box):
         except Exception as e:
             print('Exception raised reading file with initialization points',
                   file=output_stream)
-            print(type(e), file=output_stream)
             print(e, file=output_stream)
             output_stream.close()
-            exit()
+            raise
         alg = RbfoptAlgorithm(settings=settings, black_box=black_box,
                               init_node_pos=init_node_pos,
                               init_node_val=init_node_val)
@@ -212,17 +214,23 @@ if (__name__ == "__main__"):
         raise ValueError('The file {:s} '.format(args.black_box_file) +
                          'supposed to provide the implementation of ' +
                          'RbfoptBlackBox does not exist.')
-    if (sys.version_info[0] == 2):
-        import imp
-        bb = imp.load_source('user_bb', args.black_box_file)
-    elif (sys.version_info[0] == 3 and 3 <= sys.version_info[1] <= 4):
-        from importlib.machinery import SourceFileLoader
-        bb = SourceFileLoader('user_bb', args.black_box_file).load_module()
-    elif (sys.version_info[0] == 3 and sys.version_info[1] >= 5):
-        import importlib.util
-        spec = importlib.util.spec_from_file_location('user_bb',
-                                                      args.black_box_file)
-        bb = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(bb)
+
+    try:
+        rel_dir = os.path.dirname(args.black_box_file)
+        if (rel_dir == ''):
+            rel_dir = '.'
+        abs_dir = os.path.abspath(rel_dir)
+        # Add directory to path
+        sys.path.append(abs_dir)
+        # Import module (after removing trailing .py, if any)
+        module_name = os.path.basename(args.black_box_file)
+        if (module_name.endswith('.py')):
+            module_name = module_name[:-3]
+        bb = importlib.import_module(module_name)
+    except Exception as e:
+        print('Error while opening module with user black box',
+              file=sys.stderr)
+        print(e, file=sys.stderr)
+        raise
     # Run the interface
     rbfopt_cl_interface(vars(args), bb.RbfoptBlackBox())
