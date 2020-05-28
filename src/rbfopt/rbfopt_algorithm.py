@@ -258,15 +258,13 @@ class RbfoptAlgorithm:
         self.bb = black_box
         dimension = black_box.get_dimension()
         assert(dimension >= 1)
-        var_lower = black_box.get_var_lower()
-        var_upper = black_box.get_var_upper()
-        var_type = black_box.get_var_type()
+        # We make sure these vectors are Numpy arrays
+        var_lower = np.array(black_box.get_var_lower(), dtype=np.float_)
+        var_upper = np.array(black_box.get_var_upper(), dtype=np.float_)
+        var_type = np.array(black_box.get_var_type())
         assert(len(var_lower) == dimension)
         assert(len(var_upper) == dimension)
         assert(len(var_type) == dimension)
-        # We make sure these vectors are Numpy arrays
-        var_lower = np.array(var_lower, dtype=np.float_)
-        var_upper = np.array(var_upper, dtype=np.float_)
         integer_vars = np.array([i for i in range(dimension)
                                  if var_type[i].upper() != 'R'],
                                 dtype=np.int_)
@@ -287,6 +285,10 @@ class RbfoptAlgorithm:
             temp_array[integer_vars] = True
             integer_vars = np.where(temp_array[unfixed_vars] == True)[0]
             dimension -= len(fixed_vars)
+
+        # Categorical 0-1 variables should be treated as integer
+        var_type[(np.char.upper(var_type) == 'C') *
+                 (var_upper - var_lower == 1)] = 'I'
         
         # Expand categorical variable representation
         categorical = np.where(np.char.upper(var_type) == 'C')[0]
@@ -304,10 +306,10 @@ class RbfoptAlgorithm:
             dimension = current_vars
             var_lower = np.array([var_lower[i] for i in not_categorical] +
                                  [0] * (current_vars - len(not_categorical)),
-                                 dtype=np.int_)
+                                 dtype=np.float_)
             var_upper = np.array([var_upper[i] for i in not_categorical] +
                                  [1] * (current_vars - len(not_categorical)),
-                                 dtype=np.int_)
+                                 dtype=np.float_)
             integer_vars = np.array(
                 [i for i in range(len(not_categorical))
                  if var_type[not_categorical[i]].upper() == 'I'] +

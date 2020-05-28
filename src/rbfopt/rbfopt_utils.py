@@ -498,7 +498,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars,
 
     sample_size = int(max(2, round((len(var_lower) + 1) *
                                    settings.init_sample_fraction)))
-    
+
     if (categorical_info is not None and categorical_info[2] and
         settings.init_strategy in ['lhd_maximin', 'lhd_corr']):
         # Map bounds and integer variables
