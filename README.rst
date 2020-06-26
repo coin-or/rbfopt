@@ -54,8 +54,7 @@ Contents of this directory:
     * rbfopt_degreeX_models.py: PyOmo models for the auxiliary
       problems necessary for RBF functions with minimum required
       polynomial degree X.
-    * rbfopt_refinement: Routines for trust-region based refinement
-      phase.
+    * rbfopt_refinement: Routines for refinement phase.
     * rbfopt_settings.py: Global and algorithmic settings.
     * rbfopt_test_functions.py: Mathematical test functions.
     * rbfopt_user_black_box.py: A black-box class constructed from
