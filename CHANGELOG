@@ -1,3 +1,15 @@
+2020-06-26  Giacomo Nannicini <nannicini@us.ibm.com>
+	Version 4.2.0 released.
+	* Added:
+	Support for categorical variables (variable type 'C', in addition
+	to 'R' for real and 'I' for integer). These variables are treated
+	differently from integer variables, but they still need to have
+	lower and upper bounds; e.g., a categorical variable with bounds
+	[0, 2] can take on 3 possible values: 0, 1, 2.
+	* Changed:
+	Renamed parameter names starting with 'tr' to 'ref', for better
+	consistency with the literature.
+
 2019-04-08  Giacomo Nannicini  <nannicini@us.ibm.com>
 	Version 4.1.1 released.
 	* rbfopt_utils.py (initialize_nodes): fixed bug with sample_size

@@ -36,8 +36,8 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
     var_type : 1D numpy.ndarray[char]
         An array of length equal to dimension, specifying the type of
         each variable. Possible types are 'R' for real (continuous)
-        variables, 'I' for integer (discrete) variables, 'C' for
-        categorical (discrete, unordered) variables.
+        variables, 'I' for integer (discrete, ordered) variables, 'C'
+        for categorical (discrete, unordered) variables.
 
     obj_funct : Callable[1D numpy.ndarray[float]]
         The function to optimize. Must take a numpy array as argument,
@@ -117,7 +117,7 @@ class RbfoptUserBlackBox(bb.RbfoptBlackBox):
         1D numpy.ndarray[char]
             An array of length equal to dimension, specifying the type
             of each variable. Possible types are 'R' for real
-            (continuous) variables, 'I' for integer (discrete)
+            (continuous) variables, 'I' for integer (discrete, ordered)
             variables, 'C' for categorical (discrete, unordered)
             variables.
         """
