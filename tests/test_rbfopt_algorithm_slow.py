@@ -485,7 +485,7 @@ class TestMSRSMParallel(unittest.TestCase):
     """Test MSRSM algorithm in parallel on a small set of problems."""
 
     rand_seeds = [512319876, 231974198, 908652418]
-    eps_opt = 0.05
+    eps_opt = 0.2
 
     def test_msrsm_parallel_ex8_1_4(self):
         """Check solution of ex8_1_4 with the MSRSM algorithm, sampling."""
