@@ -566,10 +566,10 @@ class TestUtils(unittest.TestCase):
         var_upper = np.array([i for i in range(5)] + [i + 10 for i in range(5)])
         point = np.array([i for i in range(5)] + [i + 2*i for i in range(5)])
         # Test what happend when lower and upper bounds coincide
-        transf_point = ru.transform_domain(settings, var_lower, 
-                                           var_upper, point)
+        transf_point = ru.transform_domain(settings, var_lower, var_upper,
+                                           np.array([]), point)
         orig_point = ru.transform_domain(settings, var_lower, var_upper,
-                                         transf_point, True)
+                                         np.array([]), transf_point, True)
         for i in range(10):
             msg='Exceeding lower bound on affine domain scaling'
             self.assertLessEqual(0.0, transf_point[i], msg=msg)
@@ -579,15 +579,23 @@ class TestUtils(unittest.TestCase):
             self.assertAlmostEqual(point[i], orig_point[i], 12, msg=msg)
         # Check that 'off' scaling does not do anything
         settings.domain_scaling = 'off'
-        transf_point = ru.transform_domain(settings, var_lower, 
-                                           var_upper, point)
+        transf_point = ru.transform_domain(settings, var_lower, var_upper,
+                                           np.array([]), point)
         for i in range(10):
             msg='Transformed point with \'off\' does not match original'
+            self.assertEqual(point[i], transf_point[i], msg=msg)
+        # Check that with integer variables, we do not do anything
+        settings.domain_scaling = 'affine'
+        transf_point = ru.transform_domain(settings, var_lower, var_upper,
+                                           np.array([0]), point)
+        for i in range(10):
+            msg=('Transformed integer point with \'affine\' does not ' +
+                 'match original')
             self.assertEqual(point[i], transf_point[i], msg=msg)
         # Check that unimplemented strategies are rejected
         settings.domain_scaling = 'test'
         self.assertRaises(ValueError, ru.transform_domain, settings, 
-                          var_lower, var_upper, point)
+                          var_lower, var_upper, np.array([]), point)
     # -- end function
 
     def test_transform_domain_bounds(self):

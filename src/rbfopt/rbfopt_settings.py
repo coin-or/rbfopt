@@ -588,7 +588,7 @@ class RbfoptSettings:
         assert(isinstance(integer_vars, np.ndarray))
         assert(dimension == len(var_lower))
         assert(dimension == len(var_upper))
-        assert((not integer_vars.any()) or (np.max(integer_vars) < dimension))
+        assert((len(integer_vars)==0) or (np.max(integer_vars) < dimension))
 
         l_settings = copy.deepcopy(self)
 
@@ -602,7 +602,7 @@ class RbfoptSettings:
             l_settings.dynamism_clipping = 'median'
                 
         if (l_settings.domain_scaling == 'auto'):
-            if (integer_vars.any()):
+            if (len(integer_vars)):
                 l_settings.domain_scaling = 'off'
             else:
                 # Compute the length of the domain of each variable

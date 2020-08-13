@@ -368,11 +368,12 @@ def get_lhd_maximin_points(var_lower, var_upper, integer_vars,
     dist_values = [np.amin(ss.distance.cdist(mat, mat)[indices])
                    for mat in lhs]
     lhd = lhs[dist_values.index(max(dist_values))]
+    bound_shift = np.zeros(n)
     if (len(integer_vars)):
         # Expand bounds to ensure corner cases are equally selected
-        var_lower[integer_vars] -= 0.499
-        var_upper[integer_vars] += 0.499
-    node_pos = lhd * (var_upper-var_lower) + var_lower
+        bound_shift[integer_vars] = 0.499
+    node_pos = (lhd * (2*bound_shift + var_upper - var_lower) +
+                var_lower - bound_shift)
 
     return node_pos
 
@@ -433,11 +434,12 @@ def get_lhd_corr_points(var_lower, var_upper, integer_vars,
     corr_values = [abs(np.amax(np.corrcoef(mat, rowvar = 0)[indices]))
                    for mat in lhs]
     lhd = lhs[corr_values.index(min(corr_values))]
+    bound_shift = np.zeros(n)
     if (len(integer_vars)):
         # Expand bounds to ensure corner cases are equally selected
-        var_lower[integer_vars] -= 0.499
-        var_upper[integer_vars] += 0.499
-    node_pos = lhd * (var_upper-var_lower) + var_lower
+        bound_shift[integer_vars] = 0.499
+    node_pos = (lhd * (2*bound_shift + var_upper - var_lower) +
+                var_lower - bound_shift)
 
     return node_pos
 
@@ -1592,7 +1594,8 @@ def transform_function_values(settings, node_val, fmin, fmax,
 # -- end function
 
 
-def transform_domain(settings, var_lower, var_upper, point, reverse=False):
+def transform_domain(settings, var_lower, var_upper, integer_vars,
+                     point, reverse=False):
     """Rescale the domain.
 
     Rescale the function domain according to the chosen strategy.
@@ -1607,6 +1610,11 @@ def transform_domain(settings, var_lower, var_upper, point, reverse=False):
 
     var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
+
+    integer_vars : 1D numpy.ndarray[int]
+        A List containing the indices of the integrality constrained
+        variables. If empty, all variables are assumed to be
+        continuous.
 
     point : 1D numpy.ndarray[float]
         Point in the domain to be rescaled.
@@ -1632,7 +1640,7 @@ def transform_domain(settings, var_lower, var_upper, point, reverse=False):
     assert(len(var_lower) == len(var_upper))
     assert(len(var_lower) == len(point))
 
-    if (settings.domain_scaling == 'off'):
+    if (settings.domain_scaling == 'off' or len(integer_vars)):
         # Make a copy because the caller may assume so
         return point.copy()
     elif (settings.domain_scaling == 'affine'):
@@ -1651,8 +1659,8 @@ def transform_domain(settings, var_lower, var_upper, point, reverse=False):
 # -- end function
 
 
-def bulk_transform_domain(settings, var_lower, var_upper, points, 
-                          reverse=False):
+def bulk_transform_domain(settings, var_lower, var_upper, integer_vars,
+                          points, reverse=False):
     """Rescale the domain.
 
     Rescale the function domain according to the chosen strategy.
@@ -1667,6 +1675,11 @@ def bulk_transform_domain(settings, var_lower, var_upper, points,
 
     var_upper : 1D numpy.ndarray[float]
         List of upper bounds of the variables.
+
+    integer_vars : 1D numpy.ndarray[int]
+        A List containing the indices of the integrality constrained
+        variables. If empty, all variables are assumed to be
+        continuous.
 
     points : 2D numpy.ndarray[float]
         Point in the domain to be rescaled.
@@ -1692,7 +1705,7 @@ def bulk_transform_domain(settings, var_lower, var_upper, points,
     assert(len(var_lower) == len(var_upper))
     assert(len(var_lower) == len(points[0]))
 
-    if (settings.domain_scaling == 'off'):
+    if (settings.domain_scaling == 'off' or len(integer_vars)):
         # Make a copy because the caller may assume so
         return points.copy()
     elif (settings.domain_scaling == 'affine'):

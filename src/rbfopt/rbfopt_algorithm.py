@@ -1100,8 +1100,9 @@ class RbfoptAlgorithm:
                 self.update_log('Discarded')
             else:
                 # Transform back to original space if necessary
-                next_p_orig = ru.transform_domain(l_settings, var_lower,
-                                                  var_upper, next_p, True)
+                next_p_orig = ru.transform_domain(
+                    l_settings, var_lower, var_upper, integer_vars,
+                    next_p, True)
                 # Evaluate the new point, in accurate mode or noisy
                 # mode. If we performed a restart, we also check if the
                 # same node was evaluated before the restart happened,
@@ -1289,8 +1290,9 @@ class RbfoptAlgorithm:
                     l_settings.min_dist):
                     continue
                 # Transform back to original space if necessary
-                next_p_orig = ru.transform_domain(l_settings, var_lower,
-                                                  var_upper, next_p, True)
+                next_p_orig = ru.transform_domain(
+                    l_settings, var_lower, var_upper, integer_vars,
+                    next_p, True)
                 if (node_is_noisy and
                     self.require_accurate_evaluation(next_val + err_l)):
                     # Evaluate again
@@ -1406,7 +1408,8 @@ class RbfoptAlgorithm:
                 else:
                     # Transform back to original space if necessary
                     next_p_orig = ru.transform_domain(
-                        l_settings, var_lower, var_upper, next_p, True)
+                        l_settings, var_lower, var_upper, integer_vars,
+                        next_p, True)
                     # If we performed a restart, we also check if
                     # the same node was evaluated before the
                     # restart happened, to make sure we do not
@@ -1447,7 +1450,7 @@ class RbfoptAlgorithm:
                                 ([self.bb, next_p_orig, self.categorical_info,
                                   self.fixed_vars], ))
                             self.noisy_evalcount += 1
-                        else: 
+                        else:
                             new_res = pool.apply_async(
                                 objfun,  
                                 ([self.bb, next_p_orig, self.categorical_info,
@@ -1746,8 +1749,9 @@ class RbfoptAlgorithm:
             next_val = res.get()
             min_dist = ru.get_min_distance(next_p, self.node_pos)
             # Transform back to original space if necessary
-            next_p_orig = ru.transform_domain(l_settings, var_lower,
-                                              var_upper, next_p, True)
+            next_p_orig = ru.transform_domain(
+                l_settings, var_lower, var_upper, integer_vars,
+                next_p, True)
             # Add to the lists.
             if (node_is_noisy):
                 self.add_noisy_node(next_p, next_p_orig, next_val,
@@ -1922,8 +1926,9 @@ class RbfoptAlgorithm:
                                           node_is_noisy)
 
         # Rescale the domain of the function
-        node_pos = ru.bulk_transform_domain(self.l_settings, self.var_lower,
-                                            self.var_upper, node_pos)
+        node_pos = ru.bulk_transform_domain(
+            self.l_settings, self.var_lower, self.var_upper,
+            self.integer_vars, node_pos)
         # Update references
         self.node_pos, self.node_val = node_pos, node_val
         self.node_is_noisy = node_is_noisy
@@ -2597,6 +2602,7 @@ def refinement_step(settings, n, k, var_lower, var_upper,
             model_impr += model_impr_adj
         if (grad_norm <= settings.ref_min_grad_norm):
             return None, model_impr, to_replace
+
     return point, model_impr, to_replace
 # -- end function
 
