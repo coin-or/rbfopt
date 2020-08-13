@@ -1,3 +1,13 @@
+2020-08-13  Giacomo Nannicini <nannicini@us.ibm.com>
+	Version 4.2.1 released.
+	* rbfopt_settings.py (set_auto_parameters): fixed bug that turned
+	on affine scaling on certain conditions.
+	* rbfopt_utils.py (get_lhd_maximin_points, get_lhd_corr_points):
+	fixed bug that modified bounds on integer variables.
+	* Changed:
+	rbfopt_utils.transform_domain() functions now require list of
+	integer variables as one of the arguments.
+	
 2020-06-26  Giacomo Nannicini <nannicini@us.ibm.com>
 	Version 4.2.0 released.
 	* Added:
