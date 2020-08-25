@@ -1991,7 +1991,7 @@ def get_best_rbf_model(settings, n, k, node_pos, node_val,
     # following condition is not met.
     assert(k > n + 2)
 
-    best_loo_error = float('inf')
+    best_loo_error = np.inf
     best_model = settings.rbf
     best_gamma = settings.rbf_shape_parameter
     original_rbf_type = settings.rbf

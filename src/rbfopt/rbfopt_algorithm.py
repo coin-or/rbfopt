@@ -440,8 +440,16 @@ class RbfoptAlgorithm:
         
         # Refinement region information
         self.ref_model_set = np.array([])
-        self.ref_radius = float('inf')
+        self.ref_radius = np.inf
         self.ref_iterate_index = None
+
+        # Number of points in search space: if it is finite, used to
+        # ensure we do not loop forever
+        if (len(integer_vars) < dimension):
+            self.search_space_size = np.inf
+        else:
+            self.search_space_size = np.prod(var_upper.astype(np.float_) -
+                                             var_lower + 1)
 
         # Set default output stream
         self.output_stream = sys.stdout
@@ -857,7 +865,8 @@ class RbfoptAlgorithm:
         # Main loop
         while (self.itercount - itercount_at_start < pause_after_iters and
                self.itercount < l_settings.max_iterations and
-               self.evalcount < l_settings.max_evaluations and
+               self.evalcount < l_settings.max_evaluations and 
+               self.evalcount < self.search_space_size and
                self.cyclecount < l_settings.max_cycles and
                time.time() - start_time < l_settings.max_clock_time and
                gap > l_settings.eps_opt):
@@ -1271,6 +1280,7 @@ class RbfoptAlgorithm:
         while (self.itercount - itercount_at_start < pause_after_iters and
                self.itercount < l_settings.max_iterations and
                self.evalcount < l_settings.max_evaluations and
+               self.evalcount < self.search_space_size and
                self.cyclecount < l_settings.max_cycles and
                time.time() - start_time < l_settings.max_clock_time and
                gap > l_settings.eps_opt):
@@ -2493,8 +2503,8 @@ def local_step(settings, n, k, var_lower, var_upper, integer_vars,
             else:
                 # If yes, we will simply reevaluate the existing point
                 # (if it can be reevaluated).
-                n_bump = (float('inf') if node_is_noisy[ind] else
-                          float('-inf'))
+                n_bump = (np.inf if node_is_noisy[ind] else
+                          -np.inf)
             if (n_bump > bump):
                 # In this case we want to put the new point at the
                 # same location as one of the old points.

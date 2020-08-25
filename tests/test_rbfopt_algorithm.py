@@ -382,6 +382,44 @@ class TestFixedVariables(unittest.TestCase):
     # -- end function
 # -- end class
 
+
+class TestSmallSearchSpace(unittest.TestCase):
+    """Test a problem with small search space."""
+    rand_seeds = [512319876, 231974198, 908652418]
+
+    def test_prob03_fixed(self):
+        """Check solution of prob03 with fixed variables."""
+        for seed in self.rand_seeds:
+            bb = tf.TestBlackBox('prob03')
+            optimum = bb._function.optimum_value
+            eps_opt = 0.0001
+            print()
+            print('Solving prob03 with random seed ' +
+                  '{:d}'.format(seed))
+            settings = RbfoptSettings(algorithm='MSRSM',
+                                      target_objval=optimum,
+                                      eps_opt=eps_opt,
+                                      max_iterations=200,
+                                      max_evaluations=300,
+                                      rand_seed=seed)
+            alg = ra.RbfoptAlgorithm(settings, bb)
+            res = alg.optimize()
+            msg = 'Did not find global optimum in prob03'
+            target = optimum + (abs(optimum)*eps_opt if
+                                abs(optimum) > settings.eps_zero
+                                else eps_opt)
+            self.assertLessEqual(res[0], target, msg=msg)
+            msg = 'Used more evaluations than necessary in prob03'
+            self.assertLessEqual(
+                res[3], np.prod(bb.get_var_upper() - bb.get_var_lower() + 1),
+                msg=msg)
+            msg = 'Used too many iterations in prob03'
+            self.assertLessEqual(
+                res[2], 2*np.prod(bb.get_var_upper() - bb.get_var_lower() + 1),
+                msg=msg)            
+    # -- end function
+
+
 class TestInitPoints(unittest.TestCase):
     """Test RbfoptAlgorithms when providing initial points."""
 
