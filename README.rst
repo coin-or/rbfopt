@@ -347,8 +347,9 @@ ReadTheDocs for the `latest
 Citing RBFOpt
 =============
 
-If you use RBFOpt in one of your projects or papers, it would be great
-if you could cite the following paper:
+If you use RBFOpt in one of your projects or papers, please cite the
+following papers (this is the only way in which the authors get
+credit):
 
 * A. Costa and G. Nannicini. RBFOpt: an open-source library for
   black-box optimization with costly function
@@ -357,24 +358,22 @@ if you could cite the following paper:
   Online paper 4538
   <http://www.optimization-online.org/DB_HTML/2014/09/4538.html>`)
 
-The paper above describes version 1.0 of RBFOpt. Some of the
-improvements introduced later are described in the following papers.
+* G. Nannicini. On the implementation of a global optimization method
+  for mixed-variable problems. ArXiv 2009.02183 (download link: `arXiv
+  <https://arxiv.org/abs/2009.02183>`)
 
-* A. Fokoue, G. Diaz, G. Nannicini, H. Samulowitz. An effective
-  algorithm for hyperparameter optimization of neural networks. IBM
-  Journal of Research and Development, 61(4-5), 2017.
-
-* A. Costa, E. Di Buccio, M. Melucci, G. Nannicini. Efficient
-  parameter estimation for information retrieval using black-box
-  optimization. IEEE Transactions on Knowledge and Data Engineering,
-  30(7):1240-1253, 2018.
 
 =======
 Support
 =======
 
-The best place to ask question is the mailing list:
+If you believe there is a bug or an issue, please open an issue on
+GitHub.  If you have a general question, the best place to ask is the
+mailing list:
 
 rbfopt@list.coin-or.org
 
 `Subscription page <http://list.coin-or.org/mailman/listinfo/rbfopt>`
+
+We eventually plan to switch all discussions to GitHub discussions,
+when available.
