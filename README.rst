@@ -368,12 +368,5 @@ Support
 =======
 
 If you believe there is a bug or an issue, please open an issue on
-GitHub.  If you have a general question, the best place to ask is the
-mailing list:
-
-rbfopt@list.coin-or.org
-
-`Subscription page <http://list.coin-or.org/mailman/listinfo/rbfopt>`
-
-We eventually plan to switch all discussions to GitHub discussions,
-when available.
+GitHub.  If you have a general question, please use GitHub's
+"Discussions" feature (the tab can be opened at the top of the page).
