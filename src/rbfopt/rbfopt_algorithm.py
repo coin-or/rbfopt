@@ -289,7 +289,7 @@ class RbfoptAlgorithm:
         # Categorical 0-1 variables should be treated as integer
         var_type[(np.char.upper(var_type) == 'C') *
                  (var_upper - var_lower == 1)] = 'I'
-        
+
         # Expand categorical variable representation
         categorical = np.where(np.char.upper(var_type) == 'C')[0]
         not_categorical = np.where(np.char.upper(var_type) != 'C')[0]
@@ -1097,7 +1097,7 @@ class RbfoptAlgorithm:
             # that the point is slightly outside bounds. Clip it.
             if (next_p is not None):
                 np.clip(next_p, l_lower, l_upper, out=next_p)
-                                                     
+
             # If the optimization failed or the point is too close to
             # current nodes, discard it. Otherwise, add it to the list.
             if ((next_p is None) or 
@@ -2769,12 +2769,13 @@ def global_step(settings, n, k, var_lower, var_upper, integer_vars,
     else:
         # Otherwise, use original bounds
         local_varl = var_lower
-        local_varu = var_upper
+        local_varu = var_upper        
 
     next_p = aux.global_search(settings, n, k, local_varl, local_varu,
                                integer_vars, categorical_info, node_pos,
                                rbf_lambda, rbf_h, Amatinv, target_val,
                                dist_weight, scaled_fmin, scaled_fmax)
+
     return next_p
 # -- end function
 

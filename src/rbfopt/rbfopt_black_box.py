@@ -70,7 +70,13 @@ class RbfoptBlackBox:
             An array of length equal to dimension, specifying the type
             of each variable. Possible types are 'R' for real
             (continuous) variables, 'I' for integer (discrete)
-            variables, 'C' for categorical (discrete, unordered).
+            variables, 'C' for categorical (discrete,
+            unordered). Bounds for categorical variables are
+            interpreted the same way as for integer variables, but
+            categorical variables are handled differently by the
+            optimization algorithm; e.g., a categorical variable with
+            bounds [2, 4] can take the value 2, 3 or 4.
+
         """
         pass
     # -- end function

@@ -1086,12 +1086,12 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars,
                                                         *categorical_info)
         var_upper_comp = ru.compress_categorical_bounds(var_upper,
                                                         *categorical_info)
+        integer_vars_comp = ru.compress_categorical_integer_vars(
+            integer_vars, *categorical_info)
+        
         n_comp = len(categorical) + len(not_categorical)
         is_integer = np.zeros(len(var_lower_comp), dtype=bool)
-        for index in integer_vars:
-            if (index < len(not_categorical)):
-                is_integer[index] = True
-        for index, lower, unary_expansion in expansion:
+        for index in integer_vars_comp:
             is_integer[index] = True
 
     else:
@@ -1165,11 +1165,11 @@ def ga_optimize(settings, n, var_lower, var_upper, integer_vars,
         # Generate new population
         population = np.vstack((best_individuals, offspring,
                                 new_individuals, best_mutated))
-    # dump.close()
     # Determine ranking of last generation.
     # Compute fitness score to determine remaining individuals
     fitness_val = objfun(population)
     rank = np.argsort(fitness_val)
+
     # Return best individual
     return population[rank[0]]
 

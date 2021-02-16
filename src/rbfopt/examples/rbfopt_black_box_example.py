@@ -46,7 +46,11 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
         An array of length equal to dimension, specifying the type of
         each variable. Possible types are 'R' for real (continuous)
         variables, 'I' for integer (discrete, ordered) variables, 'C'
-        for categorical (discrete, unordered) variables.
+        for categorical (discrete, unordered) variables. Bounds for
+        categorical variables are interpreted the same way as for
+        integer variables, but categorical variables are handled
+        differently by the optimization algorithm; e.g., a categorical
+        variable with bounds [2, 4] can take the value 2, 3 or 4.
 
     integer_vars : 1D numpy.ndarray[int]
         A list of indices of the variables that must assume integer
@@ -124,9 +128,14 @@ class RbfoptBlackBox(rbfopt.RbfoptBlackBox):
         1D numpy.ndarray[char]
             An array of length equal to dimension, specifying the type
             of each variable. Possible types are 'R' for real
-            (continuous) variables, 'I' for integer (discrete, ordered)
-            variables, 'C' for categorical (discrete, unordered)
-            variables.
+            (continuous) variables, 'I' for integer (discrete)
+            variables, 'C' for categorical (discrete,
+            unordered). Bounds for categorical variables are
+            interpreted the same way as for integer variables, but
+            categorical variables are handled differently by the
+            optimization algorithm; e.g., a categorical variable with
+            bounds [2, 4] can take the value 2, 3 or 4.
+
         """
         return self.var_type
     # -- end function

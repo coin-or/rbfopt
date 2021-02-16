@@ -1,3 +1,9 @@
+2021-02-16  Giacomo Nannicini <nannicini@us.ibm.com>
+	Version 4.2.2 released.
+	* rbfopt_aux_problems.py (ga_optimize): fixed bug that ignored
+	integrality restrictions in some cases where categorical variables
+	were at the end of array of variables.
+
 2020-08-13  Giacomo Nannicini <nannicini@us.ibm.com>
 	Version 4.2.1 released.
 	* rbfopt_settings.py (set_auto_parameters): fixed bug that turned

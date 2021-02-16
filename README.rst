@@ -359,8 +359,9 @@ credit):
   <http://www.optimization-online.org/DB_HTML/2014/09/4538.html>`)
 
 * G. Nannicini. On the implementation of a global optimization method
-  for mixed-variable problems. ArXiv 2009.02183 (download link: `arXiv
-  <https://arxiv.org/abs/2009.02183>`)
+  for mixed-variable problems. Open Journal of Mathematical
+  Optimization, 2(1), 2021. (Download link: `OJMO
+  <https://ojmo.centre-mersenne.org/articles/OJMO_2021__2__A1_0/>`)
 
 
 =======

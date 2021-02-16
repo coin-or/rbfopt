@@ -87,7 +87,7 @@ master_doc = 'index'
 
 # General information about the project.
 project = u'RBFOpt'
-copyright = u'2015-2019, IBM Corporation and Singapore University of Technology'
+copyright = u'2015-2021, IBM Corporation and Singapore University of Technology and Design'
 author = u'Giacomo Nannicini'
 
 # The version info for the project you're documenting, acts as replacement for
