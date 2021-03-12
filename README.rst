@@ -132,7 +132,7 @@ build the documentation, you also need numpydoc::
   pip install numpydoc
 
 On Windows systems, we recommend `WinPython
-<http://winpython.sourceforge.net/>`, which comes with NumPy, SciPy
+<http://winpython.sourceforge.net/>`_, which comes with NumPy, SciPy
 and pip already installed. After installing WinPython, it is typically
 necessary to update the PATH environment variable. The above command
 using pip to install missing libraries has been successfully tested on
@@ -152,8 +152,8 @@ ask for help on GitHub or on the mailing list, see below.
 
 To obtain pre-compiled binaries for Bonmin and Ipopt for several
 platforms, we suggest having a look at the AMPL `opensource solvers
-<http://ampl.com/products/solvers/open-source/>` (also `here
-<http://ampl.com/dl/open/>`) for static binaries. **Note:** These
+<http://ampl.com/products/solvers/open-source/>`_ (also `here
+<http://ampl.com/dl/open/>`_) for static binaries. **Note:** These
 binaries might be outdated: better performance can sometimes be
 obtained compiling Bonmin from scratch (Bonmin contains Ipopt as
 well), especially if compiling with a different solver for linear
@@ -340,8 +340,8 @@ version) can be built using the command::
 An online version of the documentation for the latest master branch of
 the code, and for the latest stable release, are available on
 ReadTheDocs for the `latest
-<http://rbfopt.readthedocs.org/en/latest/>` and `stable
-<http://rbfopt.readthedocs.org/en/stable/>` version.
+<http://rbfopt.readthedocs.org/en/latest/>`_ and `stable
+<http://rbfopt.readthedocs.org/en/stable/>`_ version.
 
 =============
 Citing RBFOpt
