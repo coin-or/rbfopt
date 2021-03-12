@@ -356,13 +356,29 @@ credit):
   evaluations. Mathematical Programming Computation,
   10(4):597–629, 2018. (The paper can be downloaded as: `Optimization
   Online paper 4538
-  <http://www.optimization-online.org/DB_HTML/2014/09/4538.html>`)
+  <http://www.optimization-online.org/DB_HTML/2014/09/4538.html>`_)
 
 * G. Nannicini. On the implementation of a global optimization method
   for mixed-variable problems. Open Journal of Mathematical
   Optimization, 2(1), 2021. (Download link: `OJMO
-  <https://ojmo.centre-mersenne.org/articles/OJMO_2021__2__A1_0/>`)
+  <https://ojmo.centre-mersenne.org/articles/OJMO_2021__2__A1_0/>`_)
 
+======================================
+RBFOpt for hyperparameter optimization
+======================================
+
+RBFOpt is used in `IBM Watson Studio AutoAI
+<https://www.ibm.com/cloud/watson-studio/autoai>`_. For a discussion
+on the application of RBFOpt to hyperparameter optimization in machine
+learning, besides the aforementioned paper published in `OJMO
+<https://ojmo.centre-mersenne.org/articles/OJMO_2021__2__A1_0/>`_, see
+the paper:
+
+* G. I. Diaz, A. Fokoue-Nkoutche, G. Nannicini and H. Samulowitz. An
+  effective algorithm for hyperparameter optimization of neural
+  networks. IBM Journal of Research and Development 61, no. 4/5
+  (2017): 9-1. (Download link: `IBM Journal of R&D
+  <https://ieeexplore.ieee.org/document/8030298>`_)
 
 =======
 Support
