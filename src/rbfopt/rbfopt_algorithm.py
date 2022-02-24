@@ -394,7 +394,7 @@ class RbfoptAlgorithm:
 
         # Save initial nodes if given
         if (init_node_pos is None):
-            self.init_node_pos = np.array([])
+            self.init_node_pos = np.empty((0, dimension))
         else:
             self.init_node_pos = ru.expand_categorical_vars(
                 np.atleast_2d(np.array(init_node_pos)),
@@ -402,17 +402,19 @@ class RbfoptAlgorithm:
             for point in self.init_node_pos:
                 ru.round_integer_vars(point, self.integer_vars)
         if (init_node_val is None):
-            self.init_node_val = np.array([])
+            self.init_node_val = np.empty((0, dimension))
         else:
             self.init_node_val = np.array(init_node_val)
         # Initialize global lists
-        self.all_node_pos, self.all_node_val = np.array([]), np.array([])
-        self.node_pos, self.node_val = np.array([]), np.array([])
+        self.all_node_pos = np.empty((0, dimension))
+        self.all_node_val = np.array([])
+        self.node_pos, self.node_val = np.empty((0, dimension)), np.array([])
         # Store if each function evaluation is noisy or accurate
-        self.node_is_noisy, self.all_node_is_noisy = np.array([]), np.array([])
+        self.node_is_noisy = np.array([], dtype=bool)
+        self.all_node_is_noisy = np.array([], dtype=bool)
         # Error bounds
-        self.node_err_bounds = np.array([])
-        self.all_node_err_bounds = np.array([])
+        self.node_err_bounds = np.empty((0, 2))
+        self.all_node_err_bounds = np.empty((0, 2))
         # We need to remember the index of the first node in all_node_pos
         # after every restart
         self.num_nodes_at_restart = 0
@@ -616,22 +618,14 @@ class RbfoptAlgorithm:
         value : float
             Objective function value of the node
         """
-        if not self.node_pos.size:
-            self.node_pos = point.copy()
-            self.node_err_bounds = np.array([[0, 0]])
-        else:
-            self.node_pos = np.vstack((self.node_pos, point))
-            self.node_err_bounds = np.vstack((self.node_err_bounds,
-                                              np.array([[0, 0]])))
+        self.node_pos = np.vstack((self.node_pos, point))
+        self.node_err_bounds = np.vstack((self.node_err_bounds,
+                                          np.array([[0, 0]])))
         self.node_val = np.append(self.node_val, value)
         self.node_is_noisy = np.append(self.node_is_noisy, False)
-        if not self.all_node_pos.size:
-            self.all_node_pos = orig_point.copy()
-            self.all_node_err_bounds = np.array([[0, 0]])
-        else:
-            self.all_node_pos = np.vstack((self.all_node_pos, orig_point))
-            self.all_node_err_bounds = np.vstack((self.all_node_err_bounds,
-                                                  np.array([[0, 0]])))
+        self.all_node_pos = np.vstack((self.all_node_pos, orig_point))
+        self.all_node_err_bounds = np.vstack((self.all_node_err_bounds,
+                                              np.array([[0, 0]])))
         self.all_node_val = np.append(self.all_node_val, value)
         self.all_node_is_noisy = np.append(self.all_node_is_noisy, False)
 
@@ -672,22 +666,14 @@ class RbfoptAlgorithm:
             Upper variation for the error interval of the node
 
         """
-        if not self.node_pos.size:
-            self.node_pos = point.copy()
-            self.node_err_bounds = np.array([[err_l, err_u]])
-        else:
-            self.node_pos = np.vstack((self.node_pos, point))
-            self.node_err_bounds = np.vstack((self.node_err_bounds,
-                                              np.array([[err_l, err_u]])))
+        self.node_pos = np.vstack((self.node_pos, point))
+        self.node_err_bounds = np.vstack((self.node_err_bounds,
+                                          np.array([[err_l, err_u]])))
         self.node_val = np.append(self.node_val, value)
         self.node_is_noisy = np.append(self.node_is_noisy, True)
-        if not self.all_node_pos.size:
-            self.all_node_pos = orig_point.copy()
-            self.all_node_err_bounds = np.array([[err_l, err_u]])
-        else:
-            self.all_node_pos = np.vstack((self.all_node_pos, orig_point))
-            self.all_node_err_bounds = np.vstack((self.all_node_err_bounds,
-                                                  np.array([err_l, err_u])))
+        self.all_node_pos = np.vstack((self.all_node_pos, orig_point))
+        self.all_node_err_bounds = np.vstack((self.all_node_err_bounds,
+                                              np.array([err_l, err_u])))
         self.all_node_val = np.append(self.all_node_val, value)
         self.all_node_is_noisy = np.append(self.all_node_is_noisy, True)
 
@@ -1252,10 +1238,16 @@ class RbfoptAlgorithm:
         itercount_at_start = self.itercount
 
         # We will keep here temporary nodes submitted for
-        # evaluation. A position will be none if unfilled.
-        temp_node_pos = np.array([])
+        # evaluation. A position will be None if unfilled.
+        temp_node_pos = np.empty((0, n))
         temp_node_val = np.array([])
-        temp_node_is_noisy = np.array([])
+        temp_node_is_noisy = np.array([], dtype=bool)
+
+        # In two-phase optimization, it is possible that while a noisy
+        # node is in the temporary list, we decide to evaluate it
+        # accurately. We keep a list of any such node to ensure we
+        # only keep is accurate evaluation.
+        temp_node_tabu = np.empty((0, n))
 
         # Number of iterations spent in refinement. We used this
         # strange initialization statement to make sure that the
@@ -1294,10 +1286,25 @@ class RbfoptAlgorithm:
                     next_val, err_l, err_u = res.get()
                 else:
                     next_val = res.get()
+                # Remove from list of temporary points
+                temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
+                                          j, axis=0)
+                temp_node_val = np.delete(temp_node_val, j)
+                temp_node_is_noisy = np.delete(temp_node_is_noisy, j)
                 # If distance is too small for whatever reason, better
-                # to skip this point
+                # to skip this point.
                 if (ru.get_min_distance(next_p, self.node_pos) <= 
                     l_settings.min_dist):
+                    continue
+                # If the node is noisy and it is on tabu list, ignore
+                # and adjust the tabu list.
+                if (node_is_noisy and
+                    temp_node_tabu.size and
+                    any(np.equal(temp_node_tabu, next_p).all(1))):
+                    min_dist, i = ru.get_min_distance_and_index(
+                        next_p, temp_node_tabu)
+                    temp_node_tabu = np.delete(
+                        np.atleast_2d(temp_node_tabu), i, axis=0)
                     continue
                 # Transform back to original space if necessary
                 next_p_orig = ru.transform_domain(
@@ -1313,16 +1320,9 @@ class RbfoptAlgorithm:
                           self.fixed_vars], ))
                     self.evalcount += 1
                     res_eval.append([new_res, next_p, node_is_noisy, iid])
-                    # Update temporary node values. First, remove old node.
-                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
-                                              j, axis=0)
-                    temp_node_val = np.delete(temp_node_val, j)
-                    temp_node_is_noisy = np.delete(temp_node_is_noisy, j)
-                    # Then add again at the end of the array
-                    if (temp_node_pos.size):
-                        temp_node_pos = np.vstack((temp_node_pos, next_p))
-                    else:
-                        temp_node_pos = np.atleast_2d(next_p)
+                    # Update temporary node values by addin again at
+                    # the end of the array
+                    temp_node_pos = np.vstack((temp_node_pos, next_p))
                     temp_node_val = np.append(
                         temp_node_val, np.clip(next_val, self.fmin, self.fmax))
                     temp_node_is_noisy = np.append(temp_node_is_noisy,
@@ -1348,11 +1348,6 @@ class RbfoptAlgorithm:
                             rank_deficient)
                         refinement_itercount += 1
                         refinement_in_progress = False
-                    # Remove from list of temporary points
-                    temp_node_pos = np.delete(np.atleast_2d(temp_node_pos), 
-                                              j, axis=0)
-                    temp_node_val = np.delete(temp_node_val, j)
-                    temp_node_is_noisy = np.delete(temp_node_is_noisy, j)
                 # Perform main updates
                 self.itercount += 1
                 self.stalling_update()
@@ -1377,17 +1372,26 @@ class RbfoptAlgorithm:
                 if (iteration_id == 'LocalStep'):
                     adj, next_p, ind = res.get()
                     # Re-evaluate point if necessary
-                    if (ind is not None):
+                    if (ind is not None):                        
                         # Because of parallelism, there is a chance
                         # that the node position changed.  Make sure
                         # we have the right one.
-                        if (not np.array_equal(self.node_pos[ind], next_p)):
+                        if (ind < len(self.node_pos) and
+                            np.array_equal(self.node_pos[ind], next_p)):
+                            self.remove_node(ind, self.num_nodes_at_restart)
+                        else:
+                            # Find if there is a matching node
                             ind = np.where(np.all(
-                                self.node_pos == next_p, axis=1))[0][0]
-                        self.remove_node(ind, self.num_nodes_at_restart)
-                        # Since node_pos is a copy of self.node_pos
-                        # and temp_node_pos, there is no need to
-                        # adjust k
+                                self.node_pos == next_p, axis=1))[0]
+                            if (ind.size):
+                                # We found a matching node
+                                self.remove_node(
+                                    ind[0], self.num_nodes_at_restart)
+                            # There is no matching node, so the
+                            # re-evaluated node must be a temporary
+                            # one; add it to the tabu list.
+                            temp_node_tabu = np.vstack(
+                                (temp_node_tabu, next_p))
                     if (adj):
                         iteration_id = 'AdjLocalStep'
                     else:
@@ -1478,10 +1482,7 @@ class RbfoptAlgorithm:
                         val = ru.evaluate_rbf(
                             rbf_coeff_settings, next_p, n, len(rbf_l),
                             node_pos[:len(rbf_l)], rbf_l, rbf_h)
-                        if (temp_node_pos.size):
-                            temp_node_pos = np.vstack((temp_node_pos, next_p))
-                        else:
-                            temp_node_pos = np.atleast_2d(next_p)
+                        temp_node_pos = np.vstack((temp_node_pos, next_p))
                         temp_node_val = np.append(
                             temp_node_val, np.clip(val, self.fmin, self.fmax))
                         temp_node_is_noisy = np.append(temp_node_is_noisy,
@@ -1526,18 +1527,15 @@ class RbfoptAlgorithm:
                 # restart.
                 self.update_log('Restart')
                 self.restart(pool=pool)
-                temp_node_pos = np.array([])
+                temp_node_pos = np.empty((0, n))
                 temp_node_val = np.array([])
-                temp_node_is_noisy = np.array([])
+                temp_node_is_noisy = np.array([], dtype=bool)
+                temp_node_tabu = np.empty((0, n))
 
             # Nodes at current iteration, including temporary ones
-            if (temp_node_pos.size):
-                node_pos = np.vstack((self.node_pos, temp_node_pos))
-                node_err_bounds = np.vstack(
-                    (self.node_err_bounds, np.zeros((len(temp_node_pos), 2))))
-            else:
-                node_pos = np.array(self.node_pos)
-                node_err_bounds = np.array(self.node_err_bounds)
+            node_pos = np.vstack((self.node_pos, temp_node_pos))
+            node_err_bounds = np.vstack(
+                (self.node_err_bounds, np.zeros((len(temp_node_pos), 2))))
             node_val = np.append(self.node_val, temp_node_val)
             node_is_noisy = np.append(self.node_is_noisy, temp_node_is_noisy)
             k = len(node_pos)
@@ -1673,9 +1671,10 @@ class RbfoptAlgorithm:
                 self.update_log('Restoration phase failed. Restart.')
                 self.update_log('Restart')
                 self.restart(pool=pool)
-                temp_node_pos = np.array([])
+                temp_node_pos = np.empty((0, n))
                 temp_node_val = np.array([])
-                temp_node_is_noisy = np.array([])
+                temp_node_is_noisy = np.array([], dtype=bool)
+                temp_node_tabu = np.empty((0, n))
                 continue
 
             # If no refinement is in progress, and the frequency is
@@ -1879,10 +1878,10 @@ class RbfoptAlgorithm:
         else:
             # We did not perform the initialization strategy, so use
             # empty arrays
-            node_pos = np.zeros(shape=(0, self.n))
-            node_val = np.zeros(shape=(0, 1))
-            node_is_noisy = np.zeros(shape=(0, 1), dtype=bool)
-            node_err_bounds = np.zeros(shape=(0, 2))
+            node_pos = np.empty((0, self.n))
+            node_val = np.empty((0, 1))
+            node_is_noisy = np.empty((0, 1), dtype=bool)
+            node_err_bounds = np.empty((0, 2))
         # Add user-provided points if this is the first iteration
         if (self.init_node_pos.size and self.itercount == 0):
             # Determine which points can be added, based on distance
@@ -1920,17 +1919,13 @@ class RbfoptAlgorithm:
                 node_val = np.append(node_val, init_node_val)
 
             node_is_noisy = np.append(node_is_noisy, 
-                                     np.zeros(len(init_node_val), dtype=bool))
+                                      np.zeros(len(init_node_val), dtype=bool))
             node_err_bounds = np.vstack((node_err_bounds,
                                          np.zeros((len(init_node_val), 2))))
 
-        if (self.all_node_pos.size == 0):
-            self.all_node_pos = node_pos.copy()
-            self.all_node_err_bounds = node_err_bounds.copy()
-        else:
-            self.all_node_pos = np.vstack((self.all_node_pos, node_pos))
-            self.all_node_err_bounds = np.vstack((self.all_node_err_bounds,
-                                                  node_err_bounds))
+        self.all_node_pos = np.vstack((self.all_node_pos, node_pos))
+        self.all_node_err_bounds = np.vstack((self.all_node_err_bounds,
+                                              node_err_bounds))
         self.all_node_val = np.append(self.all_node_val, node_val)
         self.all_node_is_noisy = np.append(self.all_node_is_noisy, 
                                           node_is_noisy)

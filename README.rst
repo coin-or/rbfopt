@@ -31,8 +31,9 @@ Contents of this directory:
 * VERSION: Version of the library.
 * manual.pdf: User manual.
 * requirements.txt: List of dependencies for this project.
-* setup.cfg: Configuration file for setup.py
+* setup.cfg: Configuration file for setup.py.
 * setup.py: Setup file.
+* tox.ini: Configuration file for tox.
 * bin/
 
   * rbfopt_cl_interface.py: Script for the command-line interface,
@@ -81,7 +82,7 @@ Contents of this directory:
   * test_functions.py: Global optimization test functions.
   * test_rbfopt_algorithm.py: Testing module for
     rbfopt_algorithm.py (regular unit tests).
-  * test_rbfopt_algorithm_slow.py: Testing module for
+  * slow_test_rbfopt_algorithm.py: Testing module for
     rbfopt_algorithm.py (additional, slow tests).
   * test_rbfopt_aux_problems.py: Testing module for
     rbfopt_aux_problems.py.
@@ -93,7 +94,7 @@ Contents of this directory:
     documentation.
   * test_rbfopt_refinement: Testing module for rbfopt_refinement.py
   * test_rbfopt_settings.py: Testing module for rbfopt_settings.py.
-  * test_rbfopt_utils.py Testing module for rbfopt_utils.py.
+  * test_rbfopt_utils.py: Testing module for rbfopt_utils.py.
 
 =========================
 Installation requirements
@@ -205,15 +206,11 @@ Installation instructions and getting started
 
 5) Unit tests for the library can be executed by running::
 
+     nose2
+
+   or::
+
      python setup.py test
-
-   or::
-
-     python setup.py nosetests
-
-   or::
-
-     nosetests
 
    from the current (main) directory. If some of the tests fail, the
    library may or may not work correctly. Some of the test failures
@@ -222,11 +219,10 @@ Installation instructions and getting started
 
    Additional slow tests, that check if various parametrizations of
    the optimization algorithm can solve some global optimization
-   problems, are found in the file test_rbfopt_algorithm_slow.py,
-   which is ignored by nosetests by default. To execute these tests,
-   run::
+   problems, are found in the file slow_test_rbfopt_algorithm.py,
+   which is ignored by nose by default. To execute these tests, run::
 
-     python -m nose tests/test_rbfopt_algorithm_slow.py
+     nose2 tests.slow_test_rbfopt_algorithm
    
 =======================
 Minimal working example

@@ -49,8 +49,8 @@ if (__name__ == '__main__'):
           package_data={'rbfopt': ['doc/*.rst', 'doc/conf.py', 'doc/Makefile',
                                    'doc/make.bat', 'examples/*.py']},
           install_requires=['numpy', 'scipy', 'pyomo'],
-          setup_requires=['nose>=1.0'],
-          test_suite='nose.collector',
+          setup_requires=['nose2>=0.11.0'],
+          test_suite='nose2.collector.collector',
           scripts=['bin/rbfopt_cl_interface.py',
                    'bin/rbfopt_test_interface.py'],
           zip_safe=False)
