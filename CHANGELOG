@@ -1,7 +1,10 @@
+2022-02-25  Giacomo Nannicini <nannicini@us.ibm.com>
+	Version 4.2.3 released.
+	
 2022-02-24  Giacomo Nannicini <nannicini@us.ibm.com>
 	Added tox to the test workflow.
 	Moved tests to nose2.
-	* rbfopt_algorith.py (optimize_parallel): fixed bug that could
+	* rbfopt_algorithm.py (optimize_parallel): fixed bug that could
 	occur when using many threads and the noisy function evaluatio.
 
 2021-02-16  Giacomo Nannicini <nannicini@us.ibm.com>
