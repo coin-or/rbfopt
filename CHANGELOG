@@ -1,3 +1,8 @@
+2022-03-16  Giacomo Nannicini <nannicini@us.ibm.com>
+	Changed order of imports to try to enforce OMP_NUM_THREADS=1 when
+	testing.
+	Version 4.2.4 released.
+
 2022-02-25  Giacomo Nannicini <nannicini@us.ibm.com>
 	Version 4.2.3 released.
 	

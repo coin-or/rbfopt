@@ -12,9 +12,9 @@ from __future__ import division
 from __future__ import absolute_import
 
 import unittest
+import rbfopt
 import numpy as np
 import pyomo.environ
-import rbfopt
 import rbfopt.rbfopt_utils as ru
 import rbfopt.rbfopt_degreem1_models as dm1
 from rbfopt.rbfopt_settings import RbfoptSettings

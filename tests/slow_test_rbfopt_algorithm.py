@@ -17,8 +17,8 @@ import unittest
 import time
 import tempfile
 import os
-import numpy as np
 import rbfopt
+import numpy as np
 import rbfopt.rbfopt_algorithm as ra
 import rbfopt.rbfopt_test_functions as tf
 from rbfopt.rbfopt_settings import RbfoptSettings

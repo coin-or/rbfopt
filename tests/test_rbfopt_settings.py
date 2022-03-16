@@ -13,8 +13,8 @@ from __future__ import absolute_import
 
 import unittest
 import ast
-import numpy as np
 import rbfopt
+import numpy as np
 import rbfopt.rbfopt_settings as rs
 
 

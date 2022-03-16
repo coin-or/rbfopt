@@ -14,8 +14,8 @@ from __future__ import division
 from __future__ import absolute_import
 
 import unittest
-import numpy as np
 import rbfopt
+import numpy as np
 import inspect
 import rbfopt.rbfopt_test_functions as tf
 
