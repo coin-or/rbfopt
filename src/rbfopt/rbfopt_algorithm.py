@@ -1689,10 +1689,19 @@ class RbfoptAlgorithm:
                 self.solve_underdetermined = False
                 self.update_log('Restoration phase failed. Restart.')
                 self.update_log('Restart')
-                self.restart(pool=pool)
-                temp_node_pos = np.empty((0, n))
-                temp_node_val = np.array([])
-                temp_node_is_noisy = np.array([], dtype=bool)
+                self.restart(pool=pool, remaining_eval=res_eval)
+                if (res_eval):
+                    temp_node_pos = np.array([val[1] for val in res_eval])
+                else:
+                    temp_node_pos = np.empty((0, n))
+                temp_node_is_noisy = np.array([val[2] for val in res_eval],
+                                              dtype=bool)
+                temp_node_val = np.clip(
+                    ru.bulk_compute_and_evaluate_rbf(
+                        l_settings, temp_node_pos, n, len(self.node_pos),
+                        self.node_pos, self.node_val, self.fmin, self.fmax,
+                        self.node_err_bounds, self.categorical_info),
+                    self.fmin, self.fmax)
                 temp_node_tabu = np.empty((0, n))
                 continue
 
