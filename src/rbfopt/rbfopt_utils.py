@@ -445,6 +445,62 @@ def get_lhd_corr_points(var_lower, var_upper, integer_vars,
 
 # -- end function
 
+def get_num_init_samples(settings, n):
+    """Get number of initial sample points for a LHD strategy.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfoptSettings`
+        Global and algorithmic settings.
+
+    n : int
+        Dimension of the problem, i.e. number of variables.
+
+    Returns
+    -------
+    int
+        Number of samples, depending on problem dimension and
+        settings.
+
+    """
+    assert(isinstance(settings, RbfoptSettings))
+    if (settings.num_cpus > 1):
+        return int(max(2, round((n + 1) * settings.init_sample_fraction *
+                                (1 + settings.num_cpus *
+                                 settings.init_sample_increase_parallel))))
+    else:
+        return int(max(2, round((n + 1) * settings.init_sample_fraction)))
+# -- end function
+
+def get_min_num_init_samples_parallel(settings, n):
+    """Get the minimum number of initial sample points for paralell.
+
+    In parallel optimization, when generating a lating hypercube
+    design we may use more initial samples than strictly
+    necessary. This function returns the desired/target number of
+    initial samples before optimization can start, i.e., the strictly
+    necessary number to create an RBF model with the given settings.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfoptSettings`
+        Global and algorithmic settings.
+
+    n : int
+        Dimension of the problem, i.e. number of variables.
+
+    Returns
+    -------
+    int
+        Number of samples, depending on problem dimension and
+        settings.
+
+    """
+    assert(isinstance(settings, RbfoptSettings))
+    return int(max(2, round((n + 1) * settings.init_sample_fraction)))
+
+# -- end function
+
 
 def initialize_nodes(settings, var_lower, var_upper, integer_vars,
                      categorical_info):
@@ -498,8 +554,7 @@ def initialize_nodes(settings, var_lower, var_upper, integer_vars,
     assert(len(var_lower) == len(var_upper))
     assert(categorical_info is None or len(categorical_info)==3)
 
-    sample_size = int(max(2, round((len(var_lower) + 1) *
-                                   settings.init_sample_fraction)))
+    sample_size = get_num_init_samples(settings, len(var_lower))
 
     if (categorical_info is not None and categorical_info[2] and
         settings.init_strategy in ['lhd_maximin', 'lhd_corr']):
@@ -1460,6 +1515,99 @@ def bulk_evaluate_rbf(settings, points, n, k, node_pos, rbf_lambda, rbf_h,
     else:
         return (part1 + part2 + part3)
 
+# -- end function
+
+def bulk_compute_and_evaluate_rbf(settings, points, n, k, node_pos,
+                                  node_val, fmin, fmax, node_err_bounds,
+                                  categorical_info):
+    """Compute interpolant and estimate the value of given points.
+
+    Evaluate a set of points using an RBF interpolated computed from a
+    different set of given points. This function is different from
+    other (similar) functions because it first computes the
+    interpolant from a set of points, then uses the interpolant to
+    evaluate at a different set of points, and discards the
+    interpolant.
+
+    Parameters
+    ----------
+    settings : :class:`rbfopt_settings.RbfoptSettings`.
+        Global and algorithmic settings.
+
+    points : 2D numpy.ndarray[float]
+        The list of points in R^n where we want to evaluate the
+        interpolant.
+
+    n : int
+        Dimension of the problem, i.e. the size of the space.
+
+    k : int
+        Number of interpolation nodes.
+
+    node_pos : 2D numpy.ndarray[float]
+        List of coordinates of the interpolation points.
+
+    node_val : 1D numpy.ndarray[float]
+       List of function values at the interpolation nodes.
+
+    fmin : float
+       Minimum function value found so far.
+
+    fmax : float
+       Maximum function value found so far.
+
+    node_err_bounds : 2D numpy.ndarray[float]
+        The lower and upper variation of the function value for the
+        nodes in node_pos. The variation is assumed 0 for nodes
+        evaluated in accurate mode.
+
+    categorical_info : (1D numpy.ndarray[int], 1D numpy.ndarray[int],
+                        List[(int, 1D numpy.ndarray[int])]) or None
+        Information on categorical variables: array of indices of
+        categorical variables in original space, array of indices of
+        noncategorical variables in original space, and expansion of
+        each categorical variable, given as a tuple (original index,
+        indices of expanded variables).
+
+    Returns
+    -------
+    1D numpy.ndarray[float]
+        Value of the RBF interpolant at each point.
+
+    """
+    assert(isinstance(points, np.ndarray))
+    assert(isinstance(node_pos, np.ndarray))
+    assert(len(node_pos) == k)
+    assert(isinstance(node_val, np.ndarray))
+    assert(len(node_val) == k)
+    assert(isinstance(node_err_bounds, np.ndarray))
+    assert(len(node_err_bounds) == k)
+    assert(isinstance(settings, RbfoptSettings))
+    assert(categorical_info is None or len(categorical_info)==3)
+
+    if (len(points) == 0):
+        return np.array([])
+
+    tfv = transform_function_values(settings, node_val, fmin, fmax,
+                                    node_err_bounds)
+    (scaled_node_val, scaled_fmin, scaled_fmax, 
+     scaled_err_bounds, rescale_function) = tfv
+    
+    Amat = get_rbf_matrix(settings, n, k, node_pos)
+
+    # Compute RBF interpolant at current stage
+    if (k < n+1):
+        # Underdetermined RBF
+        rbf_l, rbf_h = get_rbf_coefficients_underdet(
+            settings, n, k, Amat, scaled_node_val,
+            categorical_info)
+    else:
+        # Fully accurate RBF
+        rbf_l, rbf_h = get_rbf_coefficients(
+            settings, n, k, Amat, scaled_node_val,
+            categorical_info)
+    return bulk_evaluate_rbf(settings, points, n, k, node_pos,
+                             rbf_l, rbf_h)
 # -- end function
 
 def compute_gap(settings, fmin):

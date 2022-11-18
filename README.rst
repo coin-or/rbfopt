@@ -1,8 +1,8 @@
 ..
 	File:      README.rst
 	Author(s): Giacomo Nannicini
-        International Business Machines Corporation
-        nannicini@us.ibm.com
+        University of Southern California
+	g.nannicini@usc.edu
 
 	(C) Copyright Singapore University of Technology and Design 2015.
 	(C) Copyright International Business Machines Corporation 2016.
@@ -17,9 +17,10 @@ This software is released under the Revised BSD License. By using
 this software, you are implicitly accepting the terms of the license.
 
 RBFOpt is a Python library for black-box optimization (also known as
-derivative-free optimization). It supports Python 2.7 and Python 3.
-This README contains installation instructions and a brief
-overview. More details can be found in the user manual.
+derivative-free optimization). It is developed for Python 3 but
+currently runs on Python 2.7 as well. This README contains
+installation instructions and a brief overview. More details can be
+found in the user manual.
 
 Contents of this directory:
 
@@ -102,7 +103,7 @@ Installation requirements
 
 This package requires the following software:
 
-* Python version >= 2.7 
+* Python version >= 3.7
 * NumPy version >= 1.11.0
 * SciPy version >= 0.17.0
 * Pyomo version >= 5.1.1
@@ -112,8 +113,9 @@ work with earlier version and should work with subsequent version, if
 they are backward compatible. In particular, the software is known to
 work with Pyomo version 4 and earlier versions of Scipy.
 
-The code is mainly developed for Python 3, but it also runs on Python
-2.7. We recommend using Python 3 if possible.
+The code is developed for Python 3.7, but it currently also runs on
+Python 2.7. Since Python 2.7 has reached end-of-life in January 2020,
+we recommend using Python 3.7 or later.
 
 The easiest, and recommended, way to install the package is via the
 Python module manager pip. The code is on PyPI, therefore it can be

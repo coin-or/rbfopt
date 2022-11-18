@@ -1237,18 +1237,6 @@ class RbfoptAlgorithm:
         # Save number of iterations at start
         itercount_at_start = self.itercount
 
-        # We will keep here temporary nodes submitted for
-        # evaluation. A position will be None if unfilled.
-        temp_node_pos = np.empty((0, n))
-        temp_node_val = np.array([])
-        temp_node_is_noisy = np.array([], dtype=bool)
-
-        # In two-phase optimization, it is possible that while a noisy
-        # node is in the temporary list, we decide to evaluate it
-        # accurately. We keep a list of any such node to ensure we
-        # only keep is accurate evaluation.
-        temp_node_tabu = np.empty((0, n))
-
         # Number of iterations spent in refinement. We used this
         # strange initialization statement to make sure that the
         # number is consistent (if not accurate) in case the algorithm
@@ -1260,7 +1248,29 @@ class RbfoptAlgorithm:
 
         # If this is the first iteration, initialize the algorithm
         if (self.itercount == 0):
-            self.restart(pool=pool)
+            self.restart(pool=pool, remaining_eval=res_eval)
+
+        # We will keep in the following data structures all temporary
+        # nodes submitted for evaluation.
+        if (res_eval):
+            temp_node_pos = np.array([val[1] for val in res_eval])
+        else:
+            temp_node_pos = np.empty((0, n))
+        temp_node_is_noisy = np.array([val[2] for val in res_eval],
+                                      dtype=bool)
+        temp_node_val = np.clip(
+            ru.bulk_compute_and_evaluate_rbf(
+                l_settings, temp_node_pos, n, len(self.node_pos),
+                self.node_pos, self.node_val, self.fmin, self.fmax,
+                self.node_err_bounds, self.categorical_info),
+            self.fmin, self.fmax)
+
+        # In two-phase optimization, it is possible that while a noisy
+        # node is in the temporary list, we decide to evaluate it
+        # accurately. We keep a list of any such node to ensure we
+        # only keep its accurate evaluation.
+        temp_node_tabu = np.empty((0, n))
+
         # We need to update the gap
         gap = ru.compute_gap(l_settings, self.fbest +
                              self.all_node_err_bounds[self.fbest_index, 1])
@@ -1526,10 +1536,19 @@ class RbfoptAlgorithm:
                 # If there were no results in the pipeline, we should
                 # restart.
                 self.update_log('Restart')
-                self.restart(pool=pool)
-                temp_node_pos = np.empty((0, n))
-                temp_node_val = np.array([])
-                temp_node_is_noisy = np.array([], dtype=bool)
+                self.restart(pool=pool, remaining_eval=res_eval)
+                if (res_eval):
+                    temp_node_pos = np.array([val[1] for val in res_eval])
+                else:
+                    temp_node_pos = np.empty((0, n))
+                temp_node_is_noisy = np.array([val[2] for val in res_eval],
+                                              dtype=bool)
+                temp_node_val = np.clip(
+                    ru.bulk_compute_and_evaluate_rbf(
+                        l_settings, temp_node_pos, n, len(self.node_pos),
+                        self.node_pos, self.node_val, self.fmin, self.fmax,
+                        self.node_err_bounds, self.categorical_info),
+                    self.fmin, self.fmax)
                 temp_node_tabu = np.empty((0, n))
 
             # Nodes at current iteration, including temporary ones
@@ -1778,7 +1797,7 @@ class RbfoptAlgorithm:
         self.elapsed_time += time.time() - start_time
     # -- end function
 
-    def restart(self, pool=None):
+    def restart(self, pool=None, remaining_eval=None):
         """Perform a complete restart of the optimization.
 
         Restart the optimization algorithm, i.e. discard the current
@@ -1792,6 +1811,11 @@ class RbfoptAlgorithm:
             A pool of workers to evaluate the initialization points in
             parallel. If None, parallel evaluation will not be
             performed.
+
+        remaining_eval : list()
+            A list to which any outstanding initialization point
+            evaluation is appended. If None, these evaluations will be
+            discarded.
 
         Raises
         ------
@@ -1807,6 +1831,9 @@ class RbfoptAlgorithm:
                                    else 0)
         # Store the current number of nodes
         self.num_nodes_at_restart = len(self.all_node_pos)
+        # Parallel evaluations -- will not be used in serial
+        # mode. Same format as in optimize_parallel()
+        res_eval = list()
         if (self.itercount > 0 or self.do_init_strategy):
             # Compute a new set of starting points
             node_pos = ru.initialize_nodes(
@@ -1846,25 +1873,74 @@ class RbfoptAlgorithm:
                                                  self.categorical_info,
                                                  self.fixed_vars])
                                          for point in node_pos])
+                    self.evalcount += len(node_val)
                 else:
-                    map_arg = [[self.bb, point, self.categorical_info,
-                                self.fixed_vars] for point in node_pos]
-                    node_val = np.array(pool.map(objfun, map_arg))
+                    for point in node_pos:                        
+                        res = pool.apply_async(
+                            objfun,  
+                            ([self.bb, point, self.categorical_info,
+                              self.fixed_vars], ))
+                        self.evalcount += 1
+                        res_eval.append([res, point, False, 'Initialization'])
+                    temp_node_pos = list()
+                    temp_node_val = list()
+                    # Wait for a sufficient number of results
+                    while (len(temp_node_val) <
+                           ru.get_min_num_init_samples_parallel(
+                               self.l_settings, self.n)):
+                        if (not ru.results_ready(res_eval)):
+                            time.sleep(self.l_settings.parallel_wakeup_time)
+                            continue
+                        while(ru.results_ready(res_eval)):
+                            # Obtain one point evaluation that is ready
+                            j = ru.get_one_ready_index(res_eval)
+                            res, point, node_is_noisy, iid = res_eval.pop(j)
+                            temp_node_pos.append(point)
+                            temp_node_val.append(res.get())
+                    # Add all unfinished evaluations to the
+                    # appropriate list, and store the rest
+                    node_pos = np.array(temp_node_pos)
+                    node_val = np.array(temp_node_val)
+                    remaining_eval.extend(res_eval)
                 node_err_bounds = np.zeros((len(node_val), 2))
-                self.evalcount += len(node_val)
             else:
                 if (pool is None):
-                    res = np.array([objfun_noisy([self.bb, point,
+                    val = np.array([objfun_noisy([self.bb, point,
                                                   self.categorical_info,
                                                   self.fixed_vars])
                                     for point in node_pos])
+                    self.noisy_evalcount += len(val)
                 else:
-                    map_arg = [[self.bb, point, self.categorical_info,
-                                self.fixed_vars] for point in node_pos]
-                    res = np.array(pool.map(objfun_noisy, map_arg))
-                node_val = res[:, 0]
-                node_err_bounds = res[:, 1:]
-                self.noisy_evalcount += len(node_val)
+                    for point in node_pos:                        
+                        res = pool.apply_async(
+                            objfun_noisy,  
+                            ([self.bb, point, self.categorical_info,
+                              self.fixed_vars], ))
+                        self.noisy_evalcount += 1
+                        res_eval.append([res, point, True, 'Initialization'])
+                    temp_node_pos = list()
+                    temp_node_val = list()
+                    # Wait for a sufficient number of results
+                    while (len(temp_node_val) <
+                           ru.get_min_num_init_samples_parallel(
+                               self.l_settings, self.n)):
+                        if (not ru.results_ready(res_eval)):
+                            time.sleep(self.l_settings.parallel_wakeup_time)
+                            continue
+                        while(ru.results_ready(res_eval)):
+                            # Obtain one point evaluation that is ready
+                            j = ru.get_one_ready_index(res_eval)
+                            res, point, node_is_noisy, iid = res_eval.pop(j)
+                            temp_node_pos.append(point)
+                            temp_node_val.append(res.get())
+                    # Add all unfinished evaluations to the
+                    # appropriate list, and store the rest
+                    node_pos = np.array(temp_node_pos)
+                    val = np.array(temp_node_val)
+                    remaining_eval.extend(res_eval)
+                node_val = val[:, 0]
+                node_err_bounds = val[:, 1:]
+
             node_is_noisy = np.array([self.eval_mode == 'noisy'
                                       for val in node_val])
             # Add previously evaluated points, if any

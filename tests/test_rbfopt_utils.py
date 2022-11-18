@@ -116,6 +116,36 @@ class TestUtils(unittest.TestCase):
         self.assertEqual(len(corners), 5)
     # -- end function
 
+    def test_get_num_init_samples(self):
+        """Test edge cases when getting initial number of samples."""
+        n=10
+        settings = RbfoptSettings(init_strategy='lhd_maximin',
+                                  init_sample_fraction=1.0,)
+        self.assertGreater(ru.get_num_init_samples(settings, 0), 0)
+        set1 = RbfoptSettings(init_strategy='lhd_maximin',
+                              init_sample_increase_parallel=0.0,
+                              init_sample_fraction=1.0,
+                              num_cpus=4)
+        self.assertEqual(ru.get_num_init_samples(settings, n),
+                         ru.get_num_init_samples(set1, n))
+        set2 = RbfoptSettings(init_strategy='lhd_maximin',
+                              init_sample_increase_parallel=1.0,
+                              init_sample_fraction=1.0,
+                              num_cpus=4)
+        self.assertLess(ru.get_num_init_samples(set1, n),
+                        ru.get_num_init_samples(set2, n))
+    # -- end function
+
+    def test_get_min_num_init_samples_parallel(self):
+        """Test edge cases when getting initial number of samples."""
+        settings = RbfoptSettings(init_strategy='lhd_maximin',
+                                  init_sample_fraction=1.0,
+                                  init_sample_increase_parallel=1.0,
+                                  num_cpus=4)
+        self.assertLess(ru.get_min_num_init_samples_parallel(settings, 10),
+                        ru.get_num_init_samples(settings, 10))
+    # -- end function
+
     def test_initialize_nodes(self):
         """Test initialization methods for the sample points.
 

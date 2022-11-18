@@ -126,9 +126,20 @@ class RbfoptSettings:
         Default True.
 
     init_sample_fraction : float
-        The initial sample size is set to n + 1 times this number. If
-        set to -1 (or any negative number), the size of the initial
-        sample set will be determined automatically. Default -1.
+        The initial sample size is set to n + 1 times this number,
+        with some adjustment for parallel optimization based on
+        init_sample_increase_parallel. If set to -1 (or any negative
+        number), the size of the initial sample set will be determined
+        automatically. Default -1.
+
+    init_sample_increase_parallel : float
+        Fraction of increase of the number of initial sample points in
+        order to reduce synchronization efforst in asynchronous
+        parallel evaluation. The number of total initialization points
+        is increase by a factor (1 + num_cpus *
+        init_sample_increase_parallel), and optimization starts when
+        the originally targetd number of samples is reached. Default
+        0.05.
 
     max_random_init : int
         Maximum number of trials for the random initialization
@@ -365,6 +376,49 @@ class RbfoptSettings:
     _allowed_dynamism_clipping = {'off', 'median', 'clip_at_dyn', 'auto'}
     _allowed_algorithm = {'Gutmann', 'MSRSM'}
     _allowed_global_search_method = {'genetic', 'sampling', 'solver'}
+    # Parameters that are only allowed to be nonnegative
+    _nonnegative_parameters = [
+        'max_iterations',
+        'max_evaluations',
+        'max_noisy_evaluations',
+        'max_cycles',
+        'max_clock_time',
+        'parallel_wakeup_time',
+        'eps_opt',
+        'eps_zero',
+        'eps_impr',
+        'eps_linear_dependence',
+        'min_dist',
+        'num_global_searches',
+        'init_sample_increase_parallel',
+        'max_random_init',
+        'log_scaling_threshold',
+        'dynamism_threshold',
+        'local_search_threshold',
+        'local_search_box_scaling',
+        'max_stalled_iterations',
+        'discarded_window_size',
+        'max_fraction_discarded',
+        'max_consecutive_restoration',
+        'max_cross_validations',
+        'max_noisy_restarts',
+        'max_noisy_iterations',
+        'ga_base_population_size',
+        'ga_num_generations',
+        'num_samples_aux_problems',
+        'max_consecutive_refinement',
+        'thresh_unlimited_refinement',
+        'thresh_unlimited_refinement_stalled',
+        'refinement_frequency',
+        'ref_num_integer_candidates',
+        'ref_acceptable_decrease_shrink',
+        'ref_acceptable_decrease_enlarge',
+        'ref_acceptable_decrease_move',
+        'ref_min_radius',
+        'ref_init_radius_multiplier',
+        'ref_min_grad_norm',
+        'save_state_interval'
+    ]
 
     def __init__(self,
                  max_iterations=1000,
@@ -389,6 +443,7 @@ class RbfoptSettings:
                  init_strategy='lhd_maximin',
                  init_include_midpoint=True,
                  init_sample_fraction=-1.0,
+                 init_sample_increase_parallel=0.05,
                  max_random_init=50,
                  function_scaling='auto',
                  log_scaling_threshold=1.0e6,
@@ -451,6 +506,7 @@ class RbfoptSettings:
         self.init_strategy = init_strategy
         self.init_include_midpoint = init_include_midpoint
         self.init_sample_fraction = init_sample_fraction
+        self.init_sample_increase_parallel = init_sample_increase_parallel
         self.max_random_init = max_random_init
         self.function_scaling = function_scaling
         self.log_scaling_threshold = log_scaling_threshold
@@ -517,6 +573,11 @@ class RbfoptSettings:
             raise ValueError('settings.global_search_method = ' + 
                              str(self.global_search_method) + 
                              ' not supported')
+        attrs = vars(self)
+        for param in RbfoptSettings._nonnegative_parameters:
+            if (attrs[param] < 0):
+                raise ValueError('settings.' + param + ' = ' +
+                                 str(attrs[param]) + ' not supported')        
     # -- end function
 
     @classmethod

@@ -105,5 +105,13 @@ class TestRbfoptSettings(unittest.TestCase):
                              getattr(settings, name), msg = message)
     # -- end function
 
+    def test_invalid_parameters(self):
+        """Verify that an exception is raised for invalid values."""
+        for param in rs.RbfoptSettings._nonnegative_parameters:
+            message = ('Negative parameter {:s}'.format(param) + 
+                       ' did not raise an exception.')            
+            with self.assertRaises(ValueError, msg = message):
+                rs.RbfoptSettings(**{param : -0.5})
+    # -- end function
 
 # -- end class
