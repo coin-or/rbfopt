@@ -402,7 +402,7 @@ class RbfoptAlgorithm:
             for point in self.init_node_pos:
                 ru.round_integer_vars(point, self.integer_vars)
         if (init_node_val is None):
-            self.init_node_val = np.empty((0, dimension))
+            self.init_node_val = np.array([])
         else:
             self.init_node_val = np.array(init_node_val)
         # Initialize global lists
@@ -1850,28 +1850,12 @@ class RbfoptAlgorithm:
                 self.integer_vars, self.categorical_info)
             # Check if some points were previously evaluated, i.e. before
             # the restart. If so, remove them from the list of nodes that
-            # will be evaluated now.
+            # will be evaluated now. Keep their count.
+            already_eval = 0
             if (self.num_nodes_at_restart):
-                dist = ru.bulk_get_min_distance(
-                    node_pos, self.all_node_pos[:self.num_nodes_at_restart])
-                indices = np.where(dist <= self.l_settings.eps_zero)[0]
-                prev_node_pos = list()
-                prev_node_val = list()
-                prev_node_is_noisy = list()
-                prev_node_err_bounds = list()
-                for i in reversed(sorted(indices)):
-                    val, j = ru.get_min_distance_and_index(
-                        node_pos[i],
-                        self.all_node_pos[:self.num_nodes_at_restart])
-                    if (self.eval_mode == 'noisy' or 
-                        not self.all_node_is_noisy[j]):
-                        prev_node_pos.append(self.all_node_pos[j])
-                        prev_node_val.append(self.all_node_val[j])
-                        prev_node_is_noisy.append(self.all_node_is_noisy[j])
-                        prev_node_err_bounds.append(
-                            self.all_node_err_bounds[j])
-                        node_pos = np.delete(np.atleast_2d(node_pos), i,
-                                             axis=0)
+                (node_pos, already_eval, prev_node_pos,
+                 prev_node_val, prev_node_is_noisy,
+                 prev_node_err_bounds) = self.remove_existing_nodes(node_pos)
             # Evaluate new points
             if (self.eval_mode == 'accurate' or
                 self.num_noisy_restarts > self.l_settings.max_noisy_restarts
@@ -1896,7 +1880,7 @@ class RbfoptAlgorithm:
                     # Wait for a sufficient number of results
                     while (len(temp_node_val) <
                            ru.get_min_num_init_samples_parallel(
-                               self.l_settings, self.n)):
+                               self.l_settings, self.n) - already_eval):
                         if (not ru.results_ready(res_eval)):
                             time.sleep(self.l_settings.parallel_wakeup_time)
                             continue
@@ -1908,8 +1892,12 @@ class RbfoptAlgorithm:
                             temp_node_val.append(res.get())
                     # Add all unfinished evaluations to the
                     # appropriate list, and store the rest
-                    node_pos = np.array(temp_node_pos)
-                    node_val = np.array(temp_node_val)
+                    if (temp_node_pos):
+                        node_pos = np.array(temp_node_pos)
+                        node_val = np.array(temp_node_val)
+                    else:
+                        node_pos = np.empty((0, self.n))
+                        node_val = np.array([])
                     remaining_eval.extend(res_eval)
                 node_err_bounds = np.zeros((len(node_val), 2))
             else:
@@ -1932,7 +1920,7 @@ class RbfoptAlgorithm:
                     # Wait for a sufficient number of results
                     while (len(temp_node_val) <
                            ru.get_min_num_init_samples_parallel(
-                               self.l_settings, self.n)):
+                               self.l_settings, self.n) - already_eval):
                         if (not ru.results_ready(res_eval)):
                             time.sleep(self.l_settings.parallel_wakeup_time)
                             continue
@@ -1944,8 +1932,12 @@ class RbfoptAlgorithm:
                             temp_node_val.append(res.get())
                     # Add all unfinished evaluations to the
                     # appropriate list, and store the rest
-                    node_pos = np.array(temp_node_pos)
-                    val = np.array(temp_node_val)
+                    if (temp_node_pos):
+                        node_pos = np.array(temp_node_pos)
+                        val = np.array(temp_node_val)
+                    else:
+                        node_pos = np.empty((0, self.n))
+                        val = np.empty((0, 3))
                     remaining_eval.extend(res_eval)
                 node_val = val[:, 0]
                 node_err_bounds = val[:, 1:]
@@ -2051,6 +2043,57 @@ class RbfoptAlgorithm:
                                                       self.node_pos[(i+1):])))
             self.update_log('Initialization', self.node_is_noisy[i], val, gap)
     # -- end function
+
+    def remove_existing_nodes(self, node_pos):
+        """Remove from an array all previously evaluated points.
+
+        Check the all_node_ data structures to eliminate from node_pos
+        every point that is already present in the data structures.
+        Return a purged array of nodes, as well as lists with data for
+        all points that were removed.
+
+        Parameters
+        ----------
+        settings : :class:`rbfopt_settings.RbfoptSettings`.
+            Global and algorithmic settings.
+
+        node_pos : 2D numpy.ndarray[float]
+            List of coordinates of the nodes from which we will purge.
+
+        Returns
+        -------
+        (2D numpy.ndarray[float], int, List[1D numpy.ndarray[float]],
+        List[float], List[bool], List[(float, float)])
+            An updated 2D array of points (where all existing ones
+            have been eliminated), the number of eliminated points,
+            the list of eliminated points, the list of their values,
+            the list of their is_noisy value, the list of their error
+            bounds.
+
+        """
+        dist = ru.bulk_get_min_distance(
+            node_pos, self.all_node_pos[:self.num_nodes_at_restart])
+        indices = np.where(dist <= self.l_settings.eps_zero)[0]
+        prev_node_pos = list()
+        prev_node_val = list()
+        prev_node_is_noisy = list()
+        prev_node_err_bounds = list()
+        for i in reversed(sorted(indices)):
+            val, j = ru.get_min_distance_and_index(
+                node_pos[i],
+                self.all_node_pos[:self.num_nodes_at_restart])
+            if (self.eval_mode == 'noisy' or 
+                not self.all_node_is_noisy[j]):
+                prev_node_pos.append(self.all_node_pos[j])
+                prev_node_val.append(self.all_node_val[j])
+                prev_node_is_noisy.append(self.all_node_is_noisy[j])
+                prev_node_err_bounds.append(
+                    self.all_node_err_bounds[j])
+                node_pos = np.delete(np.atleast_2d(node_pos), i,
+                                             axis=0)
+        return (node_pos, len(prev_node_val),
+                prev_node_pos, prev_node_val, prev_node_is_noisy,
+                prev_node_err_bounds)
 
     def restoration_search(self):
         """Perform restoration step to repair RBF matrix.
