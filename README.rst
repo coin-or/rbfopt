@@ -115,7 +115,7 @@ work with Pyomo version 4 and earlier versions of Scipy.
 
 The code is developed for Python 3.7, but it currently also runs on
 Python 2.7. Since Python 2.7 has reached end-of-life in January 2020,
-we recommend using Python 3.7 or later.
+we recommend using Python 3.7 or higher.
 
 The easiest, and recommended, way to install the package is via the
 Python module manager pip. The code is on PyPI, therefore it can be
