@@ -1,4 +1,4 @@
-2022-11-17  Giacomo Nannicini <g.nannicini@usc.edu>
+2022-11-20  Giacomo Nannicini <g.nannicini@usc.edu>
 	Increased parallelization efficiency during initialization phase.
 	Version 4.2.5 released.
 	
