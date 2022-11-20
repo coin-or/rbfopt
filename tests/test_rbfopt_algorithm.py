@@ -433,8 +433,12 @@ class TestInitPoints(unittest.TestCase):
         alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos=init_node_pos)
         res = alg.optimize()
         for node in init_node_pos:
-            self.assertIn(node, alg.all_node_pos,
-                          msg='Initial point not found in all_node_pos')
+            found = False
+            for other_node in alg.all_node_pos:
+                if np.array_equal(np.array(node), other_node):
+                    found = True
+            self.assertTrue(found,
+                            msg='Initial point not found in all_node_pos')
     # -- end function
 
     def test_failed_init_points(self):
@@ -446,10 +450,14 @@ class TestInitPoints(unittest.TestCase):
                                   eps_opt=0.0)
         alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos=init_node_pos,
                                  do_init_strategy=False)
-        res = alg.optimize()
+        res = alg.optimize()        
         for node in init_node_pos:
-            self.assertIn(node, alg.all_node_pos[:4],
-                          msg='Initial point not found in all_node_pos')
+            found = False
+            for other_node in alg.all_node_pos[:4]:
+                if np.array_equal(np.array(node), other_node):
+                    found = True
+            self.assertTrue(found,
+                            msg='Initial point not found in all_node_pos')
     # -- end function
 
     def test_duplicate_init_points(self):
@@ -463,9 +471,57 @@ class TestInitPoints(unittest.TestCase):
                                  do_init_strategy=False)
         res = alg.optimize()
         for node in init_node_pos[:2]:
-            self.assertIn(node, alg.all_node_pos,
-                          msg='Initial point not found in all_node_pos')
-        self.assertNotIn(init_node_pos[-1], alg.all_node_pos[2:],
+            found = False
+            for other_node in alg.all_node_pos:
+                if np.array_equal(np.array(node), other_node):
+                    found = True
+            self.assertTrue(found,
+                            msg='Initial point not found in all_node_pos')
+        found = False
+        for other_node in alg.all_node_pos[2:]:
+            if np.array_equal(np.array(init_node_pos[-1]), other_node):
+                found = True
+        self.assertFalse(found,
                          msg='Duplicate initial point found in all_node_pos')
+    # -- end function
+# -- end class
+
+class TestCachedPoints(unittest.TestCase):
+    """Test RbfoptAlgorithm's handling of cached points at restart."""
+
+    def test_duplicate_init_points(self):
+        """Verify that duplicate points are removed."""
+        bb = tf.TestBlackBox('branin')
+        optimum = bb._function.optimum_value
+        init_node_pos = [[0, 0], [0, 1], [-1, 2]]
+        settings = RbfoptSettings(target_objval=optimum, max_iterations=1,
+                                  eps_opt=0.0)
+        alg = ra.RbfoptAlgorithm(settings, bb, init_node_pos=init_node_pos,
+                                 do_init_strategy=False)
+        res = alg.optimize()
+        alg.num_nodes_at_restart = len(alg.all_node_pos)
+        (node_pos, already_eval,
+         prev_node_pos, prev_node_val, prev_node_is_noisy,
+         prev_node_err_bounds) = alg.remove_existing_nodes(
+             np.array(init_node_pos[:2]))
+        self.assertEqual(already_eval, 2, msg='Did not eliminate two nodes')
+        for node in init_node_pos[:2]:
+            found = False
+            for other_node in prev_node_pos:
+                if np.array_equal(np.array(node), np.array(other_node)):
+                    found = True
+            self.assertTrue(found,
+                            msg='Initial point not found in prev_node_pos')
+        found = False
+        for other_node in prev_node_pos[2:]:
+            if np.array_equal(np.array(init_node_pos[-1]), other_node):
+                found = True
+        self.assertFalse(found,
+                         msg='Duplicate initial point found in all_node_pos')
+        new_point = np.array([[-1, -1]])
+        (node_pos, already_eval,
+         prev_node_pos, prev_node_val, prev_node_is_noisy,
+         prev_node_err_bounds) = alg.remove_existing_nodes(new_point)
+        self.assertEqual(already_eval, 0, msg='Eliminated >0 nodes')
     # -- end function
 # -- end class
