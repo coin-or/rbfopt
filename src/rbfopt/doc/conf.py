@@ -51,7 +51,7 @@ sys.path.insert(1, os.path.abspath('..'))
 
 MOCK_MODULES = ['argparse', 'numpy', 'scipy', 'scipy.spatial', 
                 'scipy.linalg', 'scipy.special', 'pyomo.opt',
-                'pyomo.environ']
+                'pyomo.environ', 'pyomo']
 sys.modules.update((mod_name, Mock()) for mod_name in MOCK_MODULES)
 
 # -- General configuration ------------------------------------------------
