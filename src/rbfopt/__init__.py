@@ -7,7 +7,7 @@ from .rbfopt_algorithm import RbfoptAlgorithm
 from .rbfopt_black_box import RbfoptBlackBox
 from .rbfopt_user_black_box import RbfoptUserBlackBox
 
-__version__ = '4.2.5'
+__version__ = '4.2.6'
 
 __all__ = ['rbfopt_algorithm',
            'rbfopt_aux_problems',
