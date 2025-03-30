@@ -1,5 +1,0 @@
-numpy
-scipy
-numpydoc >= 0.5
-pyomo >= 4.3.11388
-mock >= 1.1.3

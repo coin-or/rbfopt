@@ -1,3 +1,22 @@
+2025-03-29  Giacomo Nannicini <g.nannicini@usc.edu>
+     	Updated dependencies (in particular NumPy 2.0).
+	Python 2.7 is no longer officially supported.
+	Adjusted code to work with new dependencies.
+	Changed test system to pytest.
+	* pyproject.toml: build configuration file added.
+	* tox.ini: deleted.
+	* setup.py: deleted.
+	* tests/context.py: deleted.
+	* bin/rbfopt_cl_interface.py: moved to src/rbfopt, script is now
+	installed using TOML configuration.
+	* bin/rbfopt_test_interface.py: moved to src/rbfopt, script is now
+	installed using TOML configuration.
+	* rbfopt_algorithm.py: all numpy.float_ were changed to
+	numpy.float64.
+	* rbfopt_degree*_models.py: all numpy.matrix were changed to
+	numpy.ndarray.
+	Version 4.3.0 released.
+	
 2023-06-14  Giacomo Nannicini <g.nannicini@usc.edu>
 	Documentation update.
 	Version 4.2.6 released.
@@ -18,7 +37,7 @@
 	Added tox to the test workflow.
 	Moved tests to nose2.
 	* rbfopt_algorithm.py (optimize_parallel): fixed bug that could
-	occur when using many threads and the noisy function evaluatio.
+	occur when using many threads and the noisy function evaluation.
 
 2021-02-16  Giacomo Nannicini <nannicini@us.ibm.com>
 	Version 4.2.2 released.

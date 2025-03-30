@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Command-line interface for RBFOpt.
 
 This module provides a basic command-line interface for RBFOpt,
@@ -51,7 +50,7 @@ def register_options(parser):
     docstring = default.__doc__
     param_docstring = docstring[docstring.find('Parameters'):
                                 docstring.find('Attributes')].split(' : ')
-    param_name = [val.split(' ')[-1].strip() for val in param_docstring[:-1]]
+    param_name = [val.split()[-1].strip() for val in param_docstring[:-1]]
     param_type = [val.split('\n')[0].strip() for val in param_docstring[1:]]
     param_help = [' '.join(line.strip() for line in val.split('\n')[1:-2])
                   for val in param_docstring[1:]]
@@ -200,9 +199,12 @@ def rbfopt_cl_interface(args, black_box):
 
 # -- end function
 
-if (__name__ == "__main__"):
-    if (sys.version_info[0] <= 2 and sys.version_info[1] < 7):
-        print('Error: this software requires Python 2.7 or later')
+def main():
+    """Entry point for the command-line interface module.
+
+    """
+    if (sys.version_info[0] <= 3 and sys.version_info[1] < 9):
+        print('Error: this software requires Python 3.9 or later')
         exit()
     # Create command line parsers
     desc = ('Apply the RBF method to an object of class "BlackBox".')

@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import unittest
 import rbfopt
 import numpy as np
+import scipy.linalg as la
 import pyomo.environ
 import rbfopt.rbfopt_utils as ru
 import rbfopt.rbfopt_degreem1_models as dm1
@@ -43,8 +44,8 @@ class TestGaussianModels(unittest.TestCase):
                    1.00000000e+00,   3.12996279e-12],
                 [  0.00000000e+00,   0.00000000e+00,   0.00000000e+00,
                    3.12996279e-12,   1.00000000e+00]]
-        self.Amat = np.matrix(Amat)
-        self.Amatinv = self.Amat.getI()
+        self.Amat = np.array(Amat)
+        self.Amatinv = la.inv(Amat)
         self.rbf_lambda = np.array([-0.19964314,  2.        ,  4.00993965,
                                     6.        ,  8.        ])
         self.rbf_h = np.array([])

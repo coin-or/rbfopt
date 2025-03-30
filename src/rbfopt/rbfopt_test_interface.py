@@ -1,4 +1,3 @@
-#!/usr/bin/env python3
 """Optimize a test function taken as a black box with RBFOpt.
 
 This module contains the routines used to construct a black-box object
@@ -20,6 +19,7 @@ import os
 # there might be issues when running several processes in parallel.
 os.environ['OMP_NUM_THREADS'] = '1'
 import argparse
+import re
 import ast
 import numpy as np
 import rbfopt
@@ -51,7 +51,7 @@ def register_options(parser):
     docstring = default.__doc__
     param_docstring = docstring[docstring.find('Parameters'):
                                 docstring.find('Attributes')].split(' : ')
-    param_name = [val.split(' ')[-1].strip() for val in param_docstring[:-1]]
+    param_name = [val.split()[-1].strip() for val in param_docstring[:-1]]
     param_type = [val.split('\n')[0].strip() for val in param_docstring[1:]]
     param_help = [' '.join(line.strip() for line in val.split('\n')[1:-2])
                   for val in param_docstring[1:]]
@@ -104,9 +104,12 @@ def rbfopt_test_interface(args, black_box):
         print('x{:<4d}: {:16.6f}'.format(i, val))
 # -- end function
 
-if (__name__ == "__main__"):
-    if (sys.version_info[0] <= 2 and sys.version_info[1] < 7):
-        print('Error: this software requires Python 2.7 or later')
+def main():
+    """Entry point for the test interface module.
+
+    """
+    if (sys.version_info[0] <= 3 and sys.version_info[1] < 9):
+        print('Error: this software requires Python 3.9 or later')
         exit()
     # Create command line parsers
     parser = argparse.ArgumentParser(description='Test RBF method')

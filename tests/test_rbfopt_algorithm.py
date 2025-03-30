@@ -246,6 +246,8 @@ class TestBlackBoxFixed(RbfoptBlackBox):
     name : string
         The name of the function to be implemented.
     """
+
+    __test__ = False
     def __init__(self, name, num_fixed_vars):
         """Constructor.
         """

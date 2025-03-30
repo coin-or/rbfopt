@@ -29,7 +29,7 @@ class TestRbfoptSettings(unittest.TestCase):
         docstring = self.default.__doc__
         param_docstring = docstring[docstring.find('Parameters'):
                                     docstring.find('Attributes')].split(' : ')
-        self.param_name = [val.split(' ')[-1].strip()
+        self.param_name = [val.split()[-1].strip()
                            for val in param_docstring[:-1]]
         self.param_type = [val.split('\n')[0].strip()
                            for val in param_docstring[1:]]

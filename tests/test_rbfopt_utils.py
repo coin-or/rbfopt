@@ -106,8 +106,8 @@ class TestUtils(unittest.TestCase):
 
     def test_get_lhd_points(self):
         """Check that latin hypercube designs have the correct size."""
-        var_lower = np.array([-1, 0, 1], dtype=np.float_)
-        var_upper = np.array([1, 2, 3], dtype=np.float_)
+        var_lower = np.array([-1, 0, 1], dtype=np.float64)
+        var_upper = np.array([1, 2, 3], dtype=np.float64)
         corners = ru.get_lhd_maximin_points(
             var_lower, var_upper, np.array([0]), 4)
         self.assertEqual(len(corners), 4)
@@ -152,8 +152,8 @@ class TestUtils(unittest.TestCase):
         This method verifies that returned sets of points have at
         least n+1 points, and integer variables are integer.
         """
-        var_lower = np.array([-1, 0, 1], dtype=np.float_)
-        var_upper = np.array([1, 2, 3], dtype=np.float_)
+        var_lower = np.array([-1, 0, 1], dtype=np.float64)
+        var_upper = np.array([1, 2, 3], dtype=np.float64)
         integer_vars = np.array([1, 2])
         for method in RbfoptSettings._allowed_init_strategy:
             settings = RbfoptSettings(init_strategy=method,
@@ -174,8 +174,8 @@ class TestUtils(unittest.TestCase):
         This method verifies that returned sets of points have at
         least n+1 points, and integer variables are integer.
         """
-        var_lower = np.array([-1, 0, 1], dtype=np.float_)
-        var_upper = np.array([1, 2, 3], dtype=np.float_)
+        var_lower = np.array([-1, 0, 1], dtype=np.float64)
+        var_upper = np.array([1, 2, 3], dtype=np.float64)
         integer_vars = np.array([1, 2])
         midpoint = np.array([0, 1, 2])
         for method in RbfoptSettings._allowed_init_strategy:

@@ -17,8 +17,8 @@ This software is released under the Revised BSD License. By using
 this software, you are implicitly accepting the terms of the license.
 
 RBFOpt is a Python library for black-box optimization (also known as
-derivative-free optimization). It is developed for Python 3 but
-currently runs on Python 2.7 as well. This README contains
+derivative-free optimization). It is developed for Python 3. Since March
+2025, Python 2.7 is no longer officially supported. This README contains
 installation instructions and a brief overview. More details can be
 found in the user manual.
 
@@ -35,14 +35,6 @@ Contents of this directory:
 * setup.cfg: Configuration file for setup.py.
 * setup.py: Setup file.
 * tox.ini: Configuration file for tox.
-* bin/
-
-  * rbfopt_cl_interface.py: Script for the command-line interface,
-    to run the library on a user-defined black-box function
-    implemented in a user-specified file.
-  * rbfopt_test_interface.py: Script to test the library on a
-    global optimization test set.
-
 * src/
 
   * rbfopt/
@@ -53,15 +45,21 @@ Contents of this directory:
       serial and parallel.
     * rbfopt_aux_problems.py: Interface for the auxiliary problems
       solved during the optimization process.
+    * rbfopt_cl_interface.py: Script for the command-line interface,
+      to run the library on a user-defined black-box function
+      implemented in a user-specified file.
     * rbfopt_degreeX_models.py: PyOmo models for the auxiliary
       problems necessary for RBF functions with minimum required
       polynomial degree X.
     * rbfopt_refinement: Routines for refinement phase.
     * rbfopt_settings.py: Global and algorithmic settings.
     * rbfopt_test_functions.py: Mathematical test functions.
+    * rbfopt_test_interface.py: Script to test the library on a
+      global optimization test set.
     * rbfopt_user_black_box.py: A black-box class constructed from
       user data.
     * rbfopt_utils.py: Utility routines.
+
 
     * doc/
 
@@ -79,7 +77,6 @@ Contents of this directory:
 	  
 * tests/
 
-  * context.py: Configuration file for nose.
   * test_functions.py: Global optimization test functions.
   * test_rbfopt_algorithm.py: Testing module for
     rbfopt_algorithm.py (regular unit tests).
@@ -103,9 +100,9 @@ Installation requirements
 
 This package requires the following software:
 
-* Python version >= 3.7
-* NumPy version >= 1.11.0
-* SciPy version >= 0.17.0
+* Python version >= 3.9
+* NumPy version >= 2.0.0
+* SciPy version >= 1.13.0
 * Pyomo version >= 5.1.1
 
 The software has been tested with the versions indicated above. It may
@@ -113,9 +110,9 @@ work with earlier version and should work with subsequent version, if
 they are backward compatible. In particular, the software is known to
 work with Pyomo version 4 and earlier versions of Scipy.
 
-The code is developed for Python 3.7, but it currently also runs on
-Python 2.7. Since Python 2.7 has reached end-of-life in January 2020,
-we recommend using Python 3.7 or higher.
+The code is developed for Python 3.9. It may also run on Python 2.7
+with earlier versions of NumPy. Since Python 2.7 has reached
+end-of-life in January 2020, we recommend using Python 3.9 or higher.
 
 The easiest, and recommended, way to install the package is via the
 Python module manager pip. The code is on PyPI, therefore it can be
@@ -171,10 +168,10 @@ all.
 Installation instructions and getting started
 =============================================
 
-1) Install the package with pip as indicated above. This will install
-   the two executable Python scripts rbfopt_cl_interface.py and
-   rbfopt_test_interface.py in your bin/ directory (whatever is used
-   by pip for this purpose), as well as the module files in your
+1) Install the package with pip as indicated above. This will create
+   the two executable Python scripts, rbfopt_cl_interface and
+   rbfopt_test_interface, in your bin/ directory (whatever is used by
+   pip for this purpose), as well as the module files in your
    site-packages directory.
 
 2) Make sure Bonmin and Ipopt are in your path; otherwise, use the
@@ -208,11 +205,7 @@ Installation instructions and getting started
 
 5) Unit tests for the library can be executed by running::
 
-     nose2
-
-   or::
-
-     python setup.py test
+     pytest
 
    from the current (main) directory. If some of the tests fail, the
    library may or may not work correctly. Some of the test failures
@@ -224,7 +217,7 @@ Installation instructions and getting started
    problems, are found in the file slow_test_rbfopt_algorithm.py,
    which is ignored by nose by default. To execute these tests, run::
 
-     nose2 tests.slow_test_rbfopt_algorithm
+     pytest tests/slow_test_rbfopt_algorithm
    
 =======================
 Minimal working example
@@ -252,7 +245,7 @@ interface on the file. An example is provided under
 src/rbfopt/examples, in the file rbfopt_black_box_example.py. This can
 be executed with::
 
-  rbfopt_cl_interface.py src/rbfopt/examples/rbfopt_black_box_example.py
+  rbfopt_cl_interface src/rbfopt/examples/rbfopt_black_box_example.py
 
 =====================
 Parallel optimization
@@ -298,9 +291,9 @@ spawn multiple threads to run BLAS, therefore disregarding the option
 num_cpus), RBFOpt attempts to set the number of BLAS threads to 1 at
 run time.
 
-All scripts (rbfopt_cl_interface.py and rbfopt_test_interface.py) set
-the environment variables OMP_NUM_THREADS to 1. Furthermore, the
-rbfopt module does the same when imported for the first time.
+All scripts (rbfopt_cl_interface and rbfopt_test_interface) set the
+environment variables OMP_NUM_THREADS to 1. Furthermore, the rbfopt
+module does the same when imported for the first time.
 
 Note that these settings are only effective if the environment
 variable is set *before* NumPy is imported; otherwise, they are

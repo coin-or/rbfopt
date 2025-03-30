@@ -188,7 +188,7 @@ def get_all_corners(var_lower, var_upper):
     assert(len(var_lower) == len(var_upper))
 
     n = len(var_lower)
-    node_pos = np.empty([2**n, n], np.float_)
+    node_pos = np.empty([2**n, n], np.float64)
     i = 0
     # Generate all corners
     for corner in itertools.product('lu', repeat=len(var_lower)):
@@ -275,7 +275,7 @@ def get_random_corners(var_lower, var_upper):
         if (get_min_distance(point, node_pos) > 0):
             node_pos = np.vstack((node_pos, point))
 
-    return np.array(node_pos, np.float_)
+    return np.array(node_pos, np.float64)
 
 # -- end function
 
@@ -304,7 +304,7 @@ def get_uniform_lhs(n, num_samples):
 
     # Generate integer LH in [0, num_samples]
     int_lh = np.array([np.random.permutation(num_samples)
-                       for i in range(n)], np.float_).T
+                       for i in range(n)], np.float64).T
     # Map integer LH back to unit hypercube, and perturb points so that
     # they are uniformly distributed in the corresponding intervals
     lhs = (np.random.rand(num_samples, n) + int_lh) / num_samples

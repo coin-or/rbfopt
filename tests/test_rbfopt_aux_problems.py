@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import unittest
 import rbfopt
 import numpy as np
+import scipy.linalg as la
 import rbfopt.rbfopt_utils as ru
 import rbfopt.rbfopt_aux_problems as aux
 from rbfopt.rbfopt_settings import RbfoptSettings
@@ -68,8 +69,8 @@ class TestAuxProblems(unittest.TestCase):
                 [1.0, 11.0, 2.0, 5.0, 7.0, 0.0, 0.0, 0.0, 0.0],
                 [2.0, 12.0, 3.0, 8.8, 12.0, 0.0, 0.0, 0.0, 0.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
-        self.Amat = np.matrix(Amat)
-        self.Amatinv = self.Amat.getI()
+        self.Amat = np.array(Amat)
+        self.Amatinv = la.inv(Amat)
         self.rbf_lambda = np.array([-0.02031417613815348,
                                     -0.0022571306820170587,
                                     0.02257130682017054,
@@ -302,7 +303,7 @@ class TestAuxProblems(unittest.TestCase):
         """
         settings = RbfoptSettings(rbf = 'cubic')
         ind, bump = aux.get_min_bump_node(
-            settings, 1, 10, np.matrix((1,1)), np.array([0] * 10),
+            settings, 1, 10, np.array([[1,1]]), np.array([0] * 10),
             np.array([[0,0] for i in range(10)]), 0)
         self.assertIsNone(ind, msg='Failed with all nodes exact')
         self.assertEqual(bump, float('+inf'),
@@ -330,7 +331,7 @@ class TestAuxProblems(unittest.TestCase):
                 [1.0, 11.0, 2.0, 5.0, 7.0, 0.0, 0.0, 0.0, 0.0],
                 [2.0, 12.0, 3.0, 8.8, 12.0, 0.0, 0.0, 0.0, 0.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
-        Amat = np.matrix(Amat)
+        Amat = np.array(Amat)
         for j in range(k):
             ind, bump = aux.get_min_bump_node(settings, n, k, Amat, 
                                               node_val, node_err_bounds,
@@ -370,7 +371,7 @@ class TestAuxProblems(unittest.TestCase):
                 [1.0, 11.0, 2.0, 5.0, 7.0, 0.0, 0.0, 0.0, 0.0],
                 [2.0, 12.0, 3.0, 8.8, 12.0, 0.0, 0.0, 0.0, 0.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
-        Amat = np.matrix(Amat)
+        Amat = np.array(Amat)
         node_err_bounds = np.array([[-1, 1], [-1, 1], [0, 0],
                                     [0, 0], [0, 0]])
         new_node = np.array([(var_lower[i] + var_upper[i])/2
@@ -416,7 +417,7 @@ class TestAuxProblems(unittest.TestCase):
         samples = aux.generate_sample_points(self.settings, self.n, 
                                              self.var_lower, self.var_upper,
                                              self.integer_vars, None, 0)
-        self.assertFalse(samples, msg='List of samples should be empty')
+        self.assertFalse(len(samples) > 0, msg='List of samples should be empty')
         samples = aux.generate_sample_points(
             self.settings, 10, np.array([0] * 10), np.array([1] * 10),
             np.array([i for i in range(10)]),

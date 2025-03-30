@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import unittest
 import rbfopt
 import numpy as np
+import scipy.linalg as la
 import pyomo.environ
 import rbfopt.rbfopt_utils as ru
 import rbfopt.rbfopt_degree0_models as d0
@@ -44,8 +45,8 @@ class TestMultiquadricModels(unittest.TestCase):
                 [12.932517156377562, 6.103277807866851, 11.280514172678478,
                  5.243090691567331, 1.0, 1.0], 
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]]
-        self.Amat = np.matrix(Amat)
-        self.Amatinv = self.Amat.getI()
+        self.Amat = np.array(Amat)
+        self.Amatinv = la.inv(Amat)
         self.rbf_lambda = np.array([1.981366489986409, 0.6262004309283905,
                                     -1.8477896263093248, -0.10028069928913483,
                                     -0.65949659531634])
@@ -166,8 +167,8 @@ class TestLinearModels(unittest.TestCase):
                 [12.893796958227627, 6.020797289396148,
                  11.236102527122116, 5.146843692983108, 0.0, 1.0], 
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0]]
-        self.Amat = np.matrix(Amat)
-        self.Amatinv = self.Amat.getI()
+        self.Amat = np.array(Amat)
+        self.Amatinv = la.inv(Amat)
         self.rbf_lambda = np.array([1.1704846814048488, 0.5281643269521171,
                                     -0.9920149389974761, -0.1328847504999134,
                                     -0.5737493188595765])

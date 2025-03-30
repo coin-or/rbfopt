@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import unittest
 import rbfopt
 import numpy as np
+import scipy.linalg as la
 import pyomo.environ
 import rbfopt.rbfopt_utils as ru
 import rbfopt.rbfopt_degree1_models as d1
@@ -47,8 +48,8 @@ class TestCubicModels(unittest.TestCase):
                 [1.0, 11.0, 2.0, 5.0, 7.0, 0.0, 0.0, 0.0, 0.0],
                 [2.0, 12.0, 3.0, 8.8, 12.0, 0.0, 0.0, 0.0, 0.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
-        self.Amat = np.matrix(Amat)
-        self.Amatinv = self.Amat.getI()
+        self.Amat = np.array(Amat)
+        self.Amatinv = la.inv(Amat)
         self.rbf_lambda = np.array([-0.02031417613815348, -0.0022571306820170587,
                                     0.02257130682017054, 6.74116235140294e-18,
                                     -1.0962407017011667e-18])
@@ -173,8 +174,8 @@ class TestThinPlateSplineModels(unittest.TestCase):
                 [1.0, 11.0, 2.0, 5.0, 7.0, 0.0, 0.0, 0.0, 0.0],
                 [2.0, 12.0, 3.0, 8.8, 12.0, 0.0, 0.0, 0.0, 0.0],
                 [1.0, 1.0, 1.0, 1.0, 1.0, 0.0, 0.0, 0.0, 0.0]]
-        self.Amat = np.matrix(Amat)
-        self.Amatinv = self.Amat.getI()
+        self.Amat = np.array(Amat)
+        self.Amatinv = la.inv(Amat)
         self.rbf_lambda = np.array([-0.1948220562664489, -0.02164689514071656,
                                     0.21646895140716543, 2.4492621453325443e-18,
                                     3.4694803106897584e-17])

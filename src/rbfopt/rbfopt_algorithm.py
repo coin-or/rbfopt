@@ -259,8 +259,8 @@ class RbfoptAlgorithm:
         dimension = black_box.get_dimension()
         assert(dimension >= 1)
         # We make sure these vectors are Numpy arrays
-        var_lower = np.array(black_box.get_var_lower(), dtype=np.float_)
-        var_upper = np.array(black_box.get_var_upper(), dtype=np.float_)
+        var_lower = np.array(black_box.get_var_lower(), dtype=np.float64)
+        var_upper = np.array(black_box.get_var_upper(), dtype=np.float64)
         var_type = np.array(black_box.get_var_type())
         assert(len(var_lower) == dimension)
         assert(len(var_upper) == dimension)
@@ -306,10 +306,10 @@ class RbfoptAlgorithm:
             dimension = current_vars
             var_lower = np.array([var_lower[i] for i in not_categorical] +
                                  [0] * (current_vars - len(not_categorical)),
-                                 dtype=np.float_)
+                                 dtype=np.float64)
             var_upper = np.array([var_upper[i] for i in not_categorical] +
                                  [1] * (current_vars - len(not_categorical)),
-                                 dtype=np.float_)
+                                 dtype=np.float64)
             integer_vars = np.array(
                 [i for i in range(len(not_categorical))
                  if var_type[not_categorical[i]].upper() == 'I'] +
@@ -450,7 +450,7 @@ class RbfoptAlgorithm:
         if (len(integer_vars) < dimension):
             self.search_space_size = np.inf
         else:
-            self.search_space_size = np.prod(var_upper.astype(np.float_) -
+            self.search_space_size = np.prod(var_upper.astype(np.float64) -
                                              var_lower + 1)
 
         # Set default output stream
