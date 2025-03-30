@@ -3,8 +3,8 @@ requires = ["setuptools"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "rbfopt" 
-version = "4.3.0" 
+name = "rbfopt"
+dynamic = ["version"]
 description = "RBFOpt is a library for black-box optimization using derivative-free optimization tools."
 readme = "README.rst"
 requires-python = ">=3.9"
@@ -29,7 +29,7 @@ dependencies = [
   "numpy >= 2.0.0",
   "scipy >= 1.13.0",
   "numpydoc >= 0.5",
-  "pyomo >= 5.1.1",
+  "pyomo >= 5.1.1"
 ]
 
 [project.optional-dependencies]
@@ -47,6 +47,9 @@ rbfopt_test_interface = "rbfopt.rbfopt_test_interface:main"
 addopts = [
     "--import-mode=importlib",
 ]
+
+[tool.setuptools.dynamic]
+version = {attr = "rbfopt.__version__"}
 
 [tool.tox]
 requires = ["tox>=4.19"]
